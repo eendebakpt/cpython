@@ -939,6 +939,18 @@ _PyObject_LookupAttr(PyObject *v, PyObject *name, PyObject **result)
         }
         return 0;
     }
+    if (tp->tp_getattro == (getattrofunc)type_getattro && 0) {
+        // DOES not work. maybe do this via specialization of PyObject_HasAttr for type objects?
+        *result = _type_getattro((PyTypeObject*)v, name, 1);
+        //*result = (*tp->tp_getattro)(v, name);
+        if (*result != NULL) {
+            return 1;
+        }
+        if (PyErr_Occurred()) {
+            return -1;
+        }
+        return 0;
+    }
     if (tp->tp_getattro != NULL) {
         *result = (*tp->tp_getattro)(v, name);
     }
@@ -976,10 +988,25 @@ _PyObject_LookupAttrId(PyObject *v, _Py_Identifier *name, PyObject **result)
     return  _PyObject_LookupAttr(v, oname, result);
 }
 
+#define PyTypeType_CheckExact(op) Py_IS_TYPE(op, &PyType_Type)
+
 int
 PyObject_HasAttr(PyObject *v, PyObject *name)
 {
     PyObject *res;
+
+    if (PyTypeType_CheckExact(v)) // type object
+    {
+        PyObject *result = _type_getattro((PyTypeObject*)v, name, 1);
+        if (result != NULL) {
+            return 1;
+        }
+        if (PyErr_Occurred()) {
+            PyErr_Clear();
+            return 0;
+        }
+        return 0;
+    }
     if (_PyObject_LookupAttr(v, name, &res) < 0) {
         PyErr_Clear();
         return 0;
