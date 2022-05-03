@@ -939,10 +939,9 @@ _PyObject_LookupAttr(PyObject *v, PyObject *name, PyObject **result)
         }
         return 0;
     }
-    if (tp->tp_getattro == (getattrofunc)type_getattro && 0) {
+    if (tp->tp_getattro == (getattrofunc)type_getattro) {
         // DOES not work. maybe do this via specialization of PyObject_HasAttr for type objects?
         *result = _type_getattro((PyTypeObject*)v, name, 1);
-        //*result = (*tp->tp_getattro)(v, name);
         if (*result != NULL) {
             return 1;
         }
