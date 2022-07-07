@@ -1043,12 +1043,12 @@ list_pop_impl(PyListObject *self, Py_ssize_t index)
 
     PyObject **items = self->ob_item;
     v = items[index];
-    if(Py_SIZE(self)-1==0) {
+    if (Py_SIZE(self) == 1) {
         Py_INCREF(v);
         status = _list_clear(self);
     }
     else {
-        if (Py_SIZE(self)-1-index)
+        if (Py_SIZE(self) - 1 != index)
             memmove(&items[index], &items[index+1], (Py_SIZE(self)-1-index)* sizeof(PyObject *));
         status = list_resize(self, Py_SIZE(self) - 1);
     }
