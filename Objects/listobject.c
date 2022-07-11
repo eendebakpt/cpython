@@ -692,7 +692,11 @@ list_ass_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)
                 goto Error;
             }
         }
-        memcpy(recycle, &item[ilow], s);
+        if (norig==1)
+            recycle[0] = item[ilow];
+        else {
+            memcpy(recycle, &item[ilow], s);
+        }
     }
 
     if (d < 0) { /* Delete -d items */
