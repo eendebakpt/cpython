@@ -815,6 +815,7 @@ def singledispatch(func):
     dispatch_cache = weakref.WeakKeyDictionary()
     cache_token = None
 
+    @cache
     def dispatch(cls):
         """generic_func.dispatch(cls) -> <function implementation>
 
@@ -899,6 +900,7 @@ def singledispatch(func):
         if cache_token is None and hasattr(cls, '__abstractmethods__'):
             cache_token = get_cache_token()
         dispatch_cache.clear()
+        dispatch.cache_clear()
         return func
 
     def wrapper(*args, **kw):
