@@ -915,7 +915,11 @@ def singledispatch(func):
     wrapper.register = register
     wrapper.dispatch = dispatch
     wrapper.registry = types.MappingProxyType(registry)
-    wrapper._clear_cache = dispatch_cache.clear
+    def clear_method():
+        dispatch_cache.clear()
+        dispatch.cache_clear()
+        
+    wrapper._clear_cache = clear_method
     update_wrapper(wrapper, func)
     return wrapper
 
