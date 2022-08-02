@@ -692,13 +692,22 @@ list_ass_slice(PyListObject *a, Py_ssize_t ilow, Py_ssize_t ihigh, PyObject *v)
                 goto Error;
             }
         }
-        memcpy(recycle, &item[ilow], s);
+        if (norig==1)
+            recycle[0] = item[ilow];
+        else {
+            memcpy(recycle, &item[ilow], s);
+        }
     }
 
     if (d < 0) { /* Delete -d items */
         Py_ssize_t tail;
         tail = (Py_SIZE(a) - ihigh) * sizeof(PyObject *);
-        memmove(&item[ihigh+d], &item[ihigh], tail);
+        if (tail==sizeof(PyObject *)) {
+            item[ihigh-1] = item[ihigh];
+        }
+        else {
+            memmove(&item[ihigh+d], &item[ihigh], tail);
+        }
         if (list_resize(a, Py_SIZE(a) + d) < 0) {
             memmove(&item[ihigh], &item[ihigh+d], tail);
             memcpy(&item[ilow], recycle, s);
