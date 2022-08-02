@@ -788,6 +788,108 @@ static PyType_Spec lru_list_elem_type_spec = {
     .slots = lru_list_elem_type_slots
 };
 
+typedef struct single_cache_object {
+    PyObject_HEAD;
+    PyObject *func;
+    PyObject *result;
+} single_cache_object;
+
+
+static int
+single_cache_tp_clear(single_cache_object *self)
+{
+    Py_CLEAR(self->func);
+    Py_CLEAR(self->result);
+    return 0;
+}
+
+static PyMethodDef single_cache_methods[] = {
+    //{"cache_info", (PyCFunction)lru_cache_cache_info, METH_NOARGS},
+    //{"cache_clear", (PyCFunction)lru_cache_cache_clear, METH_NOARGS},
+    //{"__reduce__", (PyCFunction)lru_cache_reduce, METH_NOARGS},
+    //{"__copy__", (PyCFunction)lru_cache_copy, METH_VARARGS},
+    //{"__deepcopy__", (PyCFunction)lru_cache_deepcopy, METH_VARARGS},
+    {NULL}
+};
+
+
+static void
+single_cache_dealloc(single_cache_object *obj)
+{
+    PyTypeObject *tp = Py_TYPE(obj);
+    /* bpo-31095: UnTrack is needed before calling any callbacks */
+    PyObject_GC_UnTrack(obj);
+
+    (void)single_cache_tp_clear(obj);
+    tp->tp_free(obj);
+    Py_DECREF(tp);
+}
+
+static int
+single_cache_tp_traverse(single_cache_object *self, visitproc visit, void *arg)
+{
+    //Py_VISIT(Py_TYPE(self));
+    Py_VISIT(self->result);
+    Py_VISIT(self->func);
+    return 0;
+}
+
+static PyObject *
+single_cache_call(single_cache_object *self, PyObject *args, PyObject *kwds)
+{
+
+    if (self->result == 0)
+        self->result = PyObject_Call(self->func, args, kwds);
+
+    return self->result;
+
+}
+
+static PyObject *
+single_cache_new(PyTypeObject *type, PyObject *args, PyObject *kw)
+{
+    PyObject *func;
+    single_cache_object *obj;
+    static char *keywords[] = {"user_function", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O", keywords, &func )) {
+        return NULL;
+    }
+
+
+    obj = (single_cache_object *)type->tp_alloc(type, 0);
+    if (obj == NULL) {
+        return NULL;
+    }
+
+    obj->result = 0;
+    Py_INCREF(func);
+    obj->func = func;
+    return (PyObject *)obj;
+}
+
+static PyType_Slot single_cache_object_type_slots[] = {
+    {Py_tp_dealloc, single_cache_dealloc},
+    {Py_tp_call, single_cache_call},
+    //{Py_tp_doc, (void *)lru_cache_doc},
+    {Py_tp_traverse, single_cache_tp_traverse},
+    {Py_tp_clear, single_cache_tp_clear},
+    {Py_tp_methods, single_cache_methods},
+    //{Py_tp_members, lru_cache_memberlist},
+    //{Py_tp_getset, lru_cache_getsetlist},
+    //{Py_tp_descr_get, lru_cache_descr_get},
+    {Py_tp_new, single_cache_new},
+    {0, 0}
+};
+
+static PyType_Spec single_cache_object_type_spec = {
+    .name = "functools._single_cache_wrapper",
+    .basicsize = sizeof(single_cache_object),
+    .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC |
+             Py_TPFLAGS_METHOD_DESCRIPTOR | Py_TPFLAGS_IMMUTABLETYPE,
+    .slots = single_cache_object_type_slots
+};
+
 
 typedef PyObject *(*lru_cache_ternaryfunc)(struct lru_cache_object *, PyObject *, PyObject *);
 
@@ -888,6 +990,7 @@ uncached_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwd
         return NULL;
     return result;
 }
+
 
 static PyObject *
 infinite_lru_cache_wrapper(lru_cache_object *self, PyObject *args, PyObject *kwds)
@@ -1454,6 +1557,17 @@ _functools_exec(PyObject *module)
     if (PyModule_AddType(module, state->partial_type) < 0) {
         return -1;
     }
+
+    PyObject *single_cache_type = PyType_FromModuleAndSpec(module,
+        &single_cache_object_type_spec, NULL);
+    if (single_cache_type == NULL) {
+        return -1;
+    }
+    if (PyModule_AddType(module, (PyTypeObject *)single_cache_type) < 0) {
+        Py_DECREF(single_cache_type);
+        return -1;
+    }
+    Py_DECREF(single_cache_type);
 
     PyObject *lru_cache_type = PyType_FromModuleAndSpec(module,
         &lru_cache_type_spec, NULL);
