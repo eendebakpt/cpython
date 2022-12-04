@@ -4316,14 +4316,12 @@ _Py_type_getattro_impl(PyTypeObject *type, PyObject *name, int *suppress)
     }
 
     /* Give up */
-    //printf("suppress is %d!\n", suppress);
     if (suppress == NULL) {
     PyErr_Format(PyExc_AttributeError,
                     "type object '%.50s' has no attribute '%U'",
                     type->tp_name, name);
     } else
     {
-        //printf("set flag!\n");
         *suppress=1;
     }
     return NULL;
