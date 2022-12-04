@@ -4317,12 +4317,12 @@ _Py_type_getattro_impl(PyTypeObject *type, PyObject *name, int *suppress)
 
     /* Give up */
     if (suppress == NULL) {
-    PyErr_Format(PyExc_AttributeError,
-                    "type object '%.50s' has no attribute '%U'",
-                    type->tp_name, name);
-    } else
-    {
-        *suppress=1;
+        PyErr_Format(PyExc_AttributeError,
+                        "type object '%.50s' has no attribute '%U'",
+                        type->tp_name, name);
+    } else {
+        // signal the caller we have not set an PyExc_AttributeError and gave up
+        *suppress = 1;
     }
     return NULL;
 }
