@@ -240,9 +240,8 @@ class Random(_random.Random):
 
         getrandbits = self.getrandbits
         k = n.bit_length()
-        r = getrandbits(k)  # 0 <= r < 2**k
-        while r >= n:
-            r = getrandbits(k)
+        while r := getrandbits(k) >= n: # 0 <= r < 2**k
+            pass
         return r
 
     def _randbelow_without_getrandbits(self, n, maxsize=1<<BPF):
@@ -437,9 +436,8 @@ class Random(_random.Random):
             selected = set()
             selected_add = selected.add
             for i in range(k):
-                j = randbelow(n)
-                while j in selected:
-                    j = randbelow(n)
+                while j := randbelow(n) in selected:
+                    pass
                 selected_add(j)
                 result[i] = population[j]
         return result
