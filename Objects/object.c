@@ -988,7 +988,6 @@ int
 PyObject_HasAttr(PyObject *v, PyObject *name)
 {
     PyObject *res;
-
     if (_PyObject_LookupAttr(v, name, &res) < 0) {
         PyErr_Clear();
         return 0;
