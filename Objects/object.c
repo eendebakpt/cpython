@@ -984,8 +984,6 @@ _PyObject_LookupAttrId(PyObject *v, _Py_Identifier *name, PyObject **result)
     return  _PyObject_LookupAttr(v, oname, result);
 }
 
-#define PyTypeType_CheckExact(op) Py_IS_TYPE(op, &PyType_Type)
-
 int
 PyObject_HasAttr(PyObject *v, PyObject *name)
 {
