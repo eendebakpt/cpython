@@ -939,18 +939,15 @@ _PyObject_LookupAttr(PyObject *v, PyObject *name, PyObject **result)
         }
         return 0;
     }
-    if (tp->tp_getattro == (getattrofunc)type_getattro) {
-        // DOES not work. maybe do this via specialization of PyObject_HasAttr for type objects?
-        *result = _type_getattro((PyTypeObject*)v, name, 1);
-        if (*result != NULL) {
-            return 1;
+    if (tp->tp_getattro == (getattrofunc)_Py_type_getattro) {
+        int flag = 0;
+        *result = _Py_type_getattro_impl((PyTypeObject*)v, name, &flag);
+        if (flag) {
+            // return 0 without having to clear the exception
+            return 0;
         }
-        if (PyErr_Occurred()) {
-            return -1;
-        }
-        return 0;
     }
-    if (tp->tp_getattro != NULL) {
+    else if (tp->tp_getattro != NULL) {
         *result = (*tp->tp_getattro)(v, name);
     }
     else if (tp->tp_getattr != NULL) {
@@ -994,18 +991,6 @@ PyObject_HasAttr(PyObject *v, PyObject *name)
 {
     PyObject *res;
 
-    if (PyTypeType_CheckExact(v)) // type object
-    {
-        PyObject *result = _type_getattro((PyTypeObject*)v, name, 1);
-        if (result != NULL) {
-            return 1;
-        }
-        if (PyErr_Occurred()) {
-            PyErr_Clear();
-            return 0;
-        }
-        return 0;
-    }
     if (_PyObject_LookupAttr(v, name, &res) < 0) {
         PyErr_Clear();
         return 0;
