@@ -487,7 +487,6 @@ _PyLong_AsLongAndOverflow(const PyLongObject *v, int *overflow)
     assert(v != NULL);
     assert( PyLong_Check(v) );
 
-    long res = -1;
     *overflow = 0;
     Py_ssize_t i = Py_SIZE(v);
 
