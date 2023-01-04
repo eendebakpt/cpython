@@ -27,7 +27,7 @@ class int "PyObject *" "&PyLong_Type"
 
 /* convert a PyLong of size 1, 0 or -1 to a C integer */
 static inline stwodigits
-medium_value(PyLongObject *x)
+medium_value(const PyLongObject *x)
 {
     assert(IS_MEDIUM_VALUE(x));
     return ((stwodigits)Py_SIZE(x)) * x->ob_digit[0];
@@ -488,50 +488,43 @@ _PyLong_AsLongAndOverflow(const PyLongObject *v, int *overflow)
     assert( PyLong_Check(v) );
 
     long res = -1;
+    *overflow = 0;
     Py_ssize_t i = Py_SIZE(v);
 
-    switch (i) {
-    case -1:
-        res = -(sdigit)v->ob_digit[0];
-        break;
-    case 0:
-        res = 0;
-        break;
-    case 1:
-        res = v->ob_digit[0];
-        break;
-    default:
-    {
-        int sign = 1;
-        unsigned long x = 0;
-        if (i < 0) {
-            sign = -1;
-            i = -(i);
-        }
-        while (--i >= 0) {
-            unsigned long prev = x;
-            x = (x << PyLong_SHIFT) | v->ob_digit[i];
-            if ((x >> PyLong_SHIFT) != prev) {
-                *overflow = sign;
-                goto exit;
-            }
-        }
-        /* Haven't lost any bits, but casting to long requires extra
-         * care (see comment above).
-         */
-        if (x <= (unsigned long)LONG_MAX) {
-            res = (long)x * sign;
-        }
-        else if (sign < 0 && x == PY_ABS_LONG_MIN) {
-            res = LONG_MIN;
-        }
-        else {
+    // fast path for PyLong objects with size -1, 0 or 1
+    if (IS_MEDIUM_VALUE(v)) {
+        return (long)medium_value(v);
+    }
+
+    long res = -1;
+    int sign = 1;
+    if (i < 0) {
+        sign = -1;
+        i = -(i);
+    }
+    unsigned long x = 0;
+    while (--i >= 0) {
+        unsigned long prev = x;
+        x = (x << PyLong_SHIFT) | v->ob_digit[i];
+        if ((x >> PyLong_SHIFT) != prev) {
             *overflow = sign;
-            /* res is already set to -1 */
+            return res;
         }
     }
+    /* Haven't lost any bits, but casting to long requires extra
+        * care (see comment above).
+        */
+    if (x <= (unsigned long)LONG_MAX) {
+        res = (long)x * sign;
     }
-  exit:
+    else if (sign < 0 && x == PY_ABS_LONG_MIN) {
+        res = LONG_MIN;
+    }
+    else {
+        *overflow = sign;
+        /* res is already set to -1 */
+    }
+
     return res;
 }
 
