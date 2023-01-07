@@ -176,7 +176,8 @@ get_len_of_range(long lo, long hi, long step);
 
 /* Return the length as a long, or -1 on error
  *
- * On overflow -1 is returned, but no exception is set
+ * On overflow -1 is returned
+ * For any other exception return -2 and clear the exception
  */
 static long compute_range_length_long(PyObject *start,
                 PyObject *stop, PyObject *step) {
@@ -194,6 +195,14 @@ static long compute_range_length_long(PyObject *start,
     if (overflow || (long_step == -1 && PyErr_Occurred()) ) {
         return -1;
     }
+
+    // safe guard against PyLong_AsLongAndOverflow setting an exception but return value unqual to -1
+    // this assumes PyLong_AsLongAndOverflow itself does not clear the exceptions
+    if (PyErr_Occurred()) {
+        PyErr_Clear();
+        return -2;
+    }
+
     return get_len_of_range(long_start, long_stop, long_step);
 }
 
