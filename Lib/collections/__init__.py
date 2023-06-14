@@ -280,13 +280,10 @@ class OrderedDict(dict):
         if state:
             if isinstance(state, tuple):
                 state, slots = state
+                slots = slots.copy()
             else:
                 slots = {}
             state = state.copy()
-            slots = slots.copy()
-            for k in vars(OrderedDict()):
-                state.pop(k, None)
-                slots.pop(k, None)
             if slots:
                 state = state, slots
             else:
