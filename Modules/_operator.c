@@ -1576,7 +1576,7 @@ methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     methodcallerobject *mc;
     PyObject *name, *key, *value;
-    Py_ssize_t nargs, i, ppos;
+    Py_ssize_t nargs;
 
     if (PyTuple_GET_SIZE(args) < 1) {
         PyErr_SetString(PyExc_TypeError, "methodcaller needs at least "
@@ -1622,13 +1622,16 @@ methodcaller_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     memcpy(mc->vectorcall_args + 1, PySequence_Fast_ITEMS(mc->args),
            nargs * sizeof(PyObject *));
     if (kwds) {
-        mc->vectorcall_kwnames = PySequence_Tuple(kwds);
+        const Py_ssize_t nkwds = PyDict_Size(kwds);
+
+        mc->vectorcall_kwnames = PyTuple_New(nkwds);
         if (!mc->vectorcall_kwnames) {
             return NULL;
         }
-        i = ppos = 0;
+        Py_ssize_t i = 0, ppos = 0;
         while (PyDict_Next(kwds, &ppos, &key, &value)) {
-            mc->vectorcall_args[1 + nargs + i] = value;
+            PyTuple_SET_ITEM(mc->vectorcall_kwnames, i, Py_NewRef(key));
+            mc->vectorcall_args[1 + nargs + i] = value; // borrowed reference
             ++i;
         }
     }
