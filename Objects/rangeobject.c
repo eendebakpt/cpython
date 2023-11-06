@@ -107,6 +107,21 @@ range_from_array(PyTypeObject *type, PyObject *const *args, Py_ssize_t num_args)
             if (!stop) {
                 return NULL;
             }
+            if (_PyLong_IsCompact( (PyLongObject *)args[0])) {
+                obj = PyObject_New(rangeobject, type);
+                if (obj == NULL) {
+                    return NULL;
+                }
+                obj->start = _PyLong_GetZero();
+                obj->stop = args[0];
+                obj->step = _PyLong_GetOne();
+                if (_PyLong_IsNonNegativeCompact((PyLongObject*)args[0]))
+                    obj->length = args[0];
+                else {
+                    obj->length = _PyLong_GetZero();
+                }
+                return obj;
+            }
             start = _PyLong_GetZero();
             step = _PyLong_GetOne();
             break;
