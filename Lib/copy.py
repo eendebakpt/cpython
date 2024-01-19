@@ -121,6 +121,13 @@ def deepcopy(x, memo=None, _nil=[]):
     See the module's __doc__ string for more info.
     """
 
+    cls = type(x)
+    copier = _deepcopy_dispatch.get(cls)
+
+    if copier is ...:
+        # atomic type
+        return x
+
     d = id(x)
     if memo is None:
         memo = {}
@@ -129,13 +136,6 @@ def deepcopy(x, memo=None, _nil=[]):
         if y is not _nil:
             return y
 
-    cls = type(x)
-
-    copier = _deepcopy_dispatch.get(cls)
-    
-    if copier is ...:
-        # atomic type
-        return x
     
     if copier is not None:
         y = copier(x, memo)
