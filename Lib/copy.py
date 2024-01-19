@@ -132,6 +132,11 @@ def deepcopy(x, memo=None, _nil=[]):
     cls = type(x)
 
     copier = _deepcopy_dispatch.get(cls)
+    
+    if copier is ...:
+        # atomic type
+        return x
+    
     if copier is not None:
         y = copier(x, memo)
     else:
@@ -169,24 +174,14 @@ def deepcopy(x, memo=None, _nil=[]):
 
 _deepcopy_dispatch = d = {}
 
+_atomic_types =  {types.NoneType, types.EllipsisType, types.NotImplementedType,
+          int, float, bool, complex, bytes, str, types.CodeType, type, range,
+          types.BuiltinFunctionType, types.FunctionType, weakref.ref, property}
+
+for _type in _atomic_types:
+    d[_type] = ...
 def _deepcopy_atomic(x, memo):
     return x
-d[types.NoneType] = _deepcopy_atomic
-d[types.EllipsisType] = _deepcopy_atomic
-d[types.NotImplementedType] = _deepcopy_atomic
-d[int] = _deepcopy_atomic
-d[float] = _deepcopy_atomic
-d[bool] = _deepcopy_atomic
-d[complex] = _deepcopy_atomic
-d[bytes] = _deepcopy_atomic
-d[str] = _deepcopy_atomic
-d[types.CodeType] = _deepcopy_atomic
-d[type] = _deepcopy_atomic
-d[range] = _deepcopy_atomic
-d[types.BuiltinFunctionType] = _deepcopy_atomic
-d[types.FunctionType] = _deepcopy_atomic
-d[weakref.ref] = _deepcopy_atomic
-d[property] = _deepcopy_atomic
 
 def _deepcopy_list(x, memo, deepcopy=deepcopy):
     y = []
