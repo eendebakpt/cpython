@@ -13039,6 +13039,17 @@ unicode_startswith(PyObject *self,
     Py_ssize_t end = PY_SSIZE_T_MAX;
     int result;
 
+    assert(PyTuple_CheckExact(args));
+    if ( PyTuple_GET_SIZE(args)==1 ) {
+        substring = PyTuple_GET_ITEM(args, 0); // borrowed reference
+        if (PyUnicode_Check(substring)) {
+            // fast path for single argument string case
+            result = tailmatch(self, substring, start, end, -1);
+            if (result == -1)
+                return NULL;
+            return PyBool_FromLong(result);
+        }
+    }
     if (!asciilib_parse_args_finds("startswith", args, &subobj, &start, &end))
         return NULL;
     if (PyTuple_Check(subobj)) {
