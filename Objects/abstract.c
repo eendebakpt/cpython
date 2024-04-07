@@ -1470,10 +1470,20 @@ PyNumber_AsSsize_t(PyObject *item, PyObject *err)
 {
     Py_ssize_t result;
     PyObject *runerr;
-    PyObject *value = _PyNumber_Index(item);
-    if (value == NULL)
-        return -1;
+    PyObject *value;
+    int do_decref = 1;
 
+    if (PyLong_CheckExact(item)) {
+        // fast path where we do not have in increment the reference counter
+        // we could add subclasses of PyLong here
+        value = item;
+        do_decref = 0;
+    }
+    else {
+        value = _PyNumber_Index(item);
+        if (value == NULL)
+            return -1;
+    }
     /* We're done if PyLong_AsSsize_t() returns without error. */
     result = PyLong_AsSsize_t(value);
     if (result != -1)
@@ -1511,7 +1521,9 @@ PyNumber_AsSsize_t(PyObject *item, PyObject *err)
     }
 
  finish:
-    Py_DECREF(value);
+    if (do_decref) {
+        Py_DECREF(value);
+    }
     return result;
 }
 
