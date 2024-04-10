@@ -2734,10 +2734,6 @@ _PyArg_CheckPositional(const char *name, Py_ssize_t nargs,
         return 0;
     }
 
-    if (nargs == 0) {
-        return 1;
-    }
-
     if (nargs > max) {
         if (name != NULL)
             PyErr_Format(
