@@ -33,6 +33,7 @@ PyAPI_FUNC(PyObject *) PyTuple_GetItem(PyObject *, Py_ssize_t);
 PyAPI_FUNC(int) PyTuple_SetItem(PyObject *, Py_ssize_t, PyObject *);
 PyAPI_FUNC(PyObject *) PyTuple_GetSlice(PyObject *, Py_ssize_t, Py_ssize_t);
 PyAPI_FUNC(PyObject *) PyTuple_Pack(Py_ssize_t, ...);
+PyAPI_FUNC(PyObject*) PyTuple_Pack2(PyObject* a, PyObject* b);
 
 #ifndef Py_LIMITED_API
 #  define Py_CPYTHON_TUPLEOBJECT_H

@@ -151,6 +151,21 @@ _PyTuple_MaybeUntrack(PyObject *op)
     _PyObject_GC_UNTRACK(op);
 }
 
+PyObject*
+PyTuple_Pack2(PyObject *a, PyObject *b)
+{
+    assert(a!=NULL);
+    assert(b != NULL);
+    PyTupleObject* result = tuple_alloc(2);
+    if (result == NULL) {
+        return NULL;
+    }
+    result->ob_item[0] = Py_NewRef(a);
+    result->ob_item[1] = Py_NewRef(b);
+    _PyObject_GC_TRACK(result);
+    return (PyObject*)result;
+}
+
 PyObject *
 PyTuple_Pack(Py_ssize_t n, ...)
 {

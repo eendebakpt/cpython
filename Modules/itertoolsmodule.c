@@ -356,7 +356,7 @@ pairwise_next(pairwiseobject *po)
         return NULL;
     }
     /* Future optimization: Reuse the result tuple as we do in enumerate() */
-    result = PyTuple_Pack(2, old, new);
+    result = PyTuple_Pack2(old, new);
     Py_XSETREF(po->old, new);
     Py_DECREF(old);
     return result;
