@@ -6805,7 +6805,14 @@ reduce_newobj(PyObject *obj)
         Py_ssize_t i, n;
 
         Py_XDECREF(kwargs);
-        newobj = PyObject_GetAttr(copyreg, &_Py_ID(__newobj__));
+        cls = (PyObject *) Py_TYPE(obj);
+
+        // try to get cls.__new__
+        newobj = PyObject_GetAttr(cls, &_Py_ID(__new__));
+        if (newobj == NULL) {
+            // try alternative
+            newobj = PyObject_GetAttr(copyreg, &_Py_ID(__newobj__));
+        }
         Py_DECREF(copyreg);
         if (newobj == NULL) {
             Py_XDECREF(args);
@@ -6818,7 +6825,6 @@ reduce_newobj(PyObject *obj)
             Py_DECREF(newobj);
             return NULL;
         }
-        cls = (PyObject *) Py_TYPE(obj);
         PyTuple_SET_ITEM(newargs, 0, Py_NewRef(cls));
         for (i = 0; i < n; i++) {
             PyObject *v = PyTuple_GET_ITEM(args, i);
