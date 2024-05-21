@@ -9254,7 +9254,8 @@ tailmatch(PyObject *self,
     Py_ssize_t end_sub;
 
     ADJUST_INDICES(start, end, PyUnicode_GET_LENGTH(self));
-    end -= PyUnicode_GET_LENGTH(substring);
+    Py_ssize_t substring_length = PyUnicode_GET_LENGTH(substring);
+    end -= substring_length;
     if (end < start)
         return 0;
 
@@ -9265,18 +9266,25 @@ tailmatch(PyObject *self,
     data_self = PyUnicode_DATA(self);
     kind_sub = PyUnicode_KIND(substring);
     data_sub = PyUnicode_DATA(substring);
-    end_sub = PyUnicode_GET_LENGTH(substring) - 1;
+    end_sub = substring_length - 1;
 
     if (direction > 0)
         offset = end;
     else
         offset = start;
 
-    int match_last = PyUnicode_READ(kind_self, data_self, offset + end_sub) ==
-                        PyUnicode_READ(kind_sub, data_sub, end_sub);
+    int match_first = PyUnicode_READ(kind_self, data_self, offset) ==
+                        PyUnicode_READ(kind_sub, data_sub, 0);
 
-    if (match_last) {
-        if (end_sub == 0) {
+    if (match_first) {
+        if (substring_length == 1) {
+            // single-character case
+            return 1;
+        }
+        int match_last = PyUnicode_READ(kind_self, data_self, offset + end_sub) ==
+                        PyUnicode_READ(kind_sub, data_sub, end_sub);
+        if (!match_last && substring_length == 2) {
+            // failing two-character case
             return 1;
         }
         /* If both are of the same kind, memcmp is sufficient */
@@ -9286,10 +9294,10 @@ tailmatch(PyObject *self,
         }
         /* otherwise we have to compare each character by first accessing it */
         else {
-            /* We do not need to compare len(substring)-1 because the if
-               statement above ensured already that they are equal when we
+            /* We do not need to compare 0 and len(substring)-1 because the if
+               statements above ensured already that they are equal when we
                end up here. */
-            for (i = 0; i < end_sub; ++i) {
+            for (i = 1; i < end_sub; ++i) {
                 if (PyUnicode_READ(kind_self, data_self, offset + i) !=
                     PyUnicode_READ(kind_sub, data_sub, i))
                     return 0;
