@@ -357,7 +357,7 @@ pairwise_next(pairwiseobject *po)
     }
 
     result = po->result;
-    if (Py_REFCNT(result) == 1) {
+    if (_PyObject_IsUniquelyReferenced(result)) {
         Py_INCREF(result);
         PyObject *last_old = PyTuple_GET_ITEM(result, 0);
         PyObject *last_new = PyTuple_GET_ITEM(result, 1);
@@ -2054,7 +2054,7 @@ product_next(productobject *lz)
         Py_ssize_t *indices = lz->indices;
 
         /* Copy the previous result tuple or re-use it if available */
-        if (Py_REFCNT(result) > 1) {
+        if (!_PyObject_IsUniquelyReferenced(result)) {
             PyObject *old_result = result;
             result = _PyTuple_FromArray(_PyTuple_ITEMS(old_result), npools);
             if (result == NULL)
@@ -2280,7 +2280,7 @@ combinations_next(combinationsobject *co)
         }
     } else {
         /* Copy the previous result tuple or re-use it if available */
-        if (Py_REFCNT(result) > 1) {
+        if (!_PyObject_IsUniquelyReferenced(result)) {
             PyObject *old_result = result;
             result = _PyTuple_FromArray(_PyTuple_ITEMS(old_result), r);
             if (result == NULL)
@@ -2522,7 +2522,7 @@ cwr_next(cwrobject *co)
         }
     } else {
         /* Copy the previous result tuple or re-use it if available */
-        if (Py_REFCNT(result) > 1) {
+        if (!_PyObject_IsUniquelyReferenced(result)) {
             PyObject *old_result = result;
             result = _PyTuple_FromArray(_PyTuple_ITEMS(old_result), r);
             if (result == NULL)
@@ -2778,7 +2778,7 @@ permutations_next(permutationsobject *po)
             goto empty;
 
         /* Copy the previous result tuple or re-use it if available */
-        if (Py_REFCNT(result) > 1) {
+        if (!_PyObject_IsUniquelyReferenced(result)) {
             PyObject *old_result = result;
             result = _PyTuple_FromArray(_PyTuple_ITEMS(old_result), r);
             if (result == NULL)
@@ -3710,7 +3710,7 @@ zip_longest_next(ziplongestobject *lz)
         return NULL;
     if (lz->numactive == 0)
         return NULL;
-    if (Py_REFCNT(result) == 1) {
+    if (_PyObject_IsUniquelyReferenced(result)) {
         Py_INCREF(result);
         for (i=0 ; i < tuplesize ; i++) {
             it = PyTuple_GET_ITEM(lz->ittuple, i);
