@@ -34,6 +34,7 @@ Data members:
 #include "pycore_structseq.h"     // _PyStructSequence_InitBuiltinWithFlags()
 #include "pycore_sysmodule.h"     // export _PySys_GetSizeOf()
 #include "pycore_tuple.h"         // _PyTuple_FromArray()
+#include "refcount.h"            // _Py_IMMORTAL_REFCNT_LOCAL
 
 #include "pydtrace.h"             // PyDTrace_AUDIT()
 #include "osdefs.h"               // DELIM
@@ -1966,6 +1967,36 @@ sys_getrefcount_impl(PyObject *module, PyObject *object)
 /*[clinic end generated code: output=5fd477f2264b85b2 input=bf474efd50a21535]*/
 {
     return Py_REFCNT(object);
+}
+
+/*[clinic input]
+sys.is_immortal -> bool
+    object:  object
+    /
+Return True if the object is immortal
+[clinic start generated code]*/
+
+static int
+sys_is_immortal_impl(PyObject *module, PyObject *object)
+/*[clinic end generated code: output=ba76f7fdcec1c2c1 input=c8043ac11984865d]*/
+{
+    return _Py_IsImmortal(object);
+}
+
+/*[clinic input]
+sys.set_immortal
+    object:  object
+    /
+Make an object immortal
+[clinic start generated code]*/
+
+static PyObject *
+sys_set_immortal(PyObject *module, PyObject *object)
+/*[clinic end generated code: output=a2cd63db634b3ecf input=870a735663590b1e]*/
+{
+    // this might not be very clean
+    object->ob_refcnt = _Py_IMMORTAL_INITIAL_REFCNT;
+    return Py_None;
 }
 
 #ifdef Py_REF_DEBUG
