@@ -177,23 +177,34 @@ enum_next_long(enumobject *en, PyObject* next_item)
     PyObject *old_index;
     PyObject *old_item;
 
-    if (en->en_longindex == NULL) {
-        en->en_longindex = PyLong_FromSsize_t(PY_SSIZE_T_MAX);
-        if (en->en_longindex == NULL) {
+#ifdef Py_GIL_DISABLED
+    // resets en->en_longindex to 0, but we will restore it later
+    PyObject *en_longindex = ( PyObject *)_Py_atomic_exchange_ptr(&en->en_longindex, NULL);
+#else
+    PyObject *en_longindex = en->en_longindex;
+#endif
+    if (en_longindex == NULL) {
+        en_longindex = PyLong_FromSsize_t(PY_SSIZE_T_MAX);
+        if (en_longindex == NULL) {
             Py_DECREF(next_item);
             return NULL;
         }
     }
-    next_index = en->en_longindex;
+    next_index = en_longindex;
     assert(next_index != NULL);
     stepped_up = PyNumber_Add(next_index, en->one);
     if (stepped_up == NULL) {
         Py_DECREF(next_item);
         return NULL;
     }
+#ifdef Py_GIL_DISABLED
+    PyObject *en_longindex_old = ( PyObject *)_Py_atomic_exchange_ptr(&en->en_longindex, stepped_up);
+    Py_XDECREF(en_longindex_old);
+#else
     en->en_longindex = stepped_up;
+#endif
 
-    if (Py_REFCNT(result) == 1) {
+    if (_PyObject_IsUniquelyReferenced(result)) {
         Py_INCREF(result);
         old_index = PyTuple_GET_ITEM(result, 0);
         old_item = PyTuple_GET_ITEM(result, 1);
@@ -233,17 +244,19 @@ enum_next(enumobject *en)
     if (next_item == NULL)
         return NULL;
 
-    if (en->en_index == PY_SSIZE_T_MAX)
+    Py_ssize_t en_index  = FT_ATOMIC_LOAD_SSIZE_RELAXED(en->en_index);
+    if (en_index == PY_SSIZE_T_MAX)
         return enum_next_long(en, next_item);
 
-    next_index = PyLong_FromSsize_t(en->en_index);
+
+    next_index = PyLong_FromSsize_t(en_index);
     if (next_index == NULL) {
         Py_DECREF(next_item);
         return NULL;
     }
-    en->en_index++;
+    FT_ATOMIC_STORE_SSIZE_RELAXED(en->en_index, en_index + 1);
 
-    if (Py_REFCNT(result) == 1) {
+    if (_PyObject_IsUniquelyReferenced(result)) {
         Py_INCREF(result);
         old_index = PyTuple_GET_ITEM(result, 0);
         old_item = PyTuple_GET_ITEM(result, 1);
@@ -272,10 +285,23 @@ enum_next(enumobject *en)
 static PyObject *
 enum_reduce(enumobject *en, PyObject *Py_UNUSED(ignored))
 {
-    if (en->en_longindex != NULL)
-        return Py_BuildValue("O(OO)", Py_TYPE(en), en->en_sit, en->en_longindex);
-    else
+#ifdef Py_GIL_DISABLED
+    PyObject *en_longindex = ( PyObject *)_Py_atomic_exchange_ptr(&en->en_longindex, NULL);
+#else
+    PyObject *en_longindex = en->en_longindex;
+#endif
+    if (en_longindex != NULL) {
+        PyObject *value =  Py_BuildValue("O(OO)", Py_TYPE(en), en->en_sit, en_longindex);
+#ifdef Py_GIL_DISABLED
+        // restore value of en->en_longindex
+        PyObject *en_longindex_old = ( PyObject *)_Py_atomic_exchange_ptr(&en->en_longindex, en_longindex);
+        Py_XDECREF(en_longindex_old);
+#endif
+        return value;
+    }
+    else {
         return Py_BuildValue("O(On)", Py_TYPE(en), en->en_sit, en->en_index);
+    }
 }
 
 PyDoc_STRVAR(reduce_doc, "Return state information for pickling.");
