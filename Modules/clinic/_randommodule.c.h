@@ -143,4 +143,29 @@ _random_Random_getrandbits(RandomObject *self, PyObject *arg)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=bf49ece1d341b1b6 input=a9049054013a1b77]*/
+
+PyDoc_STRVAR(_random_Random__randbelow_with_getrandbits_c__doc__,
+"_randbelow_with_getrandbits_c($self, n, /)\n"
+"--\n"
+"\n"
+"_randbelow_with_getrandbits_c(n) -> x.  Return a random int in the range [0,n).  Defined for n > 0.");
+
+#define _RANDOM_RANDOM__RANDBELOW_WITH_GETRANDBITS_C_METHODDEF    \
+    {"_randbelow_with_getrandbits_c", (PyCFunction)_random_Random__randbelow_with_getrandbits_c, METH_O, _random_Random__randbelow_with_getrandbits_c__doc__},
+
+static PyObject *
+_random_Random__randbelow_with_getrandbits_c_impl(RandomObject *self,
+                                                  PyObject *n);
+
+static PyObject *
+_random_Random__randbelow_with_getrandbits_c(RandomObject *self, PyObject *n)
+{
+    PyObject *return_value = NULL;
+
+    Py_BEGIN_CRITICAL_SECTION(self);
+    return_value = _random_Random__randbelow_with_getrandbits_c_impl(self, n);
+    Py_END_CRITICAL_SECTION();
+
+    return return_value;
+}
+/*[clinic end generated code: output=51c6b0a6b7ff7cce input=a9049054013a1b77]*/

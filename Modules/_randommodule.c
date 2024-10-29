@@ -75,6 +75,7 @@
 #include "pycore_modsupport.h"    // _PyArg_NoKeywords()
 #include "pycore_moduleobject.h"  // _PyModule_GetState()
 #include "pycore_pylifecycle.h"   // _PyOS_URandomNonblock()
+#include "pycore_abstract.h"      // _PyNumber_Index
 
 #ifdef HAVE_UNISTD_H
 #  include <unistd.h>             // getpid()
@@ -550,6 +551,54 @@ _random_Random_getrandbits_impl(RandomObject *self, int k)
     return result;
 }
 
+/*[clinic input]
+@critical_section
+_random.Random._randbelow_with_getrandbits_c
+
+  self: self(type="RandomObject *")
+  n: 'O'
+  /
+
+_randbelow_with_getrandbits_c(n) -> x.  Return a random int in the range [0,n).  Defined for n > 0.
+[clinic start generated code]*/
+
+static PyObject *
+_random_Random__randbelow_with_getrandbits_c_impl(RandomObject *self,
+                                                  PyObject *n)
+/*[clinic end generated code: output=824dcb43ea0a3784 input=f95ca76a4062a157]*/
+{
+    PyObject *m = _PyNumber_Index(n);
+    if (m==NULL) {
+        return NULL;
+    }
+    int64_t k = _PyLong_NumBits(m);
+    // for k <= 32 (or 64) we could have a fast path working internally with C ints
+
+    PyObject *r = _random_Random_getrandbits_impl(self, k);
+    while(1) {
+        if (r==NULL) {
+            Py_DECREF(m);
+            return NULL;
+        }
+        int c = PyObject_RichCompareBool(r, m, Py_GE);
+        if (c==-1) {
+            // error, bail out
+            Py_DECREF(m);
+            Py_DECREF(r);
+            return NULL;
+        }
+        // success
+        if (c==0) {
+            break;
+        }
+        // try again
+        Py_DECREF(r);
+        r = _random_Random_getrandbits_impl(self, k);
+    }
+    Py_DECREF(m);
+    return r;
+}
+
 static int
 random_init(RandomObject *self, PyObject *args, PyObject *kwds)
 {
@@ -580,6 +629,7 @@ static PyMethodDef random_methods[] = {
     _RANDOM_RANDOM_GETSTATE_METHODDEF
     _RANDOM_RANDOM_SETSTATE_METHODDEF
     _RANDOM_RANDOM_GETRANDBITS_METHODDEF
+    _RANDOM_RANDOM__RANDBELOW_WITH_GETRANDBITS_C_METHODDEF
     {NULL,              NULL}           /* sentinel */
 };
 
