@@ -79,8 +79,11 @@ typedef struct _object_stats {
     uint64_t allocations4k;
     uint64_t allocations_big;
     uint64_t frees;
+    uint64_t frees_exact_int;
     uint64_t to_freelist;
+    //uint64_t to_freelist_exact_int;
     uint64_t from_freelist;
+    //uint64_t from_freelist_exact_int;
     uint64_t inline_values;
     uint64_t dict_materialized_on_request;
     uint64_t dict_materialized_new_key;

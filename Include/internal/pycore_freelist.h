@@ -51,6 +51,9 @@ static inline int
 _PyFreeList_Push(struct _Py_freelist *fl, void *obj, Py_ssize_t maxsize)
 {
     if (fl->size < maxsize && fl->size >= 0) {
+        if (PyLong_CheckExact(obj)) {
+        //    OBJECT_STAT_INC(to_freelist_exact_int);
+        }
         *(void **)obj = fl->freelist;
         fl->freelist = obj;
         fl->size++;
@@ -98,6 +101,9 @@ _PyFreeList_PopMem(struct _Py_freelist *fl)
     void *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
         OBJECT_STAT_INC(from_freelist);
+        //if (PyLong_CheckExact(op)) {
+        //    OBJECT_STAT_INC(from_freelist_exact_int);
+        //}
     }
     return op;
 }

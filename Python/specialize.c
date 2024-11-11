@@ -198,12 +198,15 @@ static void
 print_object_stats(FILE *out, ObjectStats *stats)
 {
     fprintf(out, "Object allocations from freelist: %" PRIu64 "\n", stats->from_freelist);
+    //fprintf(out, "Object allocations from freelist for exact int: %" PRIu64 "\n", stats->from_freelist_exact_int);
     fprintf(out, "Object frees to freelist: %" PRIu64 "\n", stats->to_freelist);
+    //fprintf(out, "Object frees to freelist from exact int: %" PRIu64 "\n", stats->to_freelist_exact_int);
     fprintf(out, "Object allocations: %" PRIu64 "\n", stats->allocations);
     fprintf(out, "Object allocations to 512 bytes: %" PRIu64 "\n", stats->allocations512);
     fprintf(out, "Object allocations to 4 kbytes: %" PRIu64 "\n", stats->allocations4k);
     fprintf(out, "Object allocations over 4 kbytes: %" PRIu64 "\n", stats->allocations_big);
     fprintf(out, "Object frees: %" PRIu64 "\n", stats->frees);
+    fprintf(out, "Object frees exact int: %" PRIu64 "\n", stats->frees_exact_int);
     fprintf(out, "Object inline values: %" PRIu64 "\n", stats->inline_values);
     fprintf(out, "Object interpreter mortal increfs: %" PRIu64 "\n", stats->interpreter_increfs);
     fprintf(out, "Object interpreter mortal decrefs: %" PRIu64 "\n", stats->interpreter_decrefs);

@@ -3596,6 +3596,9 @@ long_dealloc(PyObject *self)
             }
         }
     }
+    if (PyLong_CheckExact(self)) {
+            OBJECT_STAT_INC(frees_exact_int);
+        }
     Py_TYPE(self)->tp_free(self);
 }
 
