@@ -3947,6 +3947,8 @@ list_iter(PyObject *seq)
         if (it == NULL) {
             return NULL;
         }
+    } else {
+        Py_SET_TYPE(it, &PyListIter_Type);
     }
     it->it_index = 0;
     it->it_seq = (PyListObject *)Py_NewRef(seq);
@@ -3960,7 +3962,6 @@ listiter_dealloc(PyObject *self)
     _PyListIterObject *it = (_PyListIterObject *)self;
     _PyObject_GC_UNTRACK(it);
     Py_XDECREF(it->it_seq);
-    assert(Py_IS_TYPE(self, &PyListIter_Type));
     _Py_FREELIST_FREE(list_iters, it, PyObject_GC_Del);
 }
 
