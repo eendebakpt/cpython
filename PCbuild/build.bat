@@ -190,8 +190,12 @@ echo on
  /p:UseTestMarker=%UseTestMarker% %GITProperty%^
  /p:UseJIT=%UseJIT%^
  /p:UseTIER2=%UseTIER2%^
+<<<<<<< HEAD
  /p:PyStats=%PyStats%^
  /p:UseTailCallInterp=%UseTailCallInterp%^
+=======
+ /p:Py_Stats=%Py_Stats%^
+>>>>>>> c01b70a4e77 (Enable PyStats collection on windows)
  %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 @echo off
