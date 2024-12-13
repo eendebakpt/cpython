@@ -972,6 +972,18 @@ void PyMem_RawFree(void *ptr)
 }
 
 
+inline void OBJECT_STAT_ALLOCATION_SIZE(size_t size)
+{
+#ifdef Py_STATS
+    size_t bin = size;
+    if (bin>=128)
+        bin = 127;
+     if (_Py_stats ) {
+         _Py_stats->object_stats.allocation_size[bin]++;
+    }
+#endif
+}
+
 /***********************/
 /* the "mem" allocator */
 /***********************/
@@ -982,6 +994,7 @@ PyMem_Malloc(size_t size)
     /* see PyMem_RawMalloc() */
     if (size > (size_t)PY_SSIZE_T_MAX)
         return NULL;
+    OBJECT_STAT_ALLOCATION_SIZE(size);
     OBJECT_STAT_INC_COND(allocations512, size < 512);
     OBJECT_STAT_INC_COND(allocations4k, size >= 512 && size < 4094);
     OBJECT_STAT_INC_COND(allocations_big, size >= 4094);
@@ -995,6 +1008,7 @@ PyMem_Calloc(size_t nelem, size_t elsize)
     /* see PyMem_RawMalloc() */
     if (elsize != 0 && nelem > (size_t)PY_SSIZE_T_MAX / elsize)
         return NULL;
+    OBJECT_STAT_ALLOCATION_SIZE(elsize);
     OBJECT_STAT_INC_COND(allocations512, elsize < 512);
     OBJECT_STAT_INC_COND(allocations4k, elsize >= 512 && elsize < 4094);
     OBJECT_STAT_INC_COND(allocations_big, elsize >= 4094);
