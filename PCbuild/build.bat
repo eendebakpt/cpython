@@ -39,7 +39,7 @@ echo.  --regen        Regenerate all opcodes, grammar and tokens.
 echo.  --experimental-jit          Enable the experimental just-in-time compiler.
 echo.  --experimental-jit-off      Ditto but off by default (PYTHON_JIT=1 enables).
 echo.  --experimental-jit-interpreter  Enable the experimental Tier 2 interpreter.
-echo.  --pystats      Enable PyStats collection.
+echo.  --pystats  Enable PyStats collection.
 echo.
 echo.Available flags to avoid building certain modules.
 echo.These flags have no effect if '-e' is not given:
@@ -188,7 +188,7 @@ echo on
  /p:UseTestMarker=%UseTestMarker% %GITProperty%^
  /p:UseJIT=%UseJIT%^
  /p:UseTIER2=%UseTIER2%^
- /p:PyStats=%PyStats%^
+ /p:Py_Stats=%Py_Stats%^
  %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 @echo off
