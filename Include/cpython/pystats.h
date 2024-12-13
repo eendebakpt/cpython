@@ -84,6 +84,7 @@ typedef struct _object_stats {
     uint64_t allocations512;
     uint64_t allocations4k;
     uint64_t allocations_big;
+    uint64_t allocation_size[128];
     uint64_t frees;
     uint64_t to_freelist;
     uint64_t from_freelist;

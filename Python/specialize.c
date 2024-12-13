@@ -203,6 +203,10 @@ print_object_stats(FILE *out, ObjectStats *stats)
     fprintf(out, "Object allocations to 512 bytes: %" PRIu64 "\n", stats->allocations512);
     fprintf(out, "Object allocations to 4 kbytes: %" PRIu64 "\n", stats->allocations4k);
     fprintf(out, "Object allocations over 4 kbytes: %" PRIu64 "\n", stats->allocations_big);
+    for(int i=0; i<127; i++) {
+        fprintf(out, "Object allocations of size %d bytes: %" PRIu64 "\n", i, stats->allocation_size[i]);
+    }
+    fprintf(out, "Object allocations of size %d or more bytes: %" PRIu64 "\n", 127, stats->allocation_size[127]);
     fprintf(out, "Object frees: %" PRIu64 "\n", stats->frees);
     fprintf(out, "Object inline values: %" PRIu64 "\n", stats->inline_values);
     fprintf(out, "Object interpreter mortal increfs: %" PRIu64 "\n", stats->interpreter_increfs);
