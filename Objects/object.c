@@ -530,9 +530,36 @@ PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)
     return op;
 }
 
+#include <string.h>
+int _find_object_stat_type_index(PyTypeObject *tp)
+{
+#ifdef Py_STATS
+
+    assert ( strlen(tp->tp_name) < ALLOCATION_STATS_TYPE_MAX_NAME_SIZE);
+    for(int i =0; i<_Py_stats->object_stats.allocation_type_n; i++) {
+        if strcmp(tp->tp_name, _Py_stats->object_stats.allocation_type_names[i]) {
+            return idx;
+        }
+    }
+    return ALLOCATION_STATS_TYPE_MAX-1;
+#endif
+    return -1;
+}
+void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp)
+{
+    //printf("OBJECT_STAT_ALLOCATION_TYPE: %s\n", tp->tp_name);
+
+#ifdef Py_STATS
+    _Py_stats->object_stats.allocation_type_n;
+    _Py_stats->object_stats.allocation_type_names;
+
+#endif
+}
+
 PyObject *
 _PyObject_New(PyTypeObject *tp)
 {
+    OBJECT_STAT_ALLOCATION_TYPE(tp);
     PyObject *op = (PyObject *) PyObject_Malloc(_PyObject_SIZE(tp));
     if (op == NULL) {
         return PyErr_NoMemory();

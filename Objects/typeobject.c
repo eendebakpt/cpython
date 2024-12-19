@@ -2256,6 +2256,8 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
 PyObject *
 PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 {
+    //printf("PyType_GenericAlloc: %s\n", type->tp_name);
+    OBJECT_STAT_ALLOCATION_TYPE(type);
     PyObject *obj = _PyType_AllocNoTrack(type, nitems);
     if (obj == NULL) {
         return NULL;
