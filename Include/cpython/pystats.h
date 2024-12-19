@@ -47,6 +47,8 @@
 
 #define EVAL_CALL_KINDS 10
 
+#include "ht.h"
+
 typedef struct _specialization_stats {
     uint64_t success;
     uint64_t failure;
@@ -71,6 +73,9 @@ typedef struct _call_stats {
     uint64_t eval_calls[EVAL_CALL_KINDS];
 } CallStats;
 
+#define ALLOCATION_STATS_TYPE_MAX 2000
+#define ALLOCATION_STATS_TYPE_MAX_NAME_SIZE 1024
+
 typedef struct _object_stats {
     uint64_t increfs;
     uint64_t decrefs;
@@ -85,6 +90,9 @@ typedef struct _object_stats {
     uint64_t allocations4k;
     uint64_t allocations_big;
     uint64_t allocation_size[128];
+    uint64_t allocation_type_n;
+    char* allocation_type_names[ALLOCATION_STATS_TYPE_MAX][ALLOCATION_STATS_TYPE_MAX_NAME_SIZE];
+    ht* allocation_table;
     uint64_t frees;
     uint64_t to_freelist;
     uint64_t from_freelist;
