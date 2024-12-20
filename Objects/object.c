@@ -529,31 +529,73 @@ PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)
     _PyObject_InitVar(op, tp, size);
     return op;
 }
-
+#include <stdio.h>
 #include <string.h>
+
 int _find_object_stat_type_index(PyTypeObject *tp)
 {
 #ifdef Py_STATS
 
     assert ( strlen(tp->tp_name) < ALLOCATION_STATS_TYPE_MAX_NAME_SIZE);
-    for(int i =0; i<_Py_stats->object_stats.allocation_type_n; i++) {
-        if strcmp(tp->tp_name, _Py_stats->object_stats.allocation_type_names[i]) {
-            return idx;
-        }
-    }
-    return ALLOCATION_STATS_TYPE_MAX-1;
+   // for(int i =0; i<_Py_stats->object_stats.allocation_type_n; i++) {
+    //    if (strcmp(tp->tp_name, _Py_stats->object_stats.allocation_type_names[i])) {
+    //        return i;
+     //   }
+   // }
+    //return ALLOCATION_STATS_TYPE_MAX-1;
 #endif
     return -1;
 }
+
+
+
+
+void _guard_table()
+{
+    if (_Py_stats->object_stats.allocation_table==NULL) {
+        _Py_stats->object_stats.allocation_table = ht_create();
+        if (_Py_stats->object_stats.allocation_table==NULL) {
+            printf("_guard_table: allocation failed\n");
+        }
+
+    }
+}
+
+void table_exit_nomem(void) {
+    fprintf(stderr, "hash_table: out of memory or other failure\n");
+    exit(1);
+}
+
+void hash_table_inc(ht *table, const char *key)
+{
+    _guard_table();
+
+    printf("hash_table_inc: %s\n", key);
+
+    void *value = ht_get(table, key);
+    if (value != NULL) {
+            // Already exists, increment int that value points to.
+            int* pcount = (int*)value;
+            (*pcount)++;
+            return;
+    }
+    int* pcount = malloc(sizeof(int));
+    if (pcount == NULL) {
+        table_exit_nomem();
+    }
+    *pcount = 1;
+    if (ht_set(table, key, pcount) == NULL) {
+        table_exit_nomem();
+    }
+}
+
 void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp)
 {
+    return;
+    _guard_table();
+    hash_table_inc(_Py_stats->object_stats.allocation_table, tp->tp_name);
     //printf("OBJECT_STAT_ALLOCATION_TYPE: %s\n", tp->tp_name);
 
-#ifdef Py_STATS
-    _Py_stats->object_stats.allocation_type_n;
-    _Py_stats->object_stats.allocation_type_names;
-
-#endif
 }
 
 PyObject *

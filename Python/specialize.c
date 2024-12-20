@@ -194,6 +194,8 @@ print_call_stats(FILE *out, CallStats *stats)
     }
 }
 
+#include "ht.h"
+
 static void
 print_object_stats(FILE *out, ObjectStats *stats)
 {
@@ -226,6 +228,8 @@ print_object_stats(FILE *out, ObjectStats *stats)
     fprintf(out, "Object method cache collisions: %" PRIu64 "\n", stats->type_cache_collisions);
     fprintf(out, "Object method cache dunder hits: %" PRIu64 "\n", stats->type_cache_dunder_hits);
     fprintf(out, "Object method cache dunder misses: %" PRIu64 "\n", stats->type_cache_dunder_misses);
+
+    //show_hash_table_int(stats->allocation_table);
 }
 
 static void
