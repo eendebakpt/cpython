@@ -337,14 +337,14 @@ print_rare_event_stats(FILE *out, RareEventStats *stats)
 static void
 print_stats(FILE *out, PyStats *stats)
 {
-    //print_spec_stats(out, stats->opcode_stats);
+    print_spec_stats(out, stats->opcode_stats);
     print_call_stats(out, &stats->call_stats);
     print_object_stats(out, &stats->object_stats);
     print_gc_stats(out, stats->gc_stats);
 #ifdef _Py_TIER2
-    //print_optimization_stats(out, &stats->optimization_stats);
+    print_optimization_stats(out, &stats->optimization_stats);
 #endif
-    //print_rare_event_stats(out, &stats->rare_event_stats);
+    print_rare_event_stats(out, &stats->rare_event_stats);
 
 #ifdef Py_STATS
     PyStats *_Py_stats = get_pystats();
