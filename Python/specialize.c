@@ -337,7 +337,6 @@ print_rare_event_stats(FILE *out, RareEventStats *stats)
 static void
 print_stats(FILE *out, PyStats *stats)
 {
-    printf("Print stats:\n");
     //print_spec_stats(out, stats->opcode_stats);
     print_call_stats(out, &stats->call_stats);
     print_object_stats(out, &stats->object_stats);
@@ -351,9 +350,8 @@ print_stats(FILE *out, PyStats *stats)
     PyStats *_Py_stats = get_pystats();
 
     if (_Py_stats) {
-            printf("show hash table\n");
         _guard_stats_table();
-        show_hash_table_int(_Py_stats->object_stats.allocation_table);
+        show_hash_table_int(_Py_stats->object_stats.allocation_table, out);
     }
 #endif
 }
