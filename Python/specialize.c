@@ -29,6 +29,9 @@ GCStats _py_gc_stats[NUM_GENERATIONS] = { 0 };
 static PyStats _Py_stats_struct = { .gc_stats = _py_gc_stats };
 PyStats *_Py_stats = NULL;
 
+PyStats *get_pystats() {
+    return _Py_stats;
+}
 #if PYSTATS_MAX_UOP_ID < MAX_UOP_ID
 #error "Not enough space allocated for pystats. Increase PYSTATS_MAX_UOP_ID to at least MAX_UOP_ID"
 #endif
@@ -206,7 +209,9 @@ print_object_stats(FILE *out, ObjectStats *stats)
     fprintf(out, "Object allocations to 4 kbytes: %" PRIu64 "\n", stats->allocations4k);
     fprintf(out, "Object allocations over 4 kbytes: %" PRIu64 "\n", stats->allocations_big);
     for(int i=0; i<127; i++) {
+        if (stats->allocation_size[i]) {
         fprintf(out, "Object allocations of size %d bytes: %" PRIu64 "\n", i, stats->allocation_size[i]);
+        }
     }
     fprintf(out, "Object allocations of size %d or more bytes: %" PRIu64 "\n", 127, stats->allocation_size[127]);
     fprintf(out, "Object frees: %" PRIu64 "\n", stats->frees);
@@ -228,8 +233,6 @@ print_object_stats(FILE *out, ObjectStats *stats)
     fprintf(out, "Object method cache collisions: %" PRIu64 "\n", stats->type_cache_collisions);
     fprintf(out, "Object method cache dunder hits: %" PRIu64 "\n", stats->type_cache_dunder_hits);
     fprintf(out, "Object method cache dunder misses: %" PRIu64 "\n", stats->type_cache_dunder_misses);
-
-    //show_hash_table_int(stats->allocation_table);
 }
 
 static void
@@ -334,14 +337,25 @@ print_rare_event_stats(FILE *out, RareEventStats *stats)
 static void
 print_stats(FILE *out, PyStats *stats)
 {
-    print_spec_stats(out, stats->opcode_stats);
+    printf("Print stats:\n");
+    //print_spec_stats(out, stats->opcode_stats);
     print_call_stats(out, &stats->call_stats);
     print_object_stats(out, &stats->object_stats);
     print_gc_stats(out, stats->gc_stats);
 #ifdef _Py_TIER2
-    print_optimization_stats(out, &stats->optimization_stats);
+    //print_optimization_stats(out, &stats->optimization_stats);
 #endif
-    print_rare_event_stats(out, &stats->rare_event_stats);
+    //print_rare_event_stats(out, &stats->rare_event_stats);
+
+#ifdef Py_STATS
+    PyStats *_Py_stats = get_pystats();
+
+    if (_Py_stats) {
+            printf("show hash table\n");
+        _guard_stats_table();
+        show_hash_table_int(_Py_stats->object_stats.allocation_table);
+    }
+#endif
 }
 
 void

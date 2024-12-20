@@ -90,8 +90,6 @@ typedef struct _object_stats {
     uint64_t allocations4k;
     uint64_t allocations_big;
     uint64_t allocation_size[128];
-    uint64_t allocation_type_n;
-    char* allocation_type_names[ALLOCATION_STATS_TYPE_MAX][ALLOCATION_STATS_TYPE_MAX_NAME_SIZE];
     ht* allocation_table;
     uint64_t frees;
     uint64_t to_freelist;
@@ -180,6 +178,10 @@ typedef struct _stats {
 
 // Export for shared extensions like 'math'
 PyAPI_DATA(PyStats*) _Py_stats;
+
+PyStats *get_pystats();
+void OBJECT_STAT_INCREMENT(const char *tag);
+void _guard_stats_table();
 
 #ifdef _PY_INTERPRETER
 #  define _Py_INCREF_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.interpreter_increfs++; } while (0)

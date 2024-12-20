@@ -548,54 +548,53 @@ int _find_object_stat_type_index(PyTypeObject *tp)
 }
 
 
+#include "pystats.h"
 
-
-void _guard_table()
+void _guard_stats_table()
 {
-    if (_Py_stats->object_stats.allocation_table==NULL) {
-        _Py_stats->object_stats.allocation_table = ht_create();
+    PyStats *_Py_stats = get_pystats();
+    if (_Py_stats) {
+        //printf("_Py_stats %p _Py_stats->object_stats.allocation_table %p\n", _Py_stats, _Py_stats); //->object_stats.allocation_table);
+        //printf("_guard_stats_table: %ld\n", (long)_Py_stats->object_stats.allocation_table);
         if (_Py_stats->object_stats.allocation_table==NULL) {
-            printf("_guard_table: allocation failed\n");
-        }
+            _Py_stats->object_stats.allocation_table = ht_create();
+            if (_Py_stats->object_stats.allocation_table==NULL) {
+                printf("_guard_stats_table: allocation failed\n");
+            } else {
+               // printf("_guard_stats_table: created allocation_table\n");
+            }
 
+        }
     }
+
 }
+
+void OBJECT_STAT_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        _guard_stats_table();
+        //printf("OBJECT_STAT_INCREMENT: %s\n", tag);
+        hash_table_inc(_Py_stats->object_stats.allocation_table, tag);
+    }
+#endif
+}
+
 
 void table_exit_nomem(void) {
     fprintf(stderr, "hash_table: out of memory or other failure\n");
     exit(1);
 }
 
-void hash_table_inc(ht *table, const char *key)
-{
-    _guard_table();
 
-    printf("hash_table_inc: %s\n", key);
+#include "pystats.h"
 
-    void *value = ht_get(table, key);
-    if (value != NULL) {
-            // Already exists, increment int that value points to.
-            int* pcount = (int*)value;
-            (*pcount)++;
-            return;
-    }
-    int* pcount = malloc(sizeof(int));
-    if (pcount == NULL) {
-        table_exit_nomem();
-    }
-    *pcount = 1;
-    if (ht_set(table, key, pcount) == NULL) {
-        table_exit_nomem();
-    }
-}
 
 void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp)
 {
-    return;
-    _guard_table();
-    hash_table_inc(_Py_stats->object_stats.allocation_table, tp->tp_name);
-    //printf("OBJECT_STAT_ALLOCATION_TYPE: %s\n", tp->tp_name);
-
+#ifdef Py_STATS
+    OBJECT_STAT_INCREMENT(tp->tp_name);
+#endif
 }
 
 PyObject *
@@ -613,6 +612,8 @@ _PyObject_New(PyTypeObject *tp)
 PyVarObject *
 _PyObject_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
 {
+    OBJECT_STAT_ALLOCATION_TYPE(tp);
+
     PyVarObject *op;
     const size_t size = _PyObject_VAR_SIZE(tp, nitems);
     op = (PyVarObject *) PyObject_Malloc(size);
