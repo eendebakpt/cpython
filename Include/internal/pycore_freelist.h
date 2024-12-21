@@ -43,7 +43,7 @@ _Py_freelists_GET(void)
 // Pops a non-PyObject data structure from the freelist, returns NULL if the
 // freelist is empty.
 #define _Py_FREELIST_POP_MEM(NAME) \
-    _PyFreeList_PopMem(&_Py_freelists_GET()->NAME)
+    _PyFreeList_PopMem(&_Py_freelists_GET()->NAME, #NAME)
 
 #define _Py_FREELIST_SIZE(NAME) (int)((_Py_freelists_GET()->NAME).size)
 
@@ -81,7 +81,7 @@ _PyFreeList_PopNoStats(struct _Py_freelist *fl)
     return obj;
 }
 
-#include "pystats.h"
+void OBJECT_STAT_INCREMENT(const char *tag);
 
 static inline PyObject *
 _PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
@@ -89,9 +89,7 @@ _PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
     PyObject *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
 #ifdef Py_STATS
-        char freelist_tag[200] = "freelist_";
-        strncat(freelist_tag, name, 200-8-1);
-        //OBJECT_STAT_INCREMENT(freelist_tag);
+        OBJECT_STAT_FREELIST_INCREMENT(name);
 #endif
         OBJECT_STAT_INC(from_freelist);
         _Py_NewReference(op);
@@ -100,10 +98,13 @@ _PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
 }
 
 static inline void *
-_PyFreeList_PopMem(struct _Py_freelist *fl)
+_PyFreeList_PopMem(struct _Py_freelist *fl, const char *name)
 {
     void *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
+#ifdef Py_STATS
+        OBJECT_STAT_FREELIST_INCREMENT(name);
+#endif
         OBJECT_STAT_INC(from_freelist);
     }
     return op;

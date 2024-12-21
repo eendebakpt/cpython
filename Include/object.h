@@ -4,7 +4,6 @@
 extern "C" {
 #endif
 
-
 /* Object and type object interface */
 
 /*

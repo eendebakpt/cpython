@@ -531,42 +531,21 @@ PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)
 }
 #include <stdio.h>
 #include <string.h>
-
-int _find_object_stat_type_index(PyTypeObject *tp)
-{
-#ifdef Py_STATS
-
-    assert ( strlen(tp->tp_name) < ALLOCATION_STATS_TYPE_MAX_NAME_SIZE);
-   // for(int i =0; i<_Py_stats->object_stats.allocation_type_n; i++) {
-    //    if (strcmp(tp->tp_name, _Py_stats->object_stats.allocation_type_names[i])) {
-    //        return i;
-     //   }
-   // }
-    //return ALLOCATION_STATS_TYPE_MAX-1;
-#endif
-    return -1;
-}
-
-
 #include "pystats.h"
 
 void _guard_stats_table()
 {
+#ifdef Py_STATS
     PyStats *_Py_stats = get_pystats();
     if (_Py_stats) {
-        //printf("_Py_stats %p _Py_stats->object_stats.allocation_table %p\n", _Py_stats, _Py_stats); //->object_stats.allocation_table);
-        //printf("_guard_stats_table: %ld\n", (long)_Py_stats->object_stats.allocation_table);
         if (_Py_stats->object_stats.allocation_table==NULL) {
             _Py_stats->object_stats.allocation_table = ht_create();
             if (_Py_stats->object_stats.allocation_table==NULL) {
                 printf("_guard_stats_table: allocation failed\n");
-            } else {
-               // printf("_guard_stats_table: created allocation_table\n");
             }
-
         }
     }
-
+#endif
 }
 
 void OBJECT_STAT_INCREMENT(const char *tag)
@@ -580,6 +559,16 @@ void OBJECT_STAT_INCREMENT(const char *tag)
 #endif
 }
 
+void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        char freelist_tag[200] = "freelist_";
+        strncat(freelist_tag, tag, 200-9-1);
+        OBJECT_STAT_INCREMENT(freelist_tag);
+    }
+#endif
+}
 
 void table_exit_nomem(void) {
     fprintf(stderr, "hash_table: out of memory or other failure\n");
