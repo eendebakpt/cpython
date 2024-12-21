@@ -38,7 +38,7 @@ _Py_freelists_GET(void)
 
 // Pops a PyObject from the freelist, returns NULL if the freelist is empty.
 #define _Py_FREELIST_POP(TYPE, NAME) \
-    _Py_CAST(TYPE*, _PyFreeList_Pop(&_Py_freelists_GET()->NAME))
+    _Py_CAST(TYPE*, _PyFreeList_Pop(&_Py_freelists_GET()->NAME, #NAME))
 
 // Pops a non-PyObject data structure from the freelist, returns NULL if the
 // freelist is empty.
@@ -81,11 +81,18 @@ _PyFreeList_PopNoStats(struct _Py_freelist *fl)
     return obj;
 }
 
+#include "pystats.h"
+
 static inline PyObject *
-_PyFreeList_Pop(struct _Py_freelist *fl)
+_PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
 {
     PyObject *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
+#ifdef Py_STATS
+        char freelist_tag[200] = "freelist_";
+        strncat(freelist_tag, name, 200-8-1);
+        //OBJECT_STAT_INCREMENT(freelist_tag);
+#endif
         OBJECT_STAT_INC(from_freelist);
         _Py_NewReference(op);
     }
