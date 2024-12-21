@@ -73,9 +73,6 @@ typedef struct _call_stats {
     uint64_t eval_calls[EVAL_CALL_KINDS];
 } CallStats;
 
-#define ALLOCATION_STATS_TYPE_MAX 2000
-#define ALLOCATION_STATS_TYPE_MAX_NAME_SIZE 1024
-
 typedef struct _object_stats {
     uint64_t increfs;
     uint64_t decrefs;
@@ -190,6 +187,7 @@ PyAPI_DATA(PyStats*) _Py_stats;
 
 PyStats *get_pystats();
 void OBJECT_STAT_INCREMENT(const char *tag);
+void OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
 void _guard_stats_table();
 
 #ifdef _PY_INTERPRETER
