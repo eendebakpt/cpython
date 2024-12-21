@@ -82,6 +82,7 @@ _PyFreeList_PopNoStats(struct _Py_freelist *fl)
 }
 
 void OBJECT_STAT_INCREMENT(const char *tag);
+void OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
 
 static inline PyObject *
 _PyFreeList_Pop(struct _Py_freelist *fl, const char *name)

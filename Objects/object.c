@@ -560,35 +560,6 @@ void _guard_stats_table()
 #endif
 }
 
-void OBJECT_STAT_INCREMENT(const char *tag)
-{
-#ifdef Py_STATS
-    if (_Py_stats) {
-        _guard_stats_table();
-        //printf("OBJECT_STAT_INCREMENT: %s\n", tag);
-        hash_table_inc(_Py_stats->object_stats.allocation_table, tag);
-    }
-#endif
-}
-
-void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
-{
-#ifdef Py_STATS
-    if (_Py_stats) {
-        char freelist_tag[200] = "freelist_";
-        strncat(freelist_tag, tag, 200-9-1);
-        OBJECT_STAT_INCREMENT(freelist_tag);
-    }
-#endif
-}
-
-void table_exit_nomem(void) {
-    fprintf(stderr, "hash_table: out of memory or other failure\n");
-    exit(1);
-}
-
-
-#include "pystats.h"
 
 
 void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp)

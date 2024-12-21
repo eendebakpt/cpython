@@ -30,6 +30,28 @@ static void _PyMem_mi_heap_collect_qsbr(mi_heap_t *heap);
 #undef  uint
 #define uint pymem_uint
 
+/* stats stuff, where to put in otherwise? */
+void OBJECT_STAT_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        _guard_stats_table();
+        //printf("OBJECT_STAT_INCREMENT: %s\n", tag);
+        hash_table_inc(_Py_stats->object_stats.allocation_table, tag);
+    }
+#endif
+}
+
+void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        char freelist_tag[200] = "freelist_";
+        strncat(freelist_tag, tag, 200-9-1);
+        OBJECT_STAT_INCREMENT(freelist_tag);
+    }
+#endif
+}
 
 /* Defined in tracemalloc.c */
 extern void _PyMem_DumpTraceback(int fd, const void *ptr);
