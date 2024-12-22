@@ -880,7 +880,6 @@ rangeiter_setstate(_PyRangeIterObject *r, PyObject *state)
     Py_RETURN_NONE;
 }
 
-
 PyDoc_STRVAR(reduce_doc, "Return state information for pickling.");
 PyDoc_STRVAR(setstate_doc, "Set state information for unpickling.");
 
