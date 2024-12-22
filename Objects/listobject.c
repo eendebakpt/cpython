@@ -3937,6 +3937,8 @@ PyTypeObject PyListIter_Type = {
 static PyObject *
 list_iter(PyObject *seq)
 {
+    _PyListIterObject *it;
+
     if (!PyList_Check(seq)) {
         PyErr_BadInternalCall();
         return NULL;

@@ -994,12 +994,16 @@ tupleiter_dealloc(PyObject *self)
     _PyObject_GC_UNTRACK(it);
     Py_XDECREF(it->it_seq);
 <<<<<<< HEAD
+<<<<<<< HEAD
     assert(Py_IS_TYPE(self, &PyTupleIter_Type));
     _Py_FREELIST_FREE(tuple_iters, it, PyObject_GC_Del);
 =======
     assert(sizeof(_PyTupleIterObject)==sizeof(_PyListIterObject));
     _Py_FREELIST_FREE(shared_iters, it, PyObject_GC_Del);
 >>>>>>> 148ff4c1d57 (set types)
+=======
+    PyObject_GC_Del(it);
+>>>>>>> 052faee33d0 (cleanup)
 }
 
 static int
@@ -1148,13 +1152,9 @@ tuple_iter(PyObject *seq)
     }
     _PyTupleIterObject *it = _Py_FREELIST_POP(_PyTupleIterObject, tuple_iters);
 
-    if (it == NULL) {
-        it = PyObject_GC_New(_PyTupleIterObject, &PyTupleIter_Type);
-        if (it == NULL)
-            return NULL;
-    } else {
-        Py_SET_TYPE(it, &PyTupleIter_Type);
-    }
+    it = PyObject_GC_New(_PyTupleIterObject, &PyTupleIter_Type);
+    if (it == NULL)
+        return NULL;
     it->it_index = 0;
     it->it_seq = (PyTupleObject *)Py_NewRef(seq);
     _PyObject_GC_TRACK(it);
