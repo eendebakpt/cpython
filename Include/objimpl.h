@@ -140,7 +140,6 @@ PyAPI_FUNC(PyVarObject *) _PyObject_NewVar(PyTypeObject *, Py_ssize_t);
 // directly PyObject_MALLOC() with _PyObject_VAR_SIZE().
 #define PyObject_NEW_VAR(type, typeobj, n) PyObject_NewVar(type, (typeobj), (n))
 
-void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp);
 
 /*
  * Garbage Collection Support
