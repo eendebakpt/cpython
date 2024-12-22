@@ -46,9 +46,20 @@ void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
 {
 #ifdef Py_STATS
     if (_Py_stats) {
-        char freelist_tag[200] = "freelist_";
+        char freelist_tag[200] = "Freelist allocate type #";
         strncat(freelist_tag, tag, 200-9-1);
         OBJECT_STAT_INCREMENT(freelist_tag);
+    }
+#endif
+}
+
+void OBJECT_STAT_ALLOC_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        char sub_tag[200] = "Allocate type #";
+        strncat(sub_tag, tag, 200-6-1);
+        OBJECT_STAT_INCREMENT(sub_tag);
     }
 #endif
 }

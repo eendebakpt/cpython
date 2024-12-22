@@ -190,7 +190,7 @@ long_alloc(Py_ssize_t size)
        sizeof() instead of the offsetof, but this risks being
        incorrect in the presence of padding between the header
        and the digits. */
-    OBJECT_STAT_INCREMENT("_PyLong_New");
+    OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New");
     result = PyObject_Malloc(offsetof(PyLongObject, long_value.ob_digit) +
                              ndigits*sizeof(digit));
     if (!result) {

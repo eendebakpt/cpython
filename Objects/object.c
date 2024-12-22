@@ -561,11 +561,10 @@ void _guard_stats_table()
 }
 
 
-
 void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp)
 {
 #ifdef Py_STATS
-    OBJECT_STAT_INCREMENT(tp->tp_name);
+    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name);
 #endif
 }
 
