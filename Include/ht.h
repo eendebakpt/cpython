@@ -61,7 +61,7 @@ inline void ht_destroy(ht* table) {
 
 // Return 64-bit FNV-1a hash for key (NUL-terminated). See description:
 // https://en.wikipedia.org/wiki/Fowler–Noll–Vo_hash_function
-static uint64_t hash_key(const char* key) {
+inline uint64_t hash_key(const char* key) {
     uint64_t hash = FNV_OFFSET;
     for (const char* p = key; *p; p++) {
         hash ^= (uint64_t)(unsigned char)(*p);
@@ -115,7 +115,7 @@ inline  const char* ht_set_entry(ht_entry* entries, size_t capacity,
 
     // Didn't find key, allocate+copy if needed, then insert it.
     if (plength != NULL) {
-        key = _strdup(key);
+        key = strdup(key);
         if (key == NULL) {
             return NULL;
         }
@@ -211,16 +211,15 @@ inline int ht_next(hti* it) {
     return 0;
 }
 
-inline void ht_exit_nomem(void) {
+static inline void ht_exit_nomem(void) {
     fprintf(stderr, "hash_table: out of memory or other failure\n");
     exit(1);
 }
 
-inline void show_hash_table_int(ht *table, FILE *out) {
+static inline void show_hash_table_int(ht *table, FILE *out) {
     assert (table);
     // Calculate average probe length.
     hti it = ht_iterator(table);
-    size_t total_probes = 0;
     while (ht_next(&it)) {
         if (out==0) {
             printf("%s: %d\n", it.key, *(int*) it.value);
@@ -231,18 +230,16 @@ inline void show_hash_table_int(ht *table, FILE *out) {
     }
 }
 
-inline void show_hash_table_float(ht *table) {
+static inline void show_hash_table_float(ht *table) {
     assert (table);
     hti it = ht_iterator(table);
-    size_t total_probes = 0;
     while (ht_next(&it)) {
         printf("%s: %f\n", it.key, *(float *)(it.value));
     }
 }
 
-inline void hash_table_inc(ht *table, const char *key)
+static inline void hash_table_inc(ht *table, const char *key)
 {
-
     void *value = ht_get(table, key);
     if (value != NULL) {
             // Already exists, increment int that value points to.

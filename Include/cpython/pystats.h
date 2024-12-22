@@ -176,10 +176,11 @@ typedef struct _stats {
 // Export for shared extensions like 'math'
 PyAPI_DATA(PyStats*) _Py_stats;
 
-PyStats *get_pystats();
-void OBJECT_STAT_INCREMENT(const char *tag);
-void OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
-void _guard_stats_table();
+PyAPI_FUNC(PyStats *) get_pystats(void);
+PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag);
+PyAPI_FUNC(void) _guard_stats_table(void);
 
 #ifdef _PY_INTERPRETER
 #  define _Py_INCREF_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.interpreter_increfs++; } while (0)

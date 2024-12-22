@@ -346,10 +346,13 @@ print_stats(FILE *out, PyStats *stats)
 #endif
     print_rare_event_stats(out, &stats->rare_event_stats);
 
+    printf("print_stats!\n");
 #ifdef Py_STATS
     PyStats *_Py_stats = get_pystats();
+    printf("print_stats! 2\n");
 
     if (_Py_stats) {
+        printf("print_stats! 4\n");
         _guard_stats_table();
         show_hash_table_int(_Py_stats->object_stats.allocation_table, out);
     }
