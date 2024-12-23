@@ -3653,7 +3653,11 @@ long_dealloc(PyObject *self)
 {
     assert(self);
     if (_PyLong_IsCompact((PyLongObject *)self)) {
-        if (compact_int_is_small(self)) {
+
+        PyLongObject *pylong = (PyLongObject *)self;
+        int dotest = PyLong_CheckExact(self) && _PyLong_IsCompact(pylong) && (medium_value(pylong)==5);
+
+        if (compact_int_is_small(self) || dotest) {
             /* This should never get called, but we also don't want to SEGV if
              * we accidentally decref small Ints out of existence. Instead,
              * since small Ints are immortal, re-set the reference count.
