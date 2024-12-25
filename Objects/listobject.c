@@ -238,6 +238,7 @@ PyList_New(Py_ssize_t size)
 
     PyListObject *op = _Py_FREELIST_POP(PyListObject, lists);
     if (op == NULL) {
+        OBJECT_STAT_ALLOC_INCREMENT("PyList_New_allocate");
         op = PyObject_GC_New(PyListObject, &PyList_Type);
         if (op == NULL) {
             return NULL;

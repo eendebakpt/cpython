@@ -871,6 +871,7 @@ new_dict(PyInterpreterState *interp,
     assert(keys != NULL);
     PyDictObject *mp = _Py_FREELIST_POP(PyDictObject, dicts);
     if (mp == NULL) {
+            OBJECT_STAT_ALLOC_INCREMENT("new_dict_alloc");
         mp = PyObject_GC_New(PyDictObject, &PyDict_Type);
         if (mp == NULL) {
             dictkeys_decref(interp, keys, false);

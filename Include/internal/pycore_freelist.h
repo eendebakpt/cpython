@@ -13,6 +13,8 @@ extern "C" {
 #include "pycore_pystate.h"             // _PyThreadState_GET
 #include "pycore_code.h"                // OBJECT_STAT_INC
 
+void OBJECT_STAT_INCREMENT(const char *tag);
+
 static inline struct _Py_freelists *
 _Py_freelists_GET(void)
 {
