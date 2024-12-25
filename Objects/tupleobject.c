@@ -71,6 +71,9 @@ PyTuple_New(Py_ssize_t size)
     if (size == 0) {
         return tuple_get_empty();
     }
+    if (size<20)
+        OBJECT_STAT_ALLOC_INCREMENT("tuple_alloc_size_less_20");
+    OBJECT_STAT_ALLOC_INCREMENT("tuple_alloc");
     op = tuple_alloc(size);
     if (op == NULL) {
         return NULL;
