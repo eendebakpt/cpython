@@ -46,6 +46,7 @@ cell_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     if (!PyArg_UnpackTuple(args, "cell", 0, 1, &obj)) {
         goto exit;
     }
+    OBJECT_STAT_ALLOC_INCREMENT("PyCell_New");
     return_value = PyCell_New(obj);
 
 exit:

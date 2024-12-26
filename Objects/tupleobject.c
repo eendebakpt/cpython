@@ -41,11 +41,16 @@ tuple_alloc(Py_ssize_t size)
     assert(size != 0);    // The empty tuple is statically allocated.
     Py_ssize_t index = size - 1;
     if (index < PyTuple_MAXSAVESIZE) {
+        OBJECT_STAT_FREELIST_INCREMENT("tuple");
         PyTupleObject *op = _Py_FREELIST_POP(PyTupleObject, tuples[index]);
         if (op != NULL) {
             return op;
         }
     }
+    if (size<2*PyTuple_MAXSAVESIZE)
+        OBJECT_STAT_INCREMENT_STRING("tuple_size_%ld", size);
+    OBJECT_STAT_ALLOC_INCREMENT("tuple");
+
     /* Check for overflow */
     if ((size_t)size > ((size_t)PY_SSIZE_T_MAX - (sizeof(PyTupleObject) -
                 sizeof(PyObject *))) / sizeof(PyObject *)) {
@@ -71,9 +76,6 @@ PyTuple_New(Py_ssize_t size)
     if (size == 0) {
         return tuple_get_empty();
     }
-    if (size<20)
-        OBJECT_STAT_ALLOC_INCREMENT("tuple_alloc_size_less_20");
-    OBJECT_STAT_ALLOC_INCREMENT("tuple_alloc");
     op = tuple_alloc(size);
     if (op == NULL) {
         return NULL;
