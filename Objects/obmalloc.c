@@ -42,6 +42,18 @@ void OBJECT_STAT_INCREMENT(const char *tag)
 #endif
 }
 
+void OBJECT_STAT_INCREMENT_STRING(const char* message, ...) {
+    #define BUFSIZE (2 * 1024)
+    char buf[BUFSIZE];
+
+    va_list va;
+    va_start(va, message);
+    vsnprintf(buf, BUFSIZE, message, va);
+    va_end(va);
+
+    OBJECT_STAT_INCREMENT(buf);
+}
+
 void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
 {
 #ifdef Py_STATS

@@ -14,10 +14,10 @@ typedef unsigned int pymem_uint;  /* assuming >= 16 bits */
 #undef  uint
 #define uint pymem_uint
 
-void OBJECT_STAT_INCREMENT(const char *tag);
-void OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
-void OBJECT_STAT_ALLOC_INCREMENT(const char *tag); // allocation for a new object, but not a freelist
-void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp);
+PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
+///void OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
+//void OBJECT_STAT_ALLOC_INCREMENT(const char *tag); // allocation for a new object, but not a freelist
+PyAPI_FUNC(void) OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp);
 
 /* An object allocator for Python.
 

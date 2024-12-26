@@ -117,6 +117,8 @@ list_resize(PyListObject *self, Py_ssize_t newsize)
         return 0;
     }
 
+    OBJECT_STAT_INCREMENT("Resize list to %d");
+
     /* This over-allocates proportional to the list size, making room
      * for additional growth.  The over-allocation is mild, but is
      * enough to give linear-time amortized behavior over a long
@@ -244,6 +246,13 @@ PyList_New(Py_ssize_t size)
             return NULL;
         }
     }
+
+    if (size<1024) {
+        OBJECT_STAT_INCREMENT_STRING("PyList_New_allocate_buffer_%ld", size);
+    } else {
+        OBJECT_STAT_INCREMENT_STRING("PyList_New_allocate_buffer_large");
+    }
+
     if (size <= 0) {
         op->ob_item = NULL;
     }
@@ -277,6 +286,11 @@ list_new_prealloc(Py_ssize_t size)
     PyListObject *op = (PyListObject *) PyList_New(0);
     if (op == NULL) {
         return NULL;
+    }
+    if (size<1024) {
+            OBJECT_STAT_INCREMENT_STRING("list_new_prealloc_size_%ld", size);
+    } else {
+                    OBJECT_STAT_INCREMENT_STRING("list_new_prealloc_size_large");
     }
     assert(op->ob_item == NULL);
 #ifdef Py_GIL_DISABLED

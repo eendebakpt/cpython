@@ -2253,11 +2253,23 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
     return obj;
 }
 
+void OBJECT_STAT_ALLOCATION_PyType_GenericAlloc(PyTypeObject *tp)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        char sub_tag[200] = "Allocate PyType_GenericAlloc #";
+        strncat(sub_tag, tp->tp_name, 200-28-1);
+        OBJECT_STAT_INCREMENT(sub_tag);
+    }
+#endif
+}
+
+
 PyObject *
 PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 {
     //printf("PyType_GenericAlloc: %s\n", type->tp_name);
-    OBJECT_STAT_ALLOCATION_TYPE(type);
+    OBJECT_STAT_ALLOCATION_PyType_GenericAlloc(type);
     PyObject *obj = _PyType_AllocNoTrack(type, nitems);
     if (obj == NULL) {
         return NULL;

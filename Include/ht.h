@@ -9,6 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef WIN32
+#define my_strdup _strdup
+#else
+#define my_strdup strdup
+#endif
+
 // Hash table structure: create with ht_create, free with ht_destroy.
 typedef struct ht ht;
 
@@ -115,7 +121,7 @@ inline  const char* ht_set_entry(ht_entry* entries, size_t capacity,
 
     // Didn't find key, allocate+copy if needed, then insert it.
     if (plength != NULL) {
-        key = strdup(key);
+        key = my_strdup(key);
         if (key == NULL) {
             return NULL;
         }
@@ -220,6 +226,7 @@ static inline void show_hash_table_int(ht *table, FILE *out) {
     assert (table);
     // Calculate average probe length.
     hti it = ht_iterator(table);
+    //printf("show_hash_table_int out %ld", (long)out);
     while (ht_next(&it)) {
         if (out==0) {
             printf("%s: %d\n", it.key, *(int*) it.value);
