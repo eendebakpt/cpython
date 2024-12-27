@@ -21,6 +21,7 @@ PySeqIter_New(PyObject *seq)
         PyErr_BadInternalCall();
         return NULL;
     }
+    OBJECT_STAT_ALLOC_INCREMENT("PySeqIter_New");
     it = PyObject_GC_New(seqiterobject, &PySeqIter_Type);
     if (it == NULL)
         return NULL;

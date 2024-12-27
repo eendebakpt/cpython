@@ -174,6 +174,10 @@ _PyLong_New(Py_ssize_t size)
         OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_1");
     } else if (ndigits==2) {
         OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_2");
+    } else if (ndigits==3) {
+        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_3");
+    } else if (ndigits==4) {
+        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_4");
     } else if (ndigits==0) {
         OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_0");
     }

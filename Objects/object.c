@@ -549,17 +549,11 @@ void _guard_stats_table()
 }
 
 
-void OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp)
-{
-#ifdef Py_STATS
-    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name);
-#endif
-}
 
 PyObject *
 _PyObject_New(PyTypeObject *tp)
 {
-    OBJECT_STAT_ALLOCATION_TYPE(tp);
+    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name, "_PyObject_New");
     PyObject *op = (PyObject *) PyObject_Malloc(_PyObject_SIZE(tp));
     if (op == NULL) {
         return PyErr_NoMemory();
@@ -571,7 +565,7 @@ _PyObject_New(PyTypeObject *tp)
 PyVarObject *
 _PyObject_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
 {
-    OBJECT_STAT_ALLOCATION_TYPE(tp);
+    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name, "_PyObject_NewVar");
 
     PyVarObject *op;
     const size_t size = _PyObject_VAR_SIZE(tp, nitems);

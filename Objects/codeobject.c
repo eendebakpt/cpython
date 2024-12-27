@@ -675,7 +675,6 @@ error:
 PyCodeObject *
 _PyCode_New(struct _PyCodeConstructor *con)
 {
-    OBJECT_STAT_ALLOC_INCREMENT("_PyCode_New");
     if (intern_code_constants(con) < 0) {
         return NULL;
     }
