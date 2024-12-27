@@ -65,11 +65,11 @@ void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
 #endif
 }
 
-void OBJECT_STAT_ALLOC_INCREMENT(const char *tag, const char *sub_tag)
+void OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(const char *tag, const char *sub_tag)
 {
 #ifdef Py_STATS
     if (_Py_stats) {
-        if (sub_tag==0) {
+        if (sub_tag == NULL) {
             OBJECT_STAT_INCREMENT_STRING("Allocate type #%s", tag);
         } else {
             OBJECT_STAT_INCREMENT_STRING("Allocate %s type #%s", sub_tag, tag);
@@ -77,6 +77,11 @@ void OBJECT_STAT_ALLOC_INCREMENT(const char *tag, const char *sub_tag)
         }
     }
 #endif
+}
+
+void OBJECT_STAT_ALLOC_INCREMENT(const char *tag)
+{
+    OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(tag, NULL);
 }
 
 /* Defined in tracemalloc.c */

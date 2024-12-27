@@ -14,9 +14,6 @@ typedef unsigned int pymem_uint;  /* assuming >= 16 bits */
 #undef  uint
 #define uint pymem_uint
 
-PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
-//PyAPI_FUNC(void) OBJECT_STAT_ALLOCATION_TYPE(PyTypeObject *tp);
-//PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag, const char *sub_tag=0);
 
 /* An object allocator for Python.
 

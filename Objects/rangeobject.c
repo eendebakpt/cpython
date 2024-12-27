@@ -58,7 +58,6 @@ make_range_object(PyTypeObject *type, PyObject *start,
         return NULL;
     }
 
-    OBJECT_STAT_ALLOC_INCREMENT("rangeobject_check");
     obj = PyObject_New(rangeobject, type);
     if (obj == NULL) {
         Py_DECREF(length);

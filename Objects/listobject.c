@@ -117,7 +117,8 @@ list_resize(PyListObject *self, Py_ssize_t newsize)
         return 0;
     }
 
-    OBJECT_STAT_INCREMENT("Resize list to %d");
+    if (newsize<200)
+        OBJECT_STAT_INCREMENT_STRING("Resize list to %d", newsize);
 
     /* This over-allocates proportional to the list size, making room
      * for additional growth.  The over-allocation is mild, but is

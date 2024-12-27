@@ -91,9 +91,7 @@ _PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
 {
     PyObject *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
-#ifdef Py_STATS
         OBJECT_STAT_FREELIST_INCREMENT(name);
-#endif
         OBJECT_STAT_INC(from_freelist);
         _Py_NewReference(op);
     }
@@ -105,9 +103,7 @@ _PyFreeList_PopMem(struct _Py_freelist *fl, const char *name)
 {
     void *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
-#ifdef Py_STATS
-    //    OBJECT_STAT_FREELIST_INCREMENT(name);
-#endif
+        OBJECT_STAT_FREELIST_INCREMENT(name);
         OBJECT_STAT_INC(from_freelist);
     }
     return op;
