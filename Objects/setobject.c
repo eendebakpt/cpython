@@ -1086,7 +1086,6 @@ make_new_set(PyTypeObject *type, PyObject *iterable)
     assert(PyType_Check(type));
     PySetObject *so;
 
-    OBJECT_STAT_ALLOC_INCREMENT(type->tp_name);
     so = (PySetObject *)type->tp_alloc(type, 0);
     if (so == NULL)
         return NULL;
