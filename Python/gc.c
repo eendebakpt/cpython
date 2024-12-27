@@ -2276,6 +2276,7 @@ _PyObject_GC_New(PyTypeObject *tp)
     if (_PyType_HasFeature(tp, Py_TPFLAGS_INLINE_VALUES)) {
         size += _PyInlineValuesSize(tp);
     }
+    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name);
     PyObject *op = gc_alloc(tp, size, presize);
     if (op == NULL) {
         return NULL;
@@ -2298,6 +2299,7 @@ _PyObject_GC_NewVar(PyTypeObject *tp, Py_ssize_t nitems)
     }
     size_t presize = _PyType_PreHeaderSize(tp);
     size_t size = _PyObject_VAR_SIZE(tp, nitems);
+    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name);
     op = (PyVarObject *)gc_alloc(tp, size, presize);
     if (op == NULL) {
         return NULL;
@@ -2310,6 +2312,7 @@ PyObject *
 PyUnstable_Object_GC_NewWithExtraData(PyTypeObject *tp, size_t extra_size)
 {
     size_t presize = _PyType_PreHeaderSize(tp);
+    OBJECT_STAT_ALLOC_INCREMENT(tp->tp_name);
     size_t size = _PyObject_SIZE(tp) + extra_size;
     PyObject *op = gc_alloc(tp, size, presize);
     if (op == NULL) {
