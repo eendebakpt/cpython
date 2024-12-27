@@ -69,7 +69,7 @@ void OBJECT_STAT_ALLOC_INCREMENT(const char *tag, const char *sub_tag)
 {
 #ifdef Py_STATS
     if (_Py_stats) {
-        if (subtag==0) {
+        if (sub_tag==0) {
             OBJECT_STAT_INCREMENT_STRING("Allocate type #%s", tag);
         } else {
             OBJECT_STAT_INCREMENT_STRING("Allocate %s type #%s", sub_tag, tag);

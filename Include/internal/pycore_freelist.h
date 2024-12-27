@@ -14,9 +14,8 @@ extern "C" {
 #include "pycore_code.h"                // OBJECT_STAT_INC
 
 PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
-PyAPI_FUNC(void)  OBJECT_STAT_INCREMENT(const char *tag);
-PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag, const char *sub_tag=0);
-PyAPI_FUNC(void)  OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(const char *tag, const char *sub_tag);
 PyAPI_FUNC(void) OBJECT_STAT_INCREMENT_STRING(const char* message, ...);
 
 static inline struct _Py_freelists *
