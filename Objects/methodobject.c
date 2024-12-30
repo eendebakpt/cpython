@@ -7,6 +7,7 @@
 #include "pycore_object.h"
 #include "pycore_pyerrors.h"
 #include "pycore_pystate.h"       // _PyThreadState_GET()
+#include "pycore_freelist.h"
 
 
 /* undefine macro trampoline to PyCFunction_NewEx */
@@ -89,6 +90,14 @@ PyCMethod_New(PyMethodDef *ml, PyObject *self, PyObject *module, PyTypeObject *c
         if (om == NULL) {
             return NULL;
         }
+        //printf("PyCMethod_New: allocated for %s\n", ml->ml_name);
+        if (self==NULL)
+            OBJECT_STAT_INCREMENT_STRING("PyCMethod_New for PyCFunctionObject ml %s", ml->ml_name);
+        else {
+            PyTypeObject *tp = Py_TYPE(self);
+            OBJECT_STAT_INCREMENT_STRING("PyCMethod_New for PyCFunctionObject ml %s self %s", ml->ml_name, tp->tp_name);
+        }
+
         om->mm_class = (PyTypeObject*)Py_NewRef(cls);
         op = (PyCFunctionObject *)om;
     } else {
@@ -102,6 +111,13 @@ PyCMethod_New(PyMethodDef *ml, PyObject *self, PyObject *module, PyTypeObject *c
         if (op == NULL) {
             return NULL;
         }
+        if (self==NULL)
+            OBJECT_STAT_INCREMENT_STRING("PyCMethod_New for PyCFunctionObject ml %s", ml->ml_name);
+        else {
+            PyTypeObject *tp = Py_TYPE(self);
+            OBJECT_STAT_INCREMENT_STRING("PyCMethod_New for PyCFunctionObject ml %s self %s", ml->ml_name, tp->tp_name);
+        }
+
     }
 
     op->m_weakreflist = NULL;
