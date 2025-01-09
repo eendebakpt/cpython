@@ -577,17 +577,26 @@ class _Line(str):
     def has_comments(self):
         return self.strip() != self.clean
 
+    @staticmethod
+    @functools.lru_cache
+    def _matcher(prefixes):
+        matcher = re.compile(
+            '|'.join(fr'(^|\s)({re.escape(prefix)})' for prefix in prefixes)
+            # match nothing if no prefixes
+            or '(?!)'
+        )
+        return matcher
+
     def _strip_inline(self):
         """
         Search for the earliest prefix at the beginning of the line or following a space.
         """
-        matcher = re.compile(
-            '|'.join(fr'(^|\s)({re.escape(prefix)})' for prefix in self.prefixes.inline)
-            # match nothing if no prefixes
-            or '(?!)'
-        )
+        matcher = self._matcher(self.prefixes.inline)
         match = matcher.search(self)
-        return self[:match.start() if match else None].strip()
+        if match:
+            return self[:match.start()].strip()
+        else:
+            return self.strip()
 
     def _strip_full(self):
         return '' if any(map(self.strip().startswith, self.prefixes.full)) else True
