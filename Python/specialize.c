@@ -2374,6 +2374,44 @@ binary_op_fail_kind(int oparg, PyObject *lhs, PyObject *rhs)
 
 /** Binary Op Specialization Extensions */
 
+/* tuple-tuple*/
+extern PyObject * tuple_concat(PyObject *aa, PyObject *bb);
+
+static int
+tuple_tuple_guard(PyObject *lhs, PyObject *rhs)
+{
+    return ( PyList_CheckExact(lhs) &&  PyList_CheckExact(rhs) );
+}
+
+static PyObject * \
+tuple_tuple_add(PyObject *lhs, PyObject *rhs) \
+{
+    return tuple_concat(lhs, rhs);
+}
+
+static binaryopactionfunc tuple_tuple_actions[NB_OPARG_LAST+1] = {
+    [NB_ADD] = tuple_tuple_add,
+};
+
+/* list-list*/
+extern PyObject * list_concat(PyObject *aa, PyObject *bb);
+
+static int
+list_list_guard(PyObject *lhs, PyObject *rhs)
+{
+    return ( PyList_CheckExact(lhs) &&  PyList_CheckExact(rhs) );
+}
+
+static PyObject * \
+list_list_add(PyObject *lhs, PyObject *rhs) \
+{
+    return list_concat(lhs, rhs);
+}
+
+static binaryopactionfunc list_list_actions[NB_OPARG_LAST+1] = {
+    [NB_ADD] = list_list_add,
+};
+
 /* float-long */
 
 static int
@@ -2440,24 +2478,23 @@ static binaryopactionfunc long_float_actions[NB_OPARG_LAST+1] = {
     [NB_INPLACE_MULTIPLY] = long_float_multiply,
 };
 
+#define TRY_BINARY_SPECIALIZATION(ACTIONS, GUARD, oparg) \
+    if (ACTIONS[oparg]) { \
+        if (GUARD(lhs, rhs)) { \
+            *guard = GUARD; \
+            *action = ACTIONS[oparg]; \
+            return 1; \
+        } \
+    }
+
 static int
 binary_op_extended_specialization(PyObject *lhs, PyObject *rhs, int oparg,
                                   binaryopguardfunc *guard, binaryopactionfunc *action)
 {
-    if (long_float_actions[oparg]) {
-        if (long_float_guard(lhs, rhs)) {
-            *guard = long_float_guard;
-            *action = long_float_actions[oparg];
-            return 1;
-        }
-    }
-    if (float_long_actions[oparg]) {
-        if (float_long_guard(lhs, rhs)) {
-            *guard = float_long_guard;
-            *action = float_long_actions[oparg];
-            return 1;
-        }
-    }
+    TRY_BINARY_SPECIALIZATION(long_float_actions, long_float_guard, oparg)
+    TRY_BINARY_SPECIALIZATION(float_long_actions, float_long_guard, oparg)
+    TRY_BINARY_SPECIALIZATION(list_list_actions, list_list_guard, oparg)
+    TRY_BINARY_SPECIALIZATION(tuple_tuple_actions, tuple_tuple_guard, oparg)
     return 0;
 }
 
