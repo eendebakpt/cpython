@@ -2388,7 +2388,7 @@ long_bool_add(PyObject *lhs, PyObject *rhs) \
     if (rhs == Py_False) {
         return Py_NewRef(lhs);
     }
-    return _PyLong_Add((PyLongObject *)lhs, (PyLongObject *)_PyLong_GetZero());
+    return _PyLong_Add((PyLongObject *)lhs, (PyLongObject *)_PyLong_GetOne());
 }
 
 static binaryopactionfunc long_bool_actions[NB_OPARG_LAST+1] = {
