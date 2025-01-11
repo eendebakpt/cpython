@@ -2374,6 +2374,27 @@ binary_op_fail_kind(int oparg, PyObject *lhs, PyObject *rhs)
 
 /** Binary Op Specialization Extensions */
 
+/* long-bool*/
+
+static int
+long_bool_guard(PyObject *lhs, PyObject *rhs)
+{
+    return ( PyLong_CheckExact(lhs) &&  PyBool_Check(rhs) );
+}
+
+static PyObject * \
+long_bool_add(PyObject *lhs, PyObject *rhs) \
+{
+    if (rhs == Py_False) {
+        return Py_NewRef(lhs);
+    }
+    return _PyLong_Add((PyLongObject *)lhs, (PyLongObject *)_PyLong_GetZero());
+}
+
+static binaryopactionfunc long_bool_actions[NB_OPARG_LAST+1] = {
+    [NB_ADD] = long_bool_add,
+};
+
 /* tuple-tuple*/
 extern PyObject * tuple_concat(PyObject *aa, PyObject *bb);
 
@@ -2495,6 +2516,7 @@ binary_op_extended_specialization(PyObject *lhs, PyObject *rhs, int oparg,
     TRY_BINARY_SPECIALIZATION(float_long_actions, float_long_guard, oparg)
     TRY_BINARY_SPECIALIZATION(list_list_actions, list_list_guard, oparg)
     TRY_BINARY_SPECIALIZATION(tuple_tuple_actions, tuple_tuple_guard, oparg)
+    TRY_BINARY_SPECIALIZATION(long_bool_actions, long_bool_guard, oparg)
     return 0;
 }
 
