@@ -561,37 +561,43 @@ class _ReadState:
         self.errors = list()
 
 
-class _Line(str):
+class Line(object):
 
-    def __new__(cls, val, *args, **kwargs):
-        return super().__new__(cls, val)
-
-    def __init__(self, val, prefixes):
+    def __init__(self, value, prefixes, matcher ):
+        self.value = value
         self.prefixes = prefixes
+        self.matcher = matcher
 
     @functools.cached_property
     def clean(self):
-        return self._strip_full() and self._strip_inline()
+        stripped_value = self.value.strip()
+        strip_full = '' if any(map(stripped_value.startswith, self.prefixes.full)) else True
+
+        match = self.matcher.search(self.value)
+        if match:
+            strip_inline = self.value[:match.start()].strip()
+        else:
+            strip_inline = stripped_value
+        return strip_full and strip_inline
 
     @property
     def has_comments(self):
-        return self.strip() != self.clean
+         return self.value.strip() != self.clean
 
-    def _strip_inline(self):
-        """
-        Search for the earliest prefix at the beginning of the line or following a space.
-        """
-        matcher = re.compile(
+
+class LineParser():
+    __slots__ =['prefixes', 'matcher']
+
+    def __init__(self, prefixes):
+        self.prefixes = prefixes
+        self.matcher = re.compile(
             '|'.join(fr'(^|\s)({re.escape(prefix)})' for prefix in self.prefixes.inline)
             # match nothing if no prefixes
             or '(?!)'
         )
-        match = matcher.search(self)
-        return self[:match.start() if match else None].strip()
 
-    def _strip_full(self):
-        return '' if any(map(self.strip().startswith, self.prefixes.full)) else True
-
+    def parse(self, value):
+        return Line(value, self.prefixes,  self.matcher)
 
 class RawConfigParser(MutableMapping):
     """ConfigParser that does not do interpolation."""
@@ -1066,8 +1072,11 @@ class RawConfigParser(MutableMapping):
     def _read_inner(self, fp, fpname):
         st = _ReadState()
 
-        Line = functools.partial(_Line, prefixes=self._prefixes)
-        for st.lineno, line in enumerate(map(Line, fp), start=1):
+        line_parser = LineParser(self._prefixes)
+
+      #  Line = functools.partial(_Line, prefixes=self._prefixes, matcher=line_parser.matcher)
+        #for st.lineno, line in enumerate(map(Line, fp), start=1):
+        for st.lineno, line in enumerate(map(line_parser.parse, fp), start=1):
             if not line.clean:
                 if self._empty_lines_in_values:
                     # add empty line to the value, but only if there was no
@@ -1082,7 +1091,7 @@ class RawConfigParser(MutableMapping):
                     st.indent_level = sys.maxsize
                 continue
 
-            first_nonspace = self.NONSPACECRE.search(line)
+            first_nonspace = self.NONSPACECRE.search(line.value)
             st.cur_indent_level = first_nonspace.start() if first_nonspace else 0
 
             if self._handle_continuation_line(st, line, fpname):
@@ -1098,7 +1107,7 @@ class RawConfigParser(MutableMapping):
             st.cur_indent_level > st.indent_level)
         if is_continue:
             if st.cursect[st.optname] is None:
-                raise MultilineContinuationError(fpname, st.lineno, line)
+                raise MultilineContinuationError(fpname, st.lineno, line.value)
             st.cursect[st.optname].append(line.clean)
         return is_continue
 
@@ -1116,7 +1125,7 @@ class RawConfigParser(MutableMapping):
         mo = self.SECTCRE.match(line.clean)
 
         if not mo and st.cursect is None:
-            raise MissingSectionHeaderError(fpname, st.lineno, line)
+            raise MissingSectionHeaderError(fpname, st.lineno, line.value)
 
         self._handle_header(st, mo, fpname) if mo else self._handle_option(st, line, fpname)
 
@@ -1148,12 +1157,12 @@ class RawConfigParser(MutableMapping):
             # exception but keep going. the exception will be
             # raised at the end of the file and will contain a
             # list of all bogus lines
-            st.errors.append(ParsingError(fpname, st.lineno, line))
+            st.errors.append(ParsingError(fpname, st.lineno, line.value))
             return
 
         st.optname, vi, optval = mo.group('option', 'vi', 'value')
         if not st.optname:
-            st.errors.append(ParsingError(fpname, st.lineno, line))
+            st.errors.append(ParsingError(fpname, st.lineno, line.value))
         st.optname = self.optionxform(st.optname.rstrip())
         if (self._strict and
             (st.sectname, st.optname) in st.elements_added):
