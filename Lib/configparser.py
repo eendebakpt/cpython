@@ -561,7 +561,7 @@ class _ReadState:
         self.errors = list()
 
 
-class Line(object):
+class _Line(object):
 
     def __init__(self, value, prefixes, matcher ):
         self.value = value
@@ -585,7 +585,7 @@ class Line(object):
          return self.value.strip() != self.clean
 
 
-class LineParser():
+class _LineParser():
     __slots__ =['prefixes', 'matcher']
 
     def __init__(self, prefixes):
@@ -597,7 +597,7 @@ class LineParser():
         )
 
     def parse(self, value):
-        return Line(value, self.prefixes,  self.matcher)
+        return _Line(value, self.prefixes,  self.matcher)
 
 class RawConfigParser(MutableMapping):
     """ConfigParser that does not do interpolation."""
@@ -1072,10 +1072,7 @@ class RawConfigParser(MutableMapping):
     def _read_inner(self, fp, fpname):
         st = _ReadState()
 
-        line_parser = LineParser(self._prefixes)
-
-      #  Line = functools.partial(_Line, prefixes=self._prefixes, matcher=line_parser.matcher)
-        #for st.lineno, line in enumerate(map(Line, fp), start=1):
+        line_parser = _LineParser(self._prefixes)
         for st.lineno, line in enumerate(map(line_parser.parse, fp), start=1):
             if not line.clean:
                 if self._empty_lines_in_values:
