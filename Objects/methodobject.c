@@ -86,6 +86,7 @@ PyCMethod_New(PyMethodDef *ml, PyObject *self, PyObject *module, PyTypeObject *c
                             "flag but no class");
             return NULL;
         }
+        printf("PyCMethodObject: try allocation (freelist size %d)\n", _Py_FREELIST_SIZE(pycmethodobject));
         PyCMethodObject *om = _Py_FREELIST_POP(PyCMethodObject, pycmethodobject);
         if (om == NULL) {
             om = PyObject_GC_New(PyCMethodObject, &PyCMethod_Type);
@@ -102,6 +103,7 @@ PyCMethod_New(PyMethodDef *ml, PyObject *self, PyObject *module, PyTypeObject *c
                             "but no METH_METHOD flag");
             return NULL;
         }
+        printf("PyCFunctionObject: try allocation (freelist size %d)\n", _Py_FREELIST_SIZE(pycfunctionobject));
         op = _Py_FREELIST_POP(PyCFunctionObject, pycfunctionobject);
         if (op == NULL) {
             op = PyObject_GC_New(PyCFunctionObject, &PyCFunction_Type);
@@ -180,11 +182,11 @@ meth_dealloc(PyObject *self)
     Py_XDECREF(m->m_module);
     if (m->m_ml->ml_flags & METH_METHOD) {
         assert(Py_IS_TYPE(self, &PyCMethod_Type));
-        _Py_FREELIST_FREE(pycmethodobject, m, PyObject_GC_Del);
+        _Py_FREELIST_FREE_PRINT(pycmethodobject, m, PyObject_GC_Del);
     }
     else {
         assert(Py_IS_TYPE(self, &PyCFunction_Type));
-        _Py_FREELIST_FREE(pycfunctionobject, m, PyObject_GC_Del);
+        _Py_FREELIST_FREE_PRINT(pycfunctionobject, m, PyObject_GC_Del);
     }
     Py_TRASHCAN_END;
 }

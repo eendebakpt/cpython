@@ -28,6 +28,10 @@ _Py_freelists_GET(void)
 #endif
 }
 
+#define _Py_FREELIST_FREE_PRINT(NAME, op, freefunc) \
+    _PyFreeList_Free_Print(&_Py_freelists_GET()->NAME, _PyObject_CAST(op), \
+                     Py_ ## NAME ## _MAXFREELIST, freefunc, #NAME)
+
 // Pushes `op` to the freelist, calls `freefunc` if the freelist is full
 #define _Py_FREELIST_FREE(NAME, op, freefunc) \
     _PyFreeList_Free(&_Py_freelists_GET()->NAME, _PyObject_CAST(op), \
@@ -65,6 +69,16 @@ _PyFreeList_Free(struct _Py_freelist *fl, void *obj, Py_ssize_t maxsize,
                  freefunc dofree)
 {
     if (!_PyFreeList_Push(fl, obj, maxsize)) {
+        dofree(obj);
+    }
+}
+
+static inline void
+_PyFreeList_Free_Print(struct _Py_freelist *fl, void *obj, Py_ssize_t maxsize,
+                 freefunc dofree, const char *name)
+{
+    if (!_PyFreeList_Push(fl, obj, maxsize)) {
+        printf("    %s: no space to store object\n", name);
         dofree(obj);
     }
 }
