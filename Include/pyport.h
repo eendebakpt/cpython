@@ -123,7 +123,7 @@ Used in:  Py_SAFE_DOWNCAST
  * defaulting to 30. The 15-bit digit option may be removed in the future.
  */
 #ifndef PYLONG_BITS_IN_DIGIT
-#define PYLONG_BITS_IN_DIGIT 30
+#define PYLONG_BITS_IN_DIGIT 32
 #endif
 
 /* uintptr_t is the C9X name for an unsigned integral type such that a

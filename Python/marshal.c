@@ -237,10 +237,16 @@ w_short_pstring(const void *s, Py_ssize_t n, WFILE *p)
    2**15; for the sake of portability we'll always read and write them in base
    exactly 2**15. */
 
+#if PYLONG_BITS_IN_DIGIT == 32
+// we might just get away with this...
+#define PyLong_MARSHAL_SHIFT 16
+#define PyLong_MARSHAL_BASE ((short)1 << PyLong_MARSHAL_SHIFT)
+#define PyLong_MARSHAL_MASK (PyLong_MARSHAL_BASE - 1)
+#else
 #define PyLong_MARSHAL_SHIFT 15
 #define PyLong_MARSHAL_BASE ((short)1 << PyLong_MARSHAL_SHIFT)
 #define PyLong_MARSHAL_MASK (PyLong_MARSHAL_BASE - 1)
-
+#endif
 #define W_TYPE(t, p) do { \
     w_byte((t) | flag, (p)); \
 } while(0)
@@ -999,6 +1005,7 @@ r_PyLong(RFILE *p)
     Py_ssize_t marshal_ratio = layout->bits_per_digit/PyLong_MARSHAL_SHIFT;
 
     /* must be a multiple of PyLong_MARSHAL_SHIFT */
+    printf("layout->bits_per_digit %d\n", layout->bits_per_digit);
     assert(layout->bits_per_digit % PyLong_MARSHAL_SHIFT == 0);
     assert(layout->bits_per_digit >= PyLong_MARSHAL_SHIFT);
 

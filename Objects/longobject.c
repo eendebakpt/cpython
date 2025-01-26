@@ -3341,7 +3341,8 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
     PyLongObject *v, *w, *a;
     Py_ssize_t i, k, size_v, size_w;
     int d;
-    digit wm1, wm2, carry, q, r, vtop, *v0, *vk, *w0, *ak;
+    digit wm1, wm2, carry, vtop, *v0, *vk, *w0, *ak;
+    twodigits q, r;
     twodigits vv;
     sdigit zhi;
     stwodigits z;
@@ -3454,7 +3455,7 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
 
         /* store quotient digit */
         assert(q < PyLong_BASE);
-        *--ak = q;
+        *--ak = (digit)q; // explicit cast
     }
 
     /* unshift remainder; we reuse w to store the result */

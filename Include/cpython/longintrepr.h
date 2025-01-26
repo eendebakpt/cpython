@@ -47,6 +47,14 @@ typedef int64_t stwodigits; /* signed variant of twodigits */
 #define PyLong_SHIFT    30
 #define _PyLong_DECIMAL_SHIFT   9 /* max(e such that 10**e fits in a digit) */
 #define _PyLong_DECIMAL_BASE    ((digit)1000000000) /* 10 ** DECIMAL_SHIFT */
+#elif PYLONG_BITS_IN_DIGIT == 32
+typedef uint32_t digit;
+typedef int32_t sdigit; /* signed variant of digit */
+typedef uint64_t twodigits;
+typedef int64_t stwodigits; /* signed variant of twodigits */
+#define PyLong_SHIFT    31
+#define _PyLong_DECIMAL_SHIFT   9 /* max(e such that 10**e fits in a digit) */
+#define _PyLong_DECIMAL_BASE    ((digit)1000000000) /* 10 ** DECIMAL_SHIFT */
 #elif PYLONG_BITS_IN_DIGIT == 15
 typedef unsigned short digit;
 typedef short sdigit; /* signed variant of digit */
@@ -58,7 +66,7 @@ typedef long stwodigits; /* signed variant of twodigits */
 #else
 #error "PYLONG_BITS_IN_DIGIT should be 15 or 30"
 #endif
-#define PyLong_BASE     ((digit)1 << PyLong_SHIFT)
+#define PyLong_BASE     ((twodigits)1 << PyLong_SHIFT)
 #define PyLong_MASK     ((digit)(PyLong_BASE - 1))
 
 /* Long integer representation.
