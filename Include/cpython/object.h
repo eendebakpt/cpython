@@ -347,6 +347,27 @@ PyAPI_FUNC(PyObject *) _PyObject_FunctionStr(PyObject *);
         Py_DECREF(_tmp_old_dst); \
     } while (0)
 #else
+
+// safe when src is constant
+#define Py_SETREF_FT(dst, src) \
+do { \
+    PyObject **_tmp_dst_ptr = _Py_CAST(PyObject**, &(dst)); \
+    PyObject *_tmp_src = _PyObject_CAST(src); \
+    PyObject **_tmp = &_tmp_src; \
+    _Py_atomic_exchange_ptr( (void*)_tmp_dst_ptr, (void *)_tmp); \
+    Py_DECREF(*_tmp); \
+} while (0)
+
+// safe when src is constant
+#define Py_XSETREF_FT(dst, src) \
+do { \
+    PyObject **_tmp_dst_ptr = _Py_CAST(PyObject**, &(dst)); \
+    PyObject *_tmp_src = _PyObject_CAST(src); \
+    PyObject **_tmp = &_tmp_src; \
+    _Py_atomic_exchange_ptr( (void*)_tmp_dst_ptr, (void *)_tmp); \
+    Py_XDECREF(*_tmp); \
+} while (0)
+
 #define Py_SETREF(dst, src) \
     do { \
         PyObject **_tmp_dst_ptr = _Py_CAST(PyObject**, &(dst)); \

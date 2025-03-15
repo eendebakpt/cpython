@@ -2943,7 +2943,7 @@ typedef struct {
     PyObject *total;
     PyObject *it;
     PyObject *binop;
-    PyObject *initial;
+    int initial;
     itertools_state *state;
 } accumulateobject;
 
@@ -2984,7 +2984,11 @@ itertools_accumulate_impl(PyTypeObject *type, PyObject *iterable,
     }
     lz->total = NULL;
     lz->it = it;
-    lz->initial = Py_XNewRef(initial);
+    // we store the initial value on lz->total
+    // we use lz->initial to signal weither the value in lz->total is the
+    // initial, or we need to get a new value from the lz->it
+    lz->initial = initial != Py_None;
+    lz->total = Py_XNewRef(initial);
     lz->state = find_state_by_type(type);
     return (PyObject *)lz;
 }
@@ -2998,7 +3002,6 @@ accumulate_dealloc(PyObject *op)
     Py_XDECREF(lz->binop);
     Py_XDECREF(lz->total);
     Py_XDECREF(lz->it);
-    Py_XDECREF(lz->initial);
     tp->tp_free(lz);
     Py_DECREF(tp);
 }
@@ -3011,7 +3014,6 @@ accumulate_traverse(PyObject *op, visitproc visit, void *arg)
     Py_VISIT(lz->binop);
     Py_VISIT(lz->it);
     Py_VISIT(lz->total);
-    Py_VISIT(lz->initial);
     return 0;
 }
 
@@ -3021,30 +3023,44 @@ accumulate_next(PyObject *op)
     accumulateobject *lz = accumulateobject_CAST(op);
     PyObject *val, *newtotal;
 
-    if (lz->initial != Py_None) {
-        lz->total = lz->initial;
-        lz->initial = Py_NewRef(Py_None);
-        return Py_NewRef(lz->total);
+    int initial = FT_ATOMIC_LOAD_INT_RELAXED(lz->initial);
+    // the increment here is nasty. what can we do to avoid?
+    // we could atomically swap lz->total with a temporary. but then what should another thread do?
+    PyObject *total = Py_NewRef(FT_ATOMIC_LOAD_PTR_RELAXED(lz->total));
+    printf("accumulate_next: initial %d\n", initial);
+    if (initial == 0 && total != Py_None) {
+        if (total ==NULL)
+            printf("initial is zero, total is NULL\n");
+        FT_ATOMIC_STORE_INT_RELAXED(lz->initial, 1);
+        return (total);
     }
+    printf("accumulate_next: acquire val, total is %p None %p\n", total, Py_None);
     val = (*Py_TYPE(lz->it)->tp_iternext)(lz->it);
-    if (val == NULL)
+    if (val == NULL) {
+        printf("accumulate_next: val is NULL\n");
         return NULL;
-
-    if (lz->total == NULL) {
-        lz->total = Py_NewRef(val);
-        return lz->total;
     }
 
+    if (total == Py_None) {
+        // no initial was set, and this is the first iteration
+        Py_XSETREF_FT(lz->total, Py_NewRef(val));
+        printf("accumulate_next: just return val\n");
+        Py_DECREF(total);
+        return val;
+    }
+
+    printf("accumulate_next: try to add total and val\n");
     if (lz->binop == NULL)
-        newtotal = PyNumber_Add(lz->total, val);
+        newtotal = PyNumber_Add(total, val);
     else
-        newtotal = PyObject_CallFunctionObjArgs(lz->binop, lz->total, val, NULL);
+        newtotal = PyObject_CallFunctionObjArgs(lz->binop, total, val, NULL);
     Py_DECREF(val);
     if (newtotal == NULL)
         return NULL;
 
-    Py_INCREF(newtotal);
-    Py_SETREF(lz->total, newtotal);
+    Py_INCREF(newtotal); // first increment so another thread cannot decref newtotal out of existance
+    Py_SETREF_FT(lz->total, newtotal);
+    Py_DECREF(total);
     return newtotal;
 }
 
