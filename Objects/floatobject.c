@@ -125,6 +125,7 @@ PyFloat_FromDouble(double fval)
 {
     PyFloatObject *op = _Py_FREELIST_POP(PyFloatObject, floats);
     if (op == NULL) {
+        OBJECT_STAT_ALLOC_INCREMENT("PyFloat_FromDouble_alloc");
         op = PyObject_Malloc(sizeof(PyFloatObject));
         if (!op) {
             return PyErr_NoMemory();

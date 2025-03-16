@@ -1007,6 +1007,14 @@ enum _PyAnnotateFormat {
     _Py_ANNOTATE_FORMAT_STRING = 4,
 };
 
+
+PyAPI_FUNC(void) OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(const char *tag, const char *sub_tag);
+PyAPI_FUNC(void) OBJECT_STAT_INCREMENT_STRING(const char* message, ...);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOCATION_SIZE(size_t size);
+
 #ifdef __cplusplus
 }
 #endif

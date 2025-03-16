@@ -33,6 +33,9 @@ GCStats _py_gc_stats[NUM_GENERATIONS] = { 0 };
 static PyStats _Py_stats_struct = { .gc_stats = _py_gc_stats };
 PyStats *_Py_stats = NULL;
 
+PyStats *get_pystats() {
+    return _Py_stats;
+}
 #if PYSTATS_MAX_UOP_ID < MAX_UOP_ID
 #error "Not enough space allocated for pystats. Increase PYSTATS_MAX_UOP_ID to at least MAX_UOP_ID"
 #endif
@@ -197,6 +200,8 @@ print_call_stats(FILE *out, CallStats *stats)
     }
 }
 
+#include "ht.h"
+
 static void
 print_object_stats(FILE *out, ObjectStats *stats)
 {
@@ -206,6 +211,12 @@ print_object_stats(FILE *out, ObjectStats *stats)
     fprintf(out, "Object allocations to 512 bytes: %" PRIu64 "\n", stats->allocations512);
     fprintf(out, "Object allocations to 4 kbytes: %" PRIu64 "\n", stats->allocations4k);
     fprintf(out, "Object allocations over 4 kbytes: %" PRIu64 "\n", stats->allocations_big);
+    for(int i=0; i<127; i++) {
+        if (stats->allocation_size[i]) {
+        fprintf(out, "Object allocations of size %d bytes: %" PRIu64 "\n", i, stats->allocation_size[i]);
+        }
+    }
+    fprintf(out, "Object allocations of size %d or more bytes: %" PRIu64 "\n", 127, stats->allocation_size[127]);
     fprintf(out, "Object frees: %" PRIu64 "\n", stats->frees);
     fprintf(out, "Object inline values: %" PRIu64 "\n", stats->inline_values);
     fprintf(out, "Object interpreter mortal increfs: %" PRIu64 "\n", stats->interpreter_increfs);
@@ -346,6 +357,8 @@ print_stats(FILE *out, PyStats *stats)
     print_optimization_stats(out, &stats->optimization_stats);
 #endif
     print_rare_event_stats(out, &stats->rare_event_stats);
+
+    show_hash_table_int(stats->object_stats.allocation_table, out);
 }
 
 void
