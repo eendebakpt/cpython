@@ -3963,8 +3963,6 @@ list_iter(PyObject *seq)
         if (it == NULL) {
             return NULL;
         }
-    } else {
-        Py_SET_TYPE(it, &PyListIter_Type);
     }
     it->it_index = 0;
     it->it_seq = (PyListObject *)Py_NewRef(seq);

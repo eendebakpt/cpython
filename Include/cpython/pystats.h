@@ -186,6 +186,7 @@ typedef struct _stats {
 PyAPI_DATA(PyStats*) _Py_stats;
 
 PyAPI_FUNC(PyStats *) get_pystats(void);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOCATION_SIZE(size_t size);
 PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
 PyAPI_FUNC(void) OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
 PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag);
@@ -203,3 +204,4 @@ PyAPI_FUNC(void) _guard_stats_table(void);
 #  define _Py_INCREF_IMMORTAL_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.immortal_increfs++; } while (0)
 #  define _Py_DECREF_IMMORTAL_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.immortal_decrefs++; } while (0)
 #endif
+

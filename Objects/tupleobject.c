@@ -1146,10 +1146,11 @@ tuple_iter(PyObject *seq)
         return NULL;
     }
     _PyTupleIterObject *it = _Py_FREELIST_POP(_PyTupleIterObject, tuple_iters);
-
-    it = PyObject_GC_New(_PyTupleIterObject, &PyTupleIter_Type);
-    if (it == NULL)
-        return NULL;
+    if (it == NULL) {
+        it = PyObject_GC_New(_PyTupleIterObject, &PyTupleIter_Type);
+        if (it == NULL)
+            return NULL;
+    }
     it->it_index = 0;
     it->it_seq = (PyTupleObject *)Py_NewRef(seq);
     _PyObject_GC_TRACK(it);
