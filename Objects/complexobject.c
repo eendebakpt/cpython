@@ -12,6 +12,7 @@
 #include "pycore_long.h"          // _PyLong_GetZero()
 #include "pycore_object.h"        // _PyObject_Init()
 #include "pycore_pymath.h"        // _Py_ADJUST_ERANGE2()
+#include "pycore_freelist.h"
 
 
 #define _PyComplexObject_CAST(op)   ((PyComplexObject *)(op))
