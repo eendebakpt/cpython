@@ -165,7 +165,6 @@ long_alloc(Py_ssize_t size)
     /* Fast operations for single digit integers (including zero)
      * assume that there is always at least one digit present. */
     Py_ssize_t ndigits = size ? size : 1;
-<<<<<<< HEAD
 
     if (ndigits == 1) {
         result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
@@ -184,30 +183,18 @@ long_alloc(Py_ssize_t size)
             return NULL;
         }
         _PyObject_Init((PyObject*)result, &PyLong_Type);
-=======
-    /* Number of bytes needed is: offsetof(PyLongObject, ob_digit) +
-       sizeof(digit)*size.  Previous incarnations of this code used
-       sizeof() instead of the offsetof, but this risks being
-       incorrect in the presence of padding between the header
-       and the digits. */
-    if (ndigits==1) {
-        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_1");
-    } else if (ndigits==2) {
-        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_2");
-    } else if (ndigits==3) {
-        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_3");
-    } else if (ndigits==4) {
-        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_4");
-    } else if (ndigits==0) {
-        OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_0");
-    }
-    OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New");
-    result = PyObject_Malloc(offsetof(PyLongObject, long_value.ob_digit) +
-                             ndigits*sizeof(digit));
-    if (!result) {
-        PyErr_NoMemory();
-        return NULL;
->>>>>>> 3b5549fa89c (wip)
+        if (ndigits==1) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_1");
+        } else if (ndigits==2) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_2");
+        } else if (ndigits==3) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_3");
+        } else if (ndigits==4) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_4");
+        } else if (ndigits==0) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_0");
+        }
+
     }
     _PyLong_SetSignAndDigitCount(result, size != 0, size);
     /* The digit has to be initialized explicitly to avoid
