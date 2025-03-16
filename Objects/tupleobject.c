@@ -997,17 +997,8 @@ tupleiter_dealloc(PyObject *self)
     _PyTupleIterObject *it = _PyTupleIterObject_CAST(self);
     _PyObject_GC_UNTRACK(it);
     Py_XDECREF(it->it_seq);
-<<<<<<< HEAD
-<<<<<<< HEAD
     assert(Py_IS_TYPE(self, &PyTupleIter_Type));
     _Py_FREELIST_FREE(tuple_iters, it, PyObject_GC_Del);
-=======
-    assert(sizeof(_PyTupleIterObject)==sizeof(_PyListIterObject));
-    _Py_FREELIST_FREE(shared_iters, it, PyObject_GC_Del);
->>>>>>> 148ff4c1d57 (set types)
-=======
-    PyObject_GC_Del(it);
->>>>>>> 052faee33d0 (cleanup)
 }
 
 static int

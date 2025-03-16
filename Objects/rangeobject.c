@@ -57,7 +57,6 @@ make_range_object(PyTypeObject *type, PyObject *start,
     if (length == NULL) {
         return NULL;
     }
-
     obj = PyObject_New(rangeobject, type);
     if (obj == NULL) {
         Py_DECREF(length);
@@ -896,6 +895,7 @@ rangeiter_setstate(PyObject *op, PyObject *state)
     Py_RETURN_NONE;
 }
 
+
 PyDoc_STRVAR(reduce_doc, "Return state information for pickling.");
 PyDoc_STRVAR(setstate_doc, "Set state information for unpickling.");
 
@@ -912,11 +912,7 @@ PyTypeObject PyRangeIter_Type = {
         sizeof(_PyRangeIterObject),             /* tp_basicsize */
         0,                                      /* tp_itemsize */
         /* methods */
-<<<<<<< HEAD
-        (destructor)rangeiter_dealloc,          /* tp_dealloc */
-=======
-        (destructor)PyObject_Free,              /* tp_dealloc */
->>>>>>> 052faee33d0 (cleanup)
+        0,                                      /* tp_dealloc */
         0,                                      /* tp_vectorcall_offset */
         0,                                      /* tp_getattr */
         0,                                      /* tp_setattr */

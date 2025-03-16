@@ -40,10 +40,7 @@ echo.  --experimental-jit          Enable the experimental just-in-time compiler
 echo.  --experimental-jit-off      Ditto but off by default (PYTHON_JIT=1 enables).
 echo.  --experimental-jit-interpreter  Enable the experimental Tier 2 interpreter.
 echo.  --pystats      Enable PyStats collection.
-<<<<<<< HEAD
 echo.  --tail-call-interp  Enable tail-calling interpreter (requires LLVM 19 or higher).
-=======
->>>>>>> cfb9eff5ba5 (use separate preprocessor definition)
 echo.
 echo.Available flags to avoid building certain modules.
 echo.These flags have no effect if '-e' is not given:
@@ -193,16 +190,8 @@ echo on
  /p:UseTestMarker=%UseTestMarker% %GITProperty%^
  /p:UseJIT=%UseJIT%^
  /p:UseTIER2=%UseTIER2%^
-<<<<<<< HEAD
-<<<<<<< HEAD
  /p:PyStats=%PyStats%^
  /p:UseTailCallInterp=%UseTailCallInterp%^
-=======
- /p:Py_Stats=%Py_Stats%^
->>>>>>> c01b70a4e77 (Enable PyStats collection on windows)
-=======
- /p:PyStats=%PyStats%^
->>>>>>> 052faee33d0 (cleanup)
  %1 %2 %3 %4 %5 %6 %7 %8 %9
 
 @echo off
