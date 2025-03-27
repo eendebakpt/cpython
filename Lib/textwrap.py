@@ -413,7 +413,6 @@ def shorten(text, width, **kwargs):
 
 # -- Loosely related functionality -------------------------------------
 
-_whitespace_only_re = re.compile('^[ \t]+$', re.MULTILINE)
 _leading_whitespace_re = re.compile('(^[ \t]*)(?:[^ \t\n])', re.MULTILINE)
 
 def dedent(text):
@@ -432,7 +431,7 @@ def dedent(text):
     # Look for the longest leading string of spaces and tabs common to
     # all lines.
     margin = None
-    text = _whitespace_only_re.sub('', text)
+    text = '\n'.join(line if line.lstrip() else '' for line in text.split('\n'))
     indents = _leading_whitespace_re.findall(text)
     for indent in indents:
         if margin is None:
@@ -441,7 +440,7 @@ def dedent(text):
         # Current line more deeply indented than previous winner:
         # no change (previous winner is still on top).
         elif indent.startswith(margin):
-            pass
+            continue
 
         # Current line consistent with and no deeper than previous winner:
         # it's the new winner.
@@ -455,7 +454,8 @@ def dedent(text):
                 if x != y:
                     margin = margin[:i]
                     break
-
+        if not margin:
+            break
     # sanity check (testing/debugging only)
     if 0 and margin:
         for line in text.split("\n"):
@@ -463,7 +463,8 @@ def dedent(text):
                    "line = %r, margin = %r" % (line, margin)
 
     if margin:
-        text = re.sub(r'(?m)^' + margin, '', text)
+        l = len(margin)
+        text = '\n'.join( line[l:] for line in text.split('\n'))
     return text
 
 
