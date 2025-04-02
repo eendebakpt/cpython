@@ -49,6 +49,10 @@ tuple_alloc(Py_ssize_t size)
             return op;
         }
     }
+    if (size<2*PyTuple_MAXSAVESIZE)
+        OBJECT_STAT_INCREMENT_STRING("tuple_size_%ld", size);
+    else
+        OBJECT_STAT_INCREMENT_STRING("tuple_size_large");
     /* Check for overflow */
     if ((size_t)size > ((size_t)PY_SSIZE_T_MAX - (sizeof(PyTupleObject) -
                 sizeof(PyObject *))) / sizeof(PyObject *)) {

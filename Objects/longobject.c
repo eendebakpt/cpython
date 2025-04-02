@@ -171,6 +171,7 @@ long_alloc(Py_ssize_t size)
         result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
     }
     if (result == NULL) {
+        OBJECT_STAT_INCREMENT("_PyLong_New");
         /* Number of bytes needed is: offsetof(PyLongObject, ob_digit) +
         sizeof(digit)*size.  Previous incarnations of this code used
         sizeof() instead of the offsetof, but this risks being
@@ -183,6 +184,18 @@ long_alloc(Py_ssize_t size)
             return NULL;
         }
         _PyObject_Init((PyObject*)result, &PyLong_Type);
+        if (ndigits==1) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_1");
+        } else if (ndigits==2) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_2");
+        } else if (ndigits==3) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_3");
+        } else if (ndigits==4) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_4");
+        } else if (ndigits==0) {
+            OBJECT_STAT_ALLOC_INCREMENT("_PyLong_New_digits_0");
+        }
+
     }
     _PyLong_SetSignAndDigitCount(result, size != 0, size);
     /* The digit has to be initialized explicitly to avoid

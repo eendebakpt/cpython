@@ -7,6 +7,7 @@
 #include "pycore_dict.h"          // _PyDict_KeysSize()
 #include "pycore_function.h"      // _PyFunction_GetVersionForCurrentState()
 #include "pycore_interpframe.h"   // _PyInterpreterFrame
+#include "pycore_freelist.h"      // _Py_FREELIST_FREE(), _Py_FREELIST_POP()
 #include "pycore_lock.h"          // _PySeqLock_*
 #include "pycore_long.h"          // _PyLong_IsNegative(), _PyLong_GetOne()
 #include "pycore_memoryobject.h"  // _PyMemoryView_FromBufferProc()
@@ -2328,6 +2329,7 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
 PyObject *
 PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 {
+    OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(type->tp_name, "PyType_GenericAlloc");
     PyObject *obj = _PyType_AllocNoTrack(type, nitems);
     if (obj == NULL) {
         return NULL;

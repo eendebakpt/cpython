@@ -12,6 +12,7 @@
 #include "pycore_long.h"          // _PyLong_GetZero()
 #include "pycore_object.h"        // _PyObject_Init()
 #include "pycore_pymath.h"        // _Py_ADJUST_ERANGE2()
+#include "pycore_freelist.h"
 
 
 #define _PyComplexObject_CAST(op)   ((PyComplexObject *)(op))
@@ -411,6 +412,8 @@ PyObject *
 PyComplex_FromCComplex(Py_complex cval)
 {
     /* Inline PyObject_New */
+    OBJECT_STAT_ALLOC_INCREMENT("PyComplex_FromCComplex");
+
     PyComplexObject *op = PyObject_Malloc(sizeof(PyComplexObject));
     if (op == NULL) {
         return PyErr_NoMemory();

@@ -14,6 +14,7 @@ extern "C" {
 #include "pycore_pystate.h"             // _PyThreadState_GET
 #include "pycore_stats.h"               // OBJECT_STAT_INC
 
+
 static inline struct _Py_freelists *
 _Py_freelists_GET(void)
 {
@@ -39,12 +40,12 @@ _Py_freelists_GET(void)
 
 // Pops a PyObject from the freelist, returns NULL if the freelist is empty.
 #define _Py_FREELIST_POP(TYPE, NAME) \
-    _Py_CAST(TYPE*, _PyFreeList_Pop(&_Py_freelists_GET()->NAME))
+    _Py_CAST(TYPE*, _PyFreeList_Pop(&_Py_freelists_GET()->NAME, #NAME))
 
 // Pops a non-PyObject data structure from the freelist, returns NULL if the
 // freelist is empty.
 #define _Py_FREELIST_POP_MEM(NAME) \
-    _PyFreeList_PopMem(&_Py_freelists_GET()->NAME)
+    _PyFreeList_PopMem(&_Py_freelists_GET()->NAME, #NAME)
 
 #define _Py_FREELIST_SIZE(NAME) (int)((_Py_freelists_GET()->NAME).size)
 
@@ -83,10 +84,11 @@ _PyFreeList_PopNoStats(struct _Py_freelist *fl)
 }
 
 static inline PyObject *
-_PyFreeList_Pop(struct _Py_freelist *fl)
+_PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
 {
     PyObject *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
+        OBJECT_STAT_FREELIST_INCREMENT(name);
         OBJECT_STAT_INC(from_freelist);
         _Py_NewReference(op);
     }
@@ -94,10 +96,11 @@ _PyFreeList_Pop(struct _Py_freelist *fl)
 }
 
 static inline void *
-_PyFreeList_PopMem(struct _Py_freelist *fl)
+_PyFreeList_PopMem(struct _Py_freelist *fl, const char *name)
 {
     void *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
+        OBJECT_STAT_FREELIST_INCREMENT(name);
         OBJECT_STAT_INC(from_freelist);
     }
     return op;
