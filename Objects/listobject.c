@@ -119,6 +119,9 @@ list_resize(PyListObject *self, Py_ssize_t newsize)
         return 0;
     }
 
+    if (newsize<200)
+        OBJECT_STAT_INCREMENT_STRING("Resize list to %d", newsize);
+
     /* This over-allocates proportional to the list size, making room
      * for additional growth.  The over-allocation is mild, but is
      * enough to give linear-time amortized behavior over a long
@@ -3968,7 +3971,6 @@ listiter_dealloc(PyObject *self)
     _PyListIterObject *it = (_PyListIterObject *)self;
     _PyObject_GC_UNTRACK(it);
     Py_XDECREF(it->it_seq);
-    assert(Py_IS_TYPE(self, &PyListIter_Type));
     _Py_FREELIST_FREE(list_iters, it, PyObject_GC_Del);
 }
 

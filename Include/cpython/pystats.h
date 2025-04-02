@@ -47,6 +47,8 @@
 
 #define EVAL_CALL_KINDS 10
 
+#include "ht.h"
+
 typedef struct _specialization_stats {
     uint64_t success;
     uint64_t failure;
@@ -84,6 +86,7 @@ typedef struct _object_stats {
     uint64_t allocations512;
     uint64_t allocations4k;
     uint64_t allocations_big;
+    ht* allocation_table;
     uint64_t frees;
     uint64_t to_freelist;
     uint64_t from_freelist;
@@ -181,6 +184,13 @@ typedef struct _stats {
 // Export for shared extensions like 'math'
 PyAPI_DATA(PyStats*) _Py_stats;
 
+PyAPI_FUNC(PyStats *) get_pystats(void);
+PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(const char *tag, const char *sub_tag);
+PyAPI_FUNC(void) _guard_stats_table(void);
+
 #ifdef _PY_INTERPRETER
 #  define _Py_INCREF_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.interpreter_increfs++; } while (0)
 #  define _Py_DECREF_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.interpreter_decrefs++; } while (0)
@@ -192,3 +202,4 @@ PyAPI_DATA(PyStats*) _Py_stats;
 #  define _Py_INCREF_IMMORTAL_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.immortal_increfs++; } while (0)
 #  define _Py_DECREF_IMMORTAL_STAT_INC() do { if (_Py_stats) _Py_stats->object_stats.immortal_decrefs++; } while (0)
 #endif
+
