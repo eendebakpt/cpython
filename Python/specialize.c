@@ -33,6 +33,9 @@ GCStats _py_gc_stats[NUM_GENERATIONS] = { 0 };
 static PyStats _Py_stats_struct = { .gc_stats = _py_gc_stats };
 PyStats *_Py_stats = NULL;
 
+PyStats *get_pystats() {
+    return _Py_stats;
+}
 #if PYSTATS_MAX_UOP_ID < MAX_UOP_ID
 #error "Not enough space allocated for pystats. Increase PYSTATS_MAX_UOP_ID to at least MAX_UOP_ID"
 #endif
@@ -197,6 +200,8 @@ print_call_stats(FILE *out, CallStats *stats)
     }
 }
 
+#include "ht.h"
+
 static void
 print_object_stats(FILE *out, ObjectStats *stats)
 {
@@ -346,6 +351,8 @@ print_stats(FILE *out, PyStats *stats)
     print_optimization_stats(out, &stats->optimization_stats);
 #endif
     print_rare_event_stats(out, &stats->rare_event_stats);
+
+    show_hash_table_int(stats->object_stats.allocation_table, out);
 }
 
 void

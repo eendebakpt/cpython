@@ -543,6 +543,26 @@ PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)
     _PyObject_InitVar(op, tp, size);
     return op;
 }
+#include <stdio.h>
+#include <string.h>
+#include "pystats.h"
+
+void _guard_stats_table()
+{
+#ifdef Py_STATS
+    PyStats *_Py_stats = get_pystats();
+    if (_Py_stats) {
+        if (_Py_stats->object_stats.allocation_table==NULL) {
+            _Py_stats->object_stats.allocation_table = ht_create();
+            if (_Py_stats->object_stats.allocation_table==NULL) {
+                printf("_guard_stats_table: allocation failed\n");
+            }
+        }
+    }
+#endif
+}
+
+
 
 PyObject *
 _PyObject_New(PyTypeObject *tp)
@@ -3204,3 +3224,60 @@ PyUnstable_IsImmortal(PyObject *op)
     assert(op != NULL);
     return _Py_IsImmortal(op);
 }
+
+/* stats stuff, where to put in otherwise? */
+
+void OBJECT_STAT_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        _guard_stats_table();
+        //printf("OBJECT_STAT_INCREMENT: %s\n", tag);
+        hash_table_inc(_Py_stats->object_stats.allocation_table, tag);
+    }
+#endif
+}
+
+void OBJECT_STAT_INCREMENT_STRING(const char* message, ...) {
+    #define BUFSIZE (2 * 1024)
+    char buf[BUFSIZE];
+
+    va_list va;
+    va_start(va, message);
+    vsnprintf(buf, BUFSIZE, message, va);
+    va_end(va);
+
+    OBJECT_STAT_INCREMENT(buf);
+}
+
+void OBJECT_STAT_FREELIST_INCREMENT(const char *tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        char freelist_tag[200] = "Freelist allocate type #";
+        strncat(freelist_tag, tag, 200-9-1);
+        OBJECT_STAT_INCREMENT(freelist_tag);
+    }
+#endif
+}
+
+void OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(const char *tag, const char *sub_tag)
+{
+#ifdef Py_STATS
+    if (_Py_stats) {
+        if (sub_tag == NULL) {
+            OBJECT_STAT_INCREMENT_STRING("Allocate type #%s", tag);
+        } else {
+            OBJECT_STAT_INCREMENT_STRING("Allocate %s type #%s", sub_tag, tag);
+
+        }
+    }
+#endif
+}
+
+void OBJECT_STAT_ALLOC_INCREMENT(const char *tag)
+{
+    OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(tag, NULL);
+}
+
+/* stats stuff, where to put in otherwise? */
