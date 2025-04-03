@@ -25,6 +25,16 @@ class list "PyListObject *" "&PyList_Type"
 
 #include "clinic/listobject.c.h"
 
+const int small_list_stats_threshold = 512;
+
+static inline int asize(int size)
+{
+    if (size>=small_list_stats_threshold) {
+        size=small_list_stats_threshold;
+    }
+    return size;
+}
+
 _Py_DECLARE_STR(list_err, "list index out of range");
 
 #ifdef Py_GIL_DISABLED
@@ -243,7 +253,11 @@ maybe_small_list_freelist_push(PyObject *self)
     PyListObject *op = (PyListObject *)self;
     Py_ssize_t allocated = op->allocated;
     if (allocated < PyList_MAXSAVESIZE) {
-        return _Py_FREELIST_PUSH(small_lists[allocated], self, Py_small_lists_MAXFREELIST);
+        int ret = _Py_FREELIST_PUSH(small_lists[allocated], self, Py_small_lists_MAXFREELIST);
+        if (ret) {
+            OBJECT_STAT_INCREMENT_STRING("small_list_freelist small freelist deallocate %d", allocated);
+        }
+        return ret;
     }
     return 0;
 }
@@ -263,6 +277,9 @@ PyList_New(Py_ssize_t size)
         op = (PyListObject *)_Py_FREELIST_POP(PyLongObject, small_lists[size]);
         if (op) {
             // allocated with ob_item still allocated, but we need to set the other fields
+
+            OBJECT_STAT_INCREMENT_STRING("small_list_freelist small allocate %d", (size));
+
             Py_SET_SIZE(op, size);
             if ( size>0) {
                 memset(op->ob_item, 0, size * sizeof(PyObject *));
@@ -278,10 +295,13 @@ PyList_New(Py_ssize_t size)
         // do we still need this freelist? if so, we could store it at small_lists[0] with some special casing
         op = _Py_FREELIST_POP(PyListObject, lists);
         if (op == NULL) {
+            OBJECT_STAT_INCREMENT_STRING("small_list_freelist normal allocate %d", asize(size));
             op = PyObject_GC_New(PyListObject, &PyList_Type);
             if (op == NULL) {
                 return NULL;
             }
+        } else {
+                OBJECT_STAT_INCREMENT_STRING("small_list_freelist freelist allocate %d", asize(size));
         }
         if (size <= 0) {
             op->ob_item = NULL;
@@ -317,6 +337,8 @@ list_new_prealloc(Py_ssize_t size)
     if (size < PyList_MAXSAVESIZE) {
         PyListObject *op = (PyListObject *)_Py_FREELIST_POP(PyLongObject, small_lists[size]);
         if (op) {
+            OBJECT_STAT_INCREMENT_STRING("small_list_freelist small allocate %d", (size));
+
             // allocated with ob_item still allocated, but we need to set the other fields
             assert (op->allocated >= size);
             return (PyObject *) op;
@@ -327,6 +349,8 @@ list_new_prealloc(Py_ssize_t size)
     if (op == NULL) {
         return NULL;
     }
+    OBJECT_STAT_INCREMENT_STRING("small_list_freelist normal allocate %d", asize(size));
+
     assert(op->ob_item == NULL);
 #ifdef Py_GIL_DISABLED
     _PyListArray *array = list_allocate_array(size);
@@ -623,6 +647,7 @@ list_dealloc(PyObject *self)
     }
     if (PyList_CheckExact(op)) {
         if( maybe_small_list_freelist_push(self) ) {
+            OBJECT_STAT_INCREMENT_STRING("small_list_freelist small deallocate %d", asize(op->allocated));
             goto end;
         }
     }
@@ -631,9 +656,12 @@ list_dealloc(PyObject *self)
         op->ob_item = NULL;
     }
     if (PyList_CheckExact(op)) {
+        OBJECT_STAT_INCREMENT_STRING("small_list_freelist normal/freelist deallocate %d", asize(op->allocated));
+
        _Py_FREELIST_FREE(lists, op, PyObject_GC_Del);
     }
     else {
+        OBJECT_STAT_INCREMENT_STRING("small_list_freelist normal/freelist deallocate %d", asize(op->allocated));
         PyObject_GC_Del(op);
     }
 
