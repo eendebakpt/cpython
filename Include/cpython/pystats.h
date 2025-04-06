@@ -188,6 +188,7 @@ PyAPI_FUNC(PyStats *) get_pystats(void);
 PyAPI_FUNC(void) OBJECT_STAT_INCREMENT(const char *tag);
 PyAPI_FUNC(void) OBJECT_STAT_FREELIST_INCREMENT(const char *tag);
 PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT(const char *tag);
+PyAPI_FUNC(void) OBJECT_STAT_INCREMENT_STRING(const char* message, ...);
 PyAPI_FUNC(void) OBJECT_STAT_ALLOC_INCREMENT_SUBTAG(const char *tag, const char *sub_tag);
 PyAPI_FUNC(void) _guard_stats_table(void);
 

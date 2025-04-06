@@ -273,8 +273,13 @@ PyList_New(Py_ssize_t size)
 
     PyListObject *op=0;
 
+    const int BUFSIZE = 1600;
+    char tag[BUFSIZE];
+    snprintf(tag, BUFSIZE, "small_lists[%zd]", size);
+
     if (size < PyList_MAXSAVESIZE) {
-        op = (PyListObject *)_Py_FREELIST_POP(PyLongObject, small_lists[size]);
+
+        op = (PyListObject *)_Py_FREELIST_POP_tag(PyLongObject, small_lists[size], tag);
         if (op) {
             // allocated with ob_item still allocated, but we need to set the other fields
 
@@ -284,12 +289,10 @@ PyList_New(Py_ssize_t size)
             if ( size>0) {
                 memset(op->ob_item, 0, size * sizeof(PyObject *));
             } else {
-                // might be relatex later
                 op->ob_item = NULL;
             }
             assert (op->allocated >= size);
         }
-        //op=0;
     }
     if (op == NULL) {
         // do we still need this freelist? if so, we could store it at small_lists[0] with some special casing
@@ -333,9 +336,15 @@ PyList_New(Py_ssize_t size)
 static PyObject *
 list_new_prealloc(Py_ssize_t size)
 {
+    const int BUFSIZE = 1600;
+    char tag[BUFSIZE];
+    snprintf(tag, BUFSIZE, "small_lists[%zd]", size);
+
     assert(size > 0);
     if (size < PyList_MAXSAVESIZE) {
-        PyListObject *op = (PyListObject *)_Py_FREELIST_POP(PyLongObject, small_lists[size]);
+        PyListObject *op = (PyListObject *)_Py_FREELIST_POP_tag(PyLongObject, small_lists[size], tag);
+
+        //PyListObject *op = (PyListObject *)_Py_FREELIST_POP(PyLongObject, small_lists[size]);
         if (op) {
             OBJECT_STAT_INCREMENT_STRING("small_list_freelist small allocate %d", (size));
 

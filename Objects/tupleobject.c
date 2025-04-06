@@ -36,6 +36,10 @@ static inline int maybe_freelist_push(PyTupleObject *);
 static PyTupleObject *
 tuple_alloc(Py_ssize_t size)
 {
+    const int BUFSIZE = 1600;
+    char tag[BUFSIZE];
+    snprintf(tag, BUFSIZE, "tuples[%zd]", size);
+
     if (size < 0) {
         PyErr_BadInternalCall();
         return NULL;
@@ -43,7 +47,7 @@ tuple_alloc(Py_ssize_t size)
     assert(size != 0);    // The empty tuple is statically allocated.
     Py_ssize_t index = size - 1;
     if (index < PyTuple_MAXSAVESIZE) {
-        PyTupleObject *op = _Py_FREELIST_POP(PyTupleObject, tuples[index]);
+        PyTupleObject *op = _Py_FREELIST_POP_tag(PyTupleObject, tuples[index], tag);
         if (op != NULL) {
             _PyTuple_RESET_HASH_CACHE(op);
             return op;

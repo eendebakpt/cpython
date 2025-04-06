@@ -41,6 +41,11 @@ _Py_freelists_GET(void)
 #define _Py_FREELIST_POP(TYPE, NAME) \
     _Py_CAST(TYPE*, _PyFreeList_Pop(&_Py_freelists_GET()->NAME, #NAME))
 
+// Pops a PyObject from the freelist, returns NULL if the freelist is empty. Custom tag is for statistics
+#define _Py_FREELIST_POP_tag(TYPE, NAME, tag) \
+    _Py_CAST(TYPE*, _PyFreeList_Pop(&_Py_freelists_GET()->NAME, tag))
+
+
 // Pops a non-PyObject data structure from the freelist, returns NULL if the
 // freelist is empty.
 #define _Py_FREELIST_POP_MEM(NAME) \
@@ -85,6 +90,7 @@ _PyFreeList_PopNoStats(struct _Py_freelist *fl)
 static inline PyObject *
 _PyFreeList_Pop(struct _Py_freelist *fl, const char *name)
 {
+    OBJECT_STAT_INCREMENT_STRING("_PyFreeList_Pop %s: freelistsize %d", name, fl->size);
     PyObject *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
         OBJECT_STAT_FREELIST_INCREMENT(name);
