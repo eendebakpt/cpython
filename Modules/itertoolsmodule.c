@@ -2314,7 +2314,7 @@ combinations_traverse(PyObject *op, visitproc visit, void *arg)
 }
 
 static PyObject *
-combinations_next(PyObject *op)
+combinations_next_lock_held(PyObject *op)
 {
     combinationsobject *co = combinationsobject_CAST(op);
     PyObject *elem;
@@ -2325,9 +2325,6 @@ combinations_next(PyObject *op)
     Py_ssize_t n = PyTuple_GET_SIZE(pool);
     Py_ssize_t r = co->r;
     Py_ssize_t i, j, index;
-
-    if (co->stopped)
-        return NULL;
 
     if (result == NULL) {
         /* On the first pass, initialize result tuple using the indices */
@@ -2397,6 +2394,21 @@ combinations_next(PyObject *op)
 empty:
     co->stopped = 1;
     return NULL;
+}
+
+static PyObject *
+combinations_next(PyObject *op)
+{
+    PyObject *result;
+
+    combinationsobject *co = combinationsobject_CAST(op);
+    if (co->stopped)
+        return NULL;
+
+    Py_BEGIN_CRITICAL_SECTION(op);
+    result = combinations_next_lock_held(op);
+    Py_END_CRITICAL_SECTION();
+    return result;
 }
 
 static PyMethodDef combinations_methods[] = {
