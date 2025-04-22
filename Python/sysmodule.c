@@ -2022,20 +2022,6 @@ sys_getrefcount_impl(PyObject *module, PyObject *object)
 }
 
 /*[clinic input]
-sys.is_immortal -> bool
-    object:  object
-    /
-Return True if the object is immortal
-[clinic start generated code]*/
-
-static int
-sys_is_immortal_impl(PyObject *module, PyObject *object)
-/*[clinic end generated code: output=ba76f7fdcec1c2c1 input=c8043ac11984865d]*/
-{
-    return _Py_IsImmortal(object);
-}
-
-/*[clinic input]
 sys.set_immortal
     object:  object
     /
@@ -2044,10 +2030,14 @@ Make an object immortal
 
 static PyObject *
 sys_set_immortal(PyObject *module, PyObject *object)
-/*[clinic end generated code: output=a2cd63db634b3ecf input=870a735663590b1e]*/
+/*[clinic end generated code: output=a2cd63db634b3ecf input=c0c4b76d90ff742c]*/
 {
     // this might not be very clean
+#ifdef Py_GIL_DISABLED
+    Py_SET_REFCNT(object,  1 + (size_t)UINT32_MAX);
+#else
     object->ob_refcnt = _Py_IMMORTAL_INITIAL_REFCNT;
+#endif
     return Py_None;
 }
 
@@ -2816,6 +2806,7 @@ static PyMethodDef sys_methods[] = {
     SYS_GETWINDOWSVERSION_METHODDEF
     SYS__ENABLELEGACYWINDOWSFSENCODING_METHODDEF
     SYS__IS_IMMORTAL_METHODDEF
+    SYS_SET_IMMORTAL_METHODDEF
     SYS_INTERN_METHODDEF
     SYS__IS_INTERNED_METHODDEF
     SYS_IS_FINALIZING_METHODDEF

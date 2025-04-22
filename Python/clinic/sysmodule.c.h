@@ -996,6 +996,15 @@ exit:
     return return_value;
 }
 
+PyDoc_STRVAR(sys_set_immortal__doc__,
+"set_immortal($module, object, /)\n"
+"--\n"
+"\n"
+"Make an object immortal");
+
+#define SYS_SET_IMMORTAL_METHODDEF    \
+    {"set_immortal", (PyCFunction)sys_set_immortal, METH_O, sys_set_immortal__doc__},
+
 #if defined(Py_REF_DEBUG)
 
 PyDoc_STRVAR(sys_gettotalrefcount__doc__,
@@ -1864,4 +1873,4 @@ exit:
 #ifndef SYS_GETANDROIDAPILEVEL_METHODDEF
     #define SYS_GETANDROIDAPILEVEL_METHODDEF
 #endif /* !defined(SYS_GETANDROIDAPILEVEL_METHODDEF) */
-/*[clinic end generated code: output=1aca52cefbeb800f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f263b1f5affe337f input=a9049054013a1b77]*/
