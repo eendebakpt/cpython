@@ -547,7 +547,7 @@ PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, Py_ssize_t size)
 #include <string.h>
 #include "pystats.h"
 
-void _guard_stats_table()
+void _guard_stats_table(void)
 {
 #ifdef Py_STATS
     PyStats *_Py_stats = get_pystats();

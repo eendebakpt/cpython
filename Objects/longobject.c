@@ -58,6 +58,8 @@ is_medium_int(stwodigits x)
 static PyObject *
 get_small_int(sdigit ival)
 {
+    OBJECT_STAT_INCREMENT_STRING("long get_small_int %ld", (long)ival);
+
     assert(IS_SMALL_INT(ival));
     return (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + ival];
 }
@@ -163,6 +165,8 @@ long_alloc(Py_ssize_t size)
                         "too many digits in integer");
         return NULL;
     }
+    OBJECT_STAT_INCREMENT_STRING("long alloc %d", size);
+
     /* Fast operations for single digit integers (including zero)
      * assume that there is always at least one digit present. */
     Py_ssize_t ndigits = size ? size : 1;
@@ -245,6 +249,8 @@ _PyLong_Copy(PyLongObject *src)
 static PyObject *
 _PyLong_FromMedium(sdigit x)
 {
+    OBJECT_STAT_INCREMENT_STRING("long _PyLong_FromMedium %d", x);
+
     assert(!IS_SMALL_INT(x));
     assert(is_medium_int(x));
 
