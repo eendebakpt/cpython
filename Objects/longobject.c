@@ -24,6 +24,8 @@ class int "PyObject *" "&PyLong_Type"
 
 #define medium_value(x) ((stwodigits)_PyLong_CompactValue(x))
 
+const int long_alloc_threshold = 30000;
+
 #define IS_SMALL_INT(ival) (-_PY_NSMALLNEGINTS <= (ival) && (ival) < _PY_NSMALLPOSINTS)
 #define IS_SMALL_UINT(ival) ((ival) < _PY_NSMALLPOSINTS)
 
@@ -165,8 +167,10 @@ long_alloc(Py_ssize_t size)
                         "too many digits in integer");
         return NULL;
     }
-    OBJECT_STAT_INCREMENT_STRING("long alloc %d", size);
 
+    if (-long_alloc_threshold <= size && size <= long_alloc_threshold) {
+        OBJECT_STAT_INCREMENT_STRING("long long_alloc %d", size);
+    }
     /* Fast operations for single digit integers (including zero)
      * assume that there is always at least one digit present. */
     Py_ssize_t ndigits = size ? size : 1;
@@ -198,6 +202,8 @@ long_alloc(Py_ssize_t size)
 PyLongObject *
 _PyLong_New(Py_ssize_t size)
 {
+    if (-long_alloc_threshold <= size && size <= long_alloc_threshold)
+        OBJECT_STAT_INCREMENT_STRING("long _PyLong_New %d", size);
     return long_alloc(size);
 }
 
@@ -246,13 +252,16 @@ _PyLong_Copy(PyLongObject *src)
     return (PyObject *)result;
 }
 
+
 static PyObject *
 _PyLong_FromMedium(sdigit x)
 {
-    OBJECT_STAT_INCREMENT_STRING("long _PyLong_FromMedium %d", x);
 
     assert(!IS_SMALL_INT(x));
     assert(is_medium_int(x));
+
+    if (-long_alloc_threshold <= x && x <= long_alloc_threshold)
+        OBJECT_STAT_INCREMENT_STRING("long _PyLong_FromMedium %d", x);
 
     PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
     if (v == NULL) {
@@ -1982,10 +1991,18 @@ divrem1(PyLongObject *a, digit n, digit *prem)
     PyLongObject *z;
 
     assert(n > 0 && n <= PyLong_MASK);
+
+
     z = long_alloc(size);
     if (z == NULL)
         return NULL;
     *prem = inplace_divrem1(z->long_value.ob_digit, a->long_value.ob_digit, size, n);
+
+    if (-long_alloc_threshold <= size && size <= long_alloc_threshold) {
+        int64_t val;
+        PyLong_AsInt64((PyObject*)z, val);
+        OBJECT_STAT_INCREMENT_STRING("long divrem1 %ld", val);
+    }
     return long_normalize(z);
 }
 
@@ -2602,6 +2619,10 @@ long_from_binary_base(const char *start, const char *end, Py_ssize_t digits, int
         return 0;
     }
     n = (digits * bits_per_char + PyLong_SHIFT - 1) / PyLong_SHIFT;
+    if (-long_alloc_threshold <= size && size <= long_alloc_threshold) {
+        OBJECT_STAT_INCREMENT_STRING("long long_from_binary_base %ld", n);
+    }
+
     z = long_alloc(n);
     if (z == NULL) {
         *res = NULL;
