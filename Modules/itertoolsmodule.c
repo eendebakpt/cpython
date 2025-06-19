@@ -1881,11 +1881,12 @@ chain_traverse(PyObject *op, visitproc visit, void *arg)
 }
 
 static inline PyObject *
-chain_next_lock_held(PyObject *op)
+chain_next(PyObject *op)
 {
     chainobject *lz = chainobject_CAST(op);
-    PyObject *item;
+    PyObject *item = NULL;
 
+    Py_BEGIN_CRITICAL_SECTION(op);
     /* lz->source is the iterator of iterables. If it's NULL, we've already
      * consumed them all. lz->active is the current iterator. If it's NULL,
      * we should grab a new one from lz->source. */
@@ -1894,40 +1895,37 @@ chain_next_lock_held(PyObject *op)
             PyObject *iterable = PyIter_Next(lz->source);
             if (iterable == NULL) {
                 Py_CLEAR(lz->source);
-                return NULL;            /* no more input sources */
+                goto exit;            /* no more input sources */
             }
             lz->active = PyObject_GetIter(iterable);
             Py_DECREF(iterable);
             if (lz->active == NULL) {
                 Py_CLEAR(lz->source);
-                return NULL;            /* input not iterable */
+                goto exit;            /* input not iterable */
             }
         }
         item = (*Py_TYPE(lz->active)->tp_iternext)(lz->active);
-        if (item != NULL)
-            return item;
+        if (item != NULL) {
+            goto exit;
+        }
         if (PyErr_Occurred()) {
             if (PyErr_ExceptionMatches(PyExc_StopIteration))
                 PyErr_Clear();
-            else
-                return NULL;            /* input raised an exception */
+            else {
+                goto exit;            /* input raised an exception */
+            }
         }
         /* lz->active is consumed, try with the next iterable. */
         Py_CLEAR(lz->active);
     }
     /* Everything had been consumed already. */
-    return NULL;
+
+exit:
+    Py_END_CRITICAL_SECTION()
+
+    return item;
 }
 
-static PyObject *
-chain_next(PyObject *op)
-{
-    PyObject *result;
-    Py_BEGIN_CRITICAL_SECTION(op);
-    result = chain_next_lock_held(op);
-    Py_END_CRITICAL_SECTION()
-    return result;
-}
 
 PyDoc_STRVAR(chain_doc,
 "chain(*iterables)\n\
