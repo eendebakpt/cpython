@@ -63,6 +63,5 @@ class ItertoolsThreading(unittest.TestCase):
             barrier.reset()
 
 
-
 if __name__ == "__main__":
     unittest.main()
