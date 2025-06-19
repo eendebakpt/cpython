@@ -1880,7 +1880,7 @@ chain_traverse(PyObject *op, visitproc visit, void *arg)
     return 0;
 }
 
-static inline PyObject *
+static PyObject *
 chain_next(PyObject *op)
 {
     chainobject *lz = chainobject_CAST(op);
