@@ -342,45 +342,71 @@ pairwise_traverse(PyObject *op, visitproc visit, void *arg)
     return 0;
 }
 
+#include "pyatomic.h"
+static inline Py_XSETREF_atomic(PyObject *dst, PyObject *src) {
+#ifndef Py_GIL_DISABLED
+    PyObject *tmp = src;
+    _Py_atomic_exchange_ptr(dst, tmp);
+    Py_XDECREF(tmp);
+#else
+    Py_XSETREF(dst, src);
+#endif
+}
+
 static PyObject *
 pairwise_next(PyObject *op)
 {
     pairwiseobject *po = pairwiseobject_CAST(op);
     PyObject *it = po->it;
+#ifndef Py_GIL_DISABLED
     PyObject *old = po->old;
+#else
+    PyObject *old = NULL;
+    _Py_atomic_exchange(po->old, old); // we obtained a reference to old
+#endif
     PyObject *new, *result;
 
+#ifndef Py_GIL_DISABLED
     if (it == NULL) {
         return NULL;
     }
+#endif
     if (old == NULL) {
         old = (*Py_TYPE(it)->tp_iternext)(it);
-        Py_XSETREF(po->old, old);
         if (old == NULL) {
+#ifndef Py_GIL_DISABLED
             Py_CLEAR(po->it);
+#endif
             return NULL;
         }
+        //Py_XSETREF(po->old, old); // needed for recursive calls
+#ifndef Py_GIL_DISABLED
         it = po->it;
         if (it == NULL) {
             Py_CLEAR(po->old);
             return NULL;
         }
+#endif
     }
+#ifndef Py_GIL_DISABLED
     Py_INCREF(old);
+#endif
     new = (*Py_TYPE(it)->tp_iternext)(it);
     if (new == NULL) {
+#ifndef Py_GIL_DISABLED
         Py_CLEAR(po->it);
+#endif
         Py_CLEAR(po->old);
         Py_DECREF(old);
         return NULL;
     }
 
     result = po->result;
-    if (Py_REFCNT(result) == 1) {
+    if (_PyObject_IsUniquelyReferenced(result)) {
         Py_INCREF(result);
         PyObject *last_old = PyTuple_GET_ITEM(result, 0);
         PyObject *last_new = PyTuple_GET_ITEM(result, 1);
-        PyTuple_SET_ITEM(result, 0, Py_NewRef(old));
+        PyTuple_SET_ITEM(result, 0, old);
         PyTuple_SET_ITEM(result, 1, Py_NewRef(new));
         Py_DECREF(last_old);
         Py_DECREF(last_new);
@@ -391,13 +417,12 @@ pairwise_next(PyObject *op)
     else {
         result = PyTuple_New(2);
         if (result != NULL) {
-            PyTuple_SET_ITEM(result, 0, Py_NewRef(old));
+            PyTuple_SET_ITEM(result, 0, old);
             PyTuple_SET_ITEM(result, 1, Py_NewRef(new));
         }
     }
 
-    Py_XSETREF(po->old, new);
-    Py_DECREF(old);
+    Py_XSETREF_atomic(po->old, new);
     return result;
 }
 
