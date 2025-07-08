@@ -426,6 +426,36 @@ pairwise_next(PyObject *op)
     return result;
 }
 
+/*
+from itertools import pairwise
+
+class evil_iterator:
+
+    def __init__(self, it):
+        self.it = iter(it)
+        self.it2 = None
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.it2 is not None:
+            it2 = self.it2
+            self.it2 = None
+            return next(it2)
+
+        return next(self.it)
+
+z=evil_iterator([1,2,3])
+list(z)
+
+#%%
+ei = evil_iterator((1,2,3,4))
+p = pairwise(ei)
+
+ei.it2 = iter(p)
+next(p) # needs to work, although the value could be undefined
+
+*/
 static PyType_Slot pairwise_slots[] = {
     {Py_tp_dealloc, pairwise_dealloc},
     {Py_tp_getattro, PyObject_GenericGetAttr},
