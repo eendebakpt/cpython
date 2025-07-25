@@ -107,6 +107,19 @@ bool_xor(PyObject *a, PyObject *b)
     return PyBool_FromLong((a == Py_True) ^ (b == Py_True));
 }
 
+
+static Py_hash_t
+bool_hash(PyObject *obj)
+{
+    // bool is not an acceptable base type, so only the Py_True and
+    // Py_False singletons can occur
+    if (obj == Py_True) {
+        return 1;
+    }
+    assert (obj == Py_False);
+    return 0;
+}
+
 /* Doc string */
 
 PyDoc_STRVAR(bool_doc,
@@ -182,7 +195,7 @@ PyTypeObject PyBool_Type = {
     &bool_as_number,                            /* tp_as_number */
     0,                                          /* tp_as_sequence */
     0,                                          /* tp_as_mapping */
-    0,                                          /* tp_hash */
+    bool_hash,                                          /* tp_hash */
     0,                                          /* tp_call */
     0,                                          /* tp_str */
     0,                                          /* tp_getattro */
