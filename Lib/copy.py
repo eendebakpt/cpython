@@ -52,6 +52,7 @@ __getstate__() and __setstate__().  See the documentation for module
 import types
 import weakref
 from copyreg import dispatch_table
+import _testcapi
 
 class Error(Exception):
     pass
@@ -106,6 +107,8 @@ _copy_atomic_types = frozenset({types.NoneType, int, float, bool, complex, str, 
           types.NotImplementedType, types.FunctionType, types.CodeType,
           weakref.ref, super})
 _copy_builtin_containers = frozenset({list, dict, set, bytearray})
+_testcapi.pyobject_enable_deferred_refcount(_copy_atomic_types)
+_testcapi.pyobject_enable_deferred_refcount(_copy_builtin_containers)
 
 def deepcopy(x, memo=None):
     """Deep copy operation on arbitrary Python objects.
@@ -208,6 +211,8 @@ def _deepcopy_method(x, memo): # Copy instance methods
 d[types.MethodType] = _deepcopy_method
 
 del d
+_testcapi.pyobject_enable_deferred_refcount(_atomic_types)
+_testcapi.pyobject_enable_deferred_refcount(_deepcopy_dispatch)
 
 def _keep_alive(x, memo):
     """Keeps a reference to the object x in the memo.

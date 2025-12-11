@@ -152,4 +152,17 @@ __pragma(warning(disable: 4201))
 __pragma(warning(pop))  // warning(disable: 4201)
 #endif
 
+//# Source - https://stackoverflow.com/a
+//# Posted by Maxim Khrisanfov
+//# Retrieved 2025-12-11, License - CC BY-SA 4.0
+static inline void print_str(PyObject *o)
+{
+    PyObject_Print(o, stdout, Py_PRINT_RAW);
+}
+
+static inline void print_repr(PyObject *o)
+{
+    PyObject_Print(o, stdout, 0);
+}
+
 #endif /* !Py_PYTHON_H */

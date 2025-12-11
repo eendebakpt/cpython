@@ -3878,6 +3878,30 @@ PyImport_ImportModuleLevelObject(PyObject *name, PyObject *globals,
         if (mod == NULL) {
             goto error;
         }
+
+        PyObject *attributes = PyObject_Dir(mod);
+        //printf("imported module "); print_repr(mod); printf("\n");
+        int total = 0;
+        if (attributes != NULL) {
+            // loop over all module attributes
+            for(int i=0; i< PyList_Size(attributes); i++) {
+                PyObject **result = 0;
+                PyObject *attr_name = PyList_GetItem(attributes, i);
+
+                PyObject *attr = PyObject_GetAttr(mod, attr_name);
+                if (attr==NULL) {
+                    PyErr_Clear();
+                } else {
+                    //printf("   %d: ", i); print_repr(attr); printf("\n");
+                    total += PyUnstable_Object_EnableDeferredRefcount(attr);
+                    Py_DECREF(attr);
+                }
+
+                Py_DECREF(attr_name);
+            }
+            Py_DECREF(attributes);
+            //printf("imported module "); print_repr(mod); printf(", enabled deferrred ref counting on  %d object(s)\n", total);
+        }
     }
 
     has_from = 0;
