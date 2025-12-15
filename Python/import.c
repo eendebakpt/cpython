@@ -3889,6 +3889,9 @@ PyImport_ImportModuleLevelObject(PyObject *name, PyObject *globals,
                 PyObject *attr_name = PyList_GetItem(attributes, i);
 
                 PyObject *attr = PyObject_GetAttr(mod, attr_name);
+                //if (PyUnicode_CompareWithASCIIString(attr, "inspect") ==0) {
+                //    continue;
+                //}
                 if (attr==NULL) {
                     PyErr_Clear();
                 } else {
