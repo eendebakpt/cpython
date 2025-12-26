@@ -780,6 +780,7 @@ new_keys_object(uint8_t log2_size, bool unicode)
         dk = _Py_FREELIST_POP_MEM(dictkeys);
         assert(dk->dk_log2_size == log2_size);
         assert(dk->dk_kind == DICT_KEYS_UNICODE);
+        assert(dk->dk_log2_index_bytes == log2_bytes);
     }
     if (dk == NULL) {
         dk = PyMem_Malloc(sizeof(PyDictKeysObject)
@@ -791,12 +792,12 @@ new_keys_object(uint8_t log2_size, bool unicode)
         }
         dk->dk_log2_size = log2_size;
         dk->dk_kind = unicode ? DICT_KEYS_UNICODE : DICT_KEYS_GENERAL;
+        dk->dk_log2_index_bytes = log2_bytes;
     }
 #ifdef Py_REF_DEBUG
     _Py_IncRefTotal(_PyThreadState_GET());
 #endif
     dk->dk_refcnt = 1;
-    dk->dk_log2_index_bytes = log2_bytes;
 #ifdef Py_GIL_DISABLED
     dk->dk_mutex = (PyMutex){0};
 #endif
