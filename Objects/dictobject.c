@@ -778,6 +778,8 @@ new_keys_object(uint8_t log2_size, bool unicode)
     PyDictKeysObject *dk = NULL;
     if (log2_size == PyDict_LOG_MINSIZE && unicode) {
         dk = _Py_FREELIST_POP_MEM(dictkeys);
+        assert(dk->dk_log2_size == log2_size);
+        assert(dk->dk_kind == DICT_KEYS_UNICODE);
     }
     if (dk == NULL) {
         dk = PyMem_Malloc(sizeof(PyDictKeysObject)
@@ -787,14 +789,14 @@ new_keys_object(uint8_t log2_size, bool unicode)
             PyErr_NoMemory();
             return NULL;
         }
+        dk->dk_log2_size = log2_size;
+        dk->dk_kind = unicode ? DICT_KEYS_UNICODE : DICT_KEYS_GENERAL;
     }
 #ifdef Py_REF_DEBUG
     _Py_IncRefTotal(_PyThreadState_GET());
 #endif
     dk->dk_refcnt = 1;
-    dk->dk_log2_size = log2_size;
     dk->dk_log2_index_bytes = log2_bytes;
-    dk->dk_kind = unicode ? DICT_KEYS_UNICODE : DICT_KEYS_GENERAL;
 #ifdef Py_GIL_DISABLED
     dk->dk_mutex = (PyMutex){0};
 #endif
