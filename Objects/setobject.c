@@ -3039,7 +3039,7 @@ PySet_Add(PyObject *anyset, PyObject *key)
         // new frozensets before they are exposed to other code". In this case,
         // this can be done without a lock.
         // since another key is added to the set, we must track the frozenset if needed
-        if (PyFrozenSet_CheckExact(anyset) && PyObject_GC_IsTracked(key) && !PyObject_GC_IsTracked(anyset) ) {
+        if (PyFrozenSet_CheckExact(anyset) && !PyObject_GC_IsTracked(anyset) && PyObject_GC_IsTracked(key)) {
             _PyObject_GC_TRACK(anyset);
         }
         return set_add_key((PySetObject *)anyset, key);
