@@ -563,8 +563,9 @@ groupby_next(PyObject *op)
     if (grouper == NULL)
         return NULL;
 
-    r = PyTuple_Pack(2, gbo->currkey, grouper);
-    Py_DECREF(grouper);
+    //r = PyTuple_Pack(2, gbo->currkey, grouper);
+    Py_INCREF(gbo->currkey);
+    r = _PyTuple_FromArraySteal((PyObject*[]){gbo->currkey, grouper}, 2);
     return r;
 }
 
