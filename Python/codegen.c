@@ -6103,6 +6103,11 @@ codegen_pattern_class(compiler *c, pattern_ty p, pattern_context *pc)
     }
     ADDOP_LOAD_CONST_NEW(c, LOC(p), attr_names);
     ADDOP_I(c, LOC(p), MATCH_CLASS, nargs);
+    if ((nargs + nattrs) == 0) {
+        RETURN_IF_ERROR(jump_to_fail_pop(c, LOC(p), pc, POP_JUMP_IF_FALSE));
+        // If there are no patterns, we're done!
+        return SUCCESS;
+    }
     ADDOP_I(c, LOC(p), COPY, 1);
     ADDOP_LOAD_CONST(c, LOC(p), Py_None);
     ADDOP_I(c, LOC(p), IS_OP, 1);
