@@ -6091,7 +6091,6 @@ codegen_pattern_class(compiler *c, pattern_ty p, pattern_context *pc)
     if (nattrs) {
         RETURN_IF_ERROR(validate_kwd_attrs(c, kwd_attrs, kwd_patterns));
     }
-    VISIT(c, expr, p->v.MatchClass.cls);
     PyObject *attr_names = PyTuple_New(nattrs);
     if (attr_names == NULL) {
         return ERROR;
@@ -6101,34 +6100,53 @@ codegen_pattern_class(compiler *c, pattern_ty p, pattern_context *pc)
         PyObject *name = asdl_seq_GET(kwd_attrs, i);
         PyTuple_SET_ITEM(attr_names, i, Py_NewRef(name));
     }
-    ADDOP_LOAD_CONST_NEW(c, LOC(p), attr_names);
-    ADDOP_I(c, LOC(p), MATCH_CLASS, nargs);
-    ADDOP_I(c, LOC(p), COPY, 1);
-    ADDOP_LOAD_CONST(c, LOC(p), Py_None);
-    ADDOP_I(c, LOC(p), IS_OP, 1);
-    // TOS is now a tuple of (nargs + nattrs) attributes (or None):
-    pc->on_top++;
-    RETURN_IF_ERROR(jump_to_fail_pop(c, LOC(p), pc, POP_JUMP_IF_FALSE));
-    ADDOP_I(c, LOC(p), UNPACK_SEQUENCE, nargs + nattrs);
-    pc->on_top += nargs + nattrs - 1;
-    for (i = 0; i < nargs + nattrs; i++) {
-        pc->on_top--;
-        pattern_ty pattern;
-        if (i < nargs) {
-            // Positional:
-            pattern = asdl_seq_GET(patterns, i);
-        }
-        else {
-            // Keyword:
-            pattern = asdl_seq_GET(kwd_patterns, i - nargs);
-        }
-        if (WILDCARD_CHECK(pattern)) {
-            ADDOP(c, LOC(p), POP_TOP);
-            continue;
-        }
-        RETURN_IF_ERROR(codegen_pattern_subpattern(c, pattern, pc));
+    if (nargs+nattrs>0) {
+        VISIT(c, expr, p->v.MatchClass.cls);
+        // Stack: ... subject cls
+        ADDOP_LOAD_CONST_NEW(c, LOC(p), attr_names);
+        ADDOP_I(c, LOC(p), MATCH_CLASS, nargs);
+        ADDOP_I(c, LOC(p), COPY, 1);
+        pc->on_top++;
+        RETURN_IF_ERROR(jump_to_fail_pop(c, LOC(p), pc, POP_JUMP_IF_NONE));
+        ADDOP_I(c, LOC(p), UNPACK_SEQUENCE, nargs + nattrs);
+    } else {
+        // No subpatterns: emit isinstance(subject, cls) via a CALL sequence
+        // so the specializer can turn it into CALL_ISINSTANCE at runtime.
+        // attr_names is an empty tuple; not needed here.
+        Py_DECREF(attr_names);
+        // Build the CALL 2 stack: isinstance NULL subject cls
+        // PUSH_NULL then LOAD_COMMON_CONSTANT gives: subject NULL isinstance (isinstance=TOS)
+        ADDOP(c, LOC(p), PUSH_NULL);
+        ADDOP_I(c, LOC(p), LOAD_COMMON_CONSTANT, CONSTANT_BUILTIN_ISINSTANCE);
+        // Stack: ... subject NULL isinstance
+        ADDOP_I(c, LOC(p), SWAP, 3);
+        // Stack: ... isinstance NULL subject
+        VISIT(c, expr, p->v.MatchClass.cls);
+        // Stack: ... isinstance NULL subject cls
+        ADDOP_I(c, LOC(p), CALL, 2);
+        RETURN_IF_ERROR(jump_to_fail_pop(c, LOC(p), pc, POP_JUMP_IF_FALSE));
     }
-    // Success! Pop the tuple of attributes:
+    if (nargs + nattrs > 0) {
+        pc->on_top += nargs + nattrs - 1;
+        for (i = 0; i < nargs + nattrs; i++) {
+            pc->on_top--;
+            pattern_ty pattern;
+            if (i < nargs) {
+                // Positional:
+                pattern = asdl_seq_GET(patterns, i);
+            }
+            else {
+                // Keyword:
+                pattern = asdl_seq_GET(kwd_patterns, i - nargs);
+            }
+            if (WILDCARD_CHECK(pattern)) {
+                ADDOP(c, LOC(p), POP_TOP);
+                continue;
+            }
+            RETURN_IF_ERROR(codegen_pattern_subpattern(c, pattern, pc));
+        }
+    }
+    // Success!
     return SUCCESS;
 }
 
