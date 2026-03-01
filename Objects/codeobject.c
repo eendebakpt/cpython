@@ -2546,13 +2546,15 @@ code_dealloc(PyObject *self)
 #ifdef Py_GIL_DISABLED
     // The first element always points to the mutable bytecode at the end of
     // the code object, which will be freed when the code object is freed.
-    for (Py_ssize_t i = 1; i < co->co_tlbc->size; i++) {
-        char *entry = co->co_tlbc->entries[i];
-        if (entry != NULL) {
-            PyMem_Free(entry);
+    if (co->co_tlbc != NULL) {
+        for (Py_ssize_t i = 1; i < co->co_tlbc->size; i++) {
+            char *entry = co->co_tlbc->entries[i];
+            if (entry != NULL) {
+                PyMem_Free(entry);
+            }
         }
+        PyMem_Free(co->co_tlbc);
     }
-    PyMem_Free(co->co_tlbc);
 #endif
     PyObject_Free(co);
 }
@@ -2605,7 +2607,9 @@ code_richcompare(PyObject *self, PyObject *other, int op)
     cp = (PyCodeObject *)other;
 
     eq = PyObject_RichCompareBool(co->co_name, cp->co_name, Py_EQ);
-    if (!eq) goto unequal;
+    if (eq <= 0) {
+        goto unequal;
+    }
     eq = co->co_argcount == cp->co_argcount;
     if (!eq) goto unequal;
     eq = co->co_posonlyargcount == cp->co_posonlyargcount;
