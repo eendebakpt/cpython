@@ -1169,7 +1169,7 @@ _Pickler_New(PickleState *st)
     return self;
 
 error:
-    PyMem_Free(memo);
+    PyMemoTable_Del(memo);
     Py_XDECREF(output_buffer);
     return NULL;
 }
@@ -5817,6 +5817,7 @@ load_counted_bytearray(PickleState *state, UnpicklerObject *self)
         prevsize = cursize;
         cursize += Py_MIN(cursize, size - cursize);
         if (PyByteArray_Resize(bytearray, cursize) < 0) {
+            Py_DECREF(bytearray);
             return -1;
         }
     }
