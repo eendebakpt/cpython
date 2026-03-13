@@ -219,6 +219,10 @@ class UUID:
                 raise ValueError('badly formed hexadecimal UUID string')
             int = int_(hex, 16)
         elif bytes_le is not None:
+            if not isinstance(bytes_le, bytes_):
+                raise TypeError(
+                    f'a bytes object is required, not {type(bytes_le).__name__!r}'
+                )
             if len(bytes_le) != 16:
                 raise ValueError('bytes_le is not a 16-char string')
             assert isinstance(bytes_le, bytes_), repr(bytes_le)
@@ -226,6 +230,10 @@ class UUID:
                      bytes_le[8-1:6-1:-1] + bytes_le[8:])
             int = int_.from_bytes(bytes)  # big endian
         elif bytes is not None:
+            if not isinstance(bytes, bytes_):
+                raise TypeError(
+                    f'a bytes object is required, not {type(bytes).__name__!r}'
+                )
             if len(bytes) != 16:
                 raise ValueError('bytes is not a 16-char string')
             assert isinstance(bytes, bytes_), repr(bytes)

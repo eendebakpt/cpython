@@ -282,14 +282,16 @@ class BaseTestUUID:
         badvalue(lambda: self.uuid.UUID('123456781234567812345678z2345678'))
 
         # Badly formed bytes.
-        badvalue(lambda: self.uuid.UUID(bytes='abc'))
-        badvalue(lambda: self.uuid.UUID(bytes='\0'*15))
-        badvalue(lambda: self.uuid.UUID(bytes='\0'*17))
+        badtype(lambda: self.uuid.UUID(bytes='abc'))
+        badvalue(lambda: self.uuid.UUID(bytes=b'abc'))
+        badvalue(lambda: self.uuid.UUID(bytes=b'\0'*15))
+        badvalue(lambda: self.uuid.UUID(bytes=b'\0'*17))
 
         # Badly formed bytes_le.
-        badvalue(lambda: self.uuid.UUID(bytes_le='abc'))
-        badvalue(lambda: self.uuid.UUID(bytes_le='\0'*15))
-        badvalue(lambda: self.uuid.UUID(bytes_le='\0'*17))
+        badtype(lambda: self.uuid.UUID(bytes_le='abc'))
+        badvalue(lambda: self.uuid.UUID(bytes_le=b'abc'))
+        badvalue(lambda: self.uuid.UUID(bytes_le=b'\0'*15))
+        badvalue(lambda: self.uuid.UUID(bytes_le=b'\0'*17))
 
         # Badly formed fields.
         badvalue(lambda: self.uuid.UUID(fields=(1,)))
@@ -877,11 +879,14 @@ class BaseTestUUID:
             equal((u.int >> 80) & 0xffff, 0x232a)
             equal((u.int >> 96) & 0xffff_ffff, 0x1ec9_414c)
 
-    def test_uuid7(self):
+    def test_uuid7_functional(self):
         equal = self.assertEqual
         u = self.uuid.uuid7()
         equal(u.variant, self.uuid.RFC_4122)
         equal(u.version, 7)
+
+    def test_uuid7_mock(self):
+        equal = self.assertEqual
 
         # 1 Jan 2023 12:34:56.123_456_789
         timestamp_ns = 1672533296_123_456_789  # ns precision
@@ -940,11 +945,13 @@ class BaseTestUUID:
         versions = {u.version for u in uuids}
         self.assertSetEqual(versions, {7})
 
-    def test_uuid7_monotonicity(self):
+    def test_uuid7_monotonicity_functional(self):
         equal = self.assertEqual
-
         us = [self.uuid.uuid7() for _ in range(10_000)]
         equal(us, sorted(us))
+
+    def test_uuid7_monotonicity_mock(self):
+        equal = self.assertEqual
 
         with mock.patch.multiple(
             self.uuid,
@@ -1003,7 +1010,7 @@ class BaseTestUUID:
 
             self.assertLess(u1, u2)
 
-    def test_uuid7_timestamp_backwards(self):
+    def test_uuid7_timestamp_backwards_mock(self):
         equal = self.assertEqual
         # 1 Jan 2023 12:34:56.123_456_789
         timestamp_ns = 1672533296_123_456_789  # ns precision
@@ -1043,7 +1050,7 @@ class BaseTestUUID:
             equal((u.int >> 32) & 0x3fff_ffff, counter_lo + 1)
             equal(u.int & 0xffff_ffff, tail)
 
-    def test_uuid7_overflow_counter(self):
+    def test_uuid7_overflow_counter_mock(self):
         equal = self.assertEqual
         # 1 Jan 2023 12:34:56.123_456_789
         timestamp_ns = 1672533296_123_456_789  # ns precision
@@ -1497,6 +1504,92 @@ class TestInternalsWithExtModule(BaseTestInternals, unittest.TestCase):
     def test_windll_getnode(self):
         node = self.uuid._windll_getnode()
         self.check_node(node)
+
+
+@unittest.skipUnless(c_uuid, "requires the C _uuid module")
+@unittest.skipUnless(
+    hasattr(__import__('uuid'), '_c_UUID'),
+    "requires the C UUID type"
+)
+class TestCImplementationCompat(unittest.TestCase):
+    def test_compatibility(self):
+        import uuid
+
+        PU = uuid._py_UUID
+        CU = uuid._c_UUID
+        N = 1000
+
+        uuids = [
+            "00000000-0000-0000-0000-000000000000",
+            "ffffffff-ffff-ffff-ffff-ffffffffffff",
+            *(str(uuid.uuid4()) for _ in range(N)),
+            *(str(uuid.uuid7()) for _ in range(N)),
+            *(str(uuid.uuid1()) for _ in range(N)),
+            *(str(uuid.UUID(bytes=os.urandom(16))) for _ in range(N)),
+        ]
+
+        def full_test(p, u):
+            self.assertEqual(p, u)
+            self.assertEqual(p.hex, u.hex)
+            self.assertEqual(p.int, u.int)
+            self.assertEqual(p.variant, u.variant)
+            self.assertEqual(p.version, u.version)
+            self.assertEqual(p.is_safe, u.is_safe)
+            self.assertEqual(p.bytes, u.bytes)
+            self.assertEqual(p.bytes_le, u.bytes_le)
+            self.assertEqual(p.fields, u.fields)
+            self.assertEqual(p.time_low, u.time_low)
+            self.assertEqual(p.time_mid, u.time_mid)
+            self.assertEqual(p.time_hi_version, u.time_hi_version)
+            self.assertEqual(p.clock_seq_hi_variant, u.clock_seq_hi_variant)
+            self.assertEqual(p.clock_seq_low, u.clock_seq_low)
+            self.assertEqual(p.node, u.node)
+
+        all_ps = set()
+        all_us = set()
+        for uuid_str in uuids:
+            with self.subTest(uuid=uuid_str):
+                p = PU(uuid_str)
+                u = CU(uuid_str)
+                full_test(p, u)
+
+                u2 = CU(bytes_le=p.bytes_le)
+                full_test(p, u2)
+
+                u3 = CU(fields=p.fields)
+                full_test(p, u3)
+
+                u4 = CU(int=p.int)
+                full_test(p, u4)
+
+                u5 = CU(
+                    hex=p.hex,
+                    is_safe=uuid.SafeUUID.safe,
+                )
+                full_test(
+                    PU(
+                        uuid_str,
+                        is_safe=uuid.SafeUUID.safe,
+                    ),
+                    u5,
+                )
+
+                all_ps.add(p)
+                all_us.add(u)
+
+        self.assertEqual(len(all_ps), len(all_us))
+        self.assertEqual(len(all_ps), len(uuids))
+
+    def test_subclassing(self):
+        import uuid
+
+        class U(uuid._c_UUID):
+            pass
+
+        u = U(int=1)
+        u_str = str(u)
+        del u
+        self.assertEqual(u_str, '00000000-0000-0000-0000-000000000001')
 
 
 if __name__ == '__main__':
