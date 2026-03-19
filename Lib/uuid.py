@@ -934,17 +934,30 @@ def uuid8(a=None, b=None, c=None):
     return UUID._from_int(int_uuid_8)
 
 
-# Use the C implementation of uuid7 when available.
-# The Python version is kept as a fallback.
+# Use C implementations when available, keep Python versions as fallbacks.
 _py_uuid7 = uuid7
-_uuid7_impl = getattr(_uuid, 'uuid7', None) if _uuid is not None else None
-if _uuid7_impl is not None:
-    def uuid7():
-        """Generate a UUID from a Unix timestamp in milliseconds and random bits.
+_py_uuid8 = uuid8
+if _uuid is not None:
+    _uuid._register_type(UUID)
+    if hasattr(_uuid, 'uuid7'):
+        def uuid7():
+            """Generate a UUID from a Unix timestamp in milliseconds and random bits.
 
-        UUIDv7 objects feature monotonicity within a millisecond.
-        """
-        return UUID(bytes=_uuid7_impl())
+            UUIDv7 objects feature monotonicity within a millisecond.
+            """
+            return _uuid.uuid7()
+        _uuid7_impl = _uuid.uuid7
+    if hasattr(_uuid, 'uuid8'):
+        def uuid8(a=None, b=None, c=None):
+            """Generate a UUID from three custom blocks.
+
+            * 'a' is the first 48-bit chunk of the UUID (octets 0-5);
+            * 'b' is the mid 12-bit chunk (octets 6-7);
+            * 'c' is the last 62-bit chunk (octets 8-15).
+
+            When a value is not specified, a random value is generated.
+            """
+            return _uuid.uuid8(a, b, c)
 
 
 def main():

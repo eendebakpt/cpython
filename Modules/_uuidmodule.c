@@ -13,6 +13,7 @@
 #include "pyconfig.h"   // Py_GIL_DISABLED
 #include "Python.h"
 
+#include "pycore_long.h"          // _PyLong_FromByteArray()
 #include "pycore_pylifecycle.h"   // _PyOS_URandom()
 #include "pycore_time.h"          // PyTime_TimeRaw()
 
@@ -58,6 +59,9 @@ typedef struct {
     uint64_t last_timestamp_v7;
     uint64_t last_counter_v7;
     int last_timestamp_v7_init;  // 0 = not set (equivalent to Python's None)
+
+    // Python UUID class reference (set via _register_type)
+    PyObject *UuidType;
 } uuid_state;
 
 static inline uuid_state *
@@ -152,6 +156,26 @@ _uuid_gen_random_impl(PyObject *module, Py_ssize_t size)
     }
 
     return result;
+}
+
+/* Create a UUID object from a 16-byte array via UUID._from_int(). */
+static PyObject *
+uuid_from_bytes(uuid_state *state, const uint8_t *bytes)
+{
+    if (state->UuidType == NULL) {
+        PyErr_SetString(PyExc_RuntimeError,
+                        "_uuid: UUID type not registered");
+        return NULL;
+    }
+    PyObject *int_obj = _PyLong_FromByteArray(bytes, 16,
+                                              /* little_endian */ 0,
+                                              /* signed */ 0);
+    if (int_obj == NULL) {
+        return NULL;
+    }
+    // "N" steals the reference to int_obj
+    return PyObject_CallMethod(
+        state->UuidType, "_from_int", "N", int_obj);
 }
 
 static inline int
@@ -257,7 +281,113 @@ _uuid_uuid7_impl(PyObject *module)
     state->last_timestamp_v7 = timestamp_ms;
     state->last_counter_v7 = counter;
 
-    return PyBytes_FromStringAndSize((const char *)bytes, 16);
+    return uuid_from_bytes(state, bytes);
+}
+
+/*[clinic input]
+@critical_section
+_uuid.uuid8
+
+    a: object = None
+    b: object = None
+    c: object = None
+
+Generate a UUID from three custom blocks.
+
+'a' is the first 48-bit chunk (octets 0-5),
+'b' is the mid 12-bit chunk (octets 6-7),
+'c' is the last 62-bit chunk (octets 8-15).
+When a value is None, a random value is generated.
+[clinic start generated code]*/
+
+static PyObject *
+_uuid_uuid8_impl(PyObject *module, PyObject *a, PyObject *b, PyObject *c)
+/*[clinic end generated code: output=c7fe92979af51fe9 input=dc42f778e2aa4fdc]*/
+{
+    uuid_state *state = get_uuid_state(module);
+    uint64_t va, vb, vc;
+
+    if (a == Py_None) {
+        uint8_t buf[6];
+        if (gen_random(state, buf, 6) < 0) return NULL;
+        va = ((uint64_t)buf[0] << 40) | ((uint64_t)buf[1] << 32) |
+             ((uint64_t)buf[2] << 24) | ((uint64_t)buf[3] << 16) |
+             ((uint64_t)buf[4] << 8)  |  (uint64_t)buf[5];
+    }
+    else {
+        va = PyLong_AsUnsignedLongLong(a);
+        if (va == (uint64_t)-1 && PyErr_Occurred()) return NULL;
+    }
+
+    if (b == Py_None) {
+        uint8_t buf[2];
+        if (gen_random(state, buf, 2) < 0) return NULL;
+        vb = ((uint64_t)buf[0] << 8) | (uint64_t)buf[1];
+    }
+    else {
+        vb = PyLong_AsUnsignedLongLong(b);
+        if (vb == (uint64_t)-1 && PyErr_Occurred()) return NULL;
+    }
+
+    if (c == Py_None) {
+        uint8_t buf[8];
+        if (gen_random(state, buf, 8) < 0) return NULL;
+        vc = ((uint64_t)buf[0] << 56) | ((uint64_t)buf[1] << 48) |
+             ((uint64_t)buf[2] << 40) | ((uint64_t)buf[3] << 32) |
+             ((uint64_t)buf[4] << 24) | ((uint64_t)buf[5] << 16) |
+             ((uint64_t)buf[6] << 8)  |  (uint64_t)buf[7];
+    }
+    else {
+        vc = PyLong_AsUnsignedLongLong(c);
+        if (vc == (uint64_t)-1 && PyErr_Occurred()) return NULL;
+    }
+
+    va &= 0xffffffffffffULL;   // 48 bits
+    vb &= 0xfff;               // 12 bits
+    vc &= 0x3fffffffffffffffULL; // 62 bits
+
+    uint8_t bytes[16];
+    // Bytes 0-5: 'a' (48 bits)
+    bytes[0] = va >> 40;
+    bytes[1] = va >> 32;
+    bytes[2] = va >> 24;
+    bytes[3] = va >> 16;
+    bytes[4] = va >> 8;
+    bytes[5] = va;
+
+    // Bytes 6-7: version (8 = 1000) | 'b' (12 bits)
+    bytes[6] = 0x80 | (vb >> 8);   // version 8
+    bytes[7] = vb;
+
+    // Bytes 8-15: variant (10) | 'c' (62 bits)
+    bytes[8]  = 0x80 | ((vc >> 56) & 0x3f);  // variant
+    bytes[9]  = vc >> 48;
+    bytes[10] = vc >> 40;
+    bytes[11] = vc >> 32;
+    bytes[12] = vc >> 24;
+    bytes[13] = vc >> 16;
+    bytes[14] = vc >> 8;
+    bytes[15] = vc;
+
+    return uuid_from_bytes(state, bytes);
+}
+
+/*[clinic input]
+_uuid._register_type
+
+    type: object
+    /
+
+Register the UUID type for use by C implementations.
+[clinic start generated code]*/
+
+static PyObject *
+_uuid__register_type(PyObject *module, PyObject *type)
+/*[clinic end generated code: output=3be5b63c53e76844 input=f7f7aa374f2951bd]*/
+{
+    uuid_state *state = get_uuid_state(module);
+    Py_XSETREF(state->UuidType, Py_NewRef(type));
+    Py_RETURN_NONE;
 }
 
 #ifndef MS_WINDOWS
@@ -366,7 +496,24 @@ uuid_exec(PyObject *module)
     state->last_timestamp_v7_init = 0;
     state->last_timestamp_v7 = 0;
     state->last_counter_v7 = 0;
+    state->UuidType = NULL;
 
+    return 0;
+}
+
+static int
+uuid_module_traverse(PyObject *module, visitproc visit, void *arg)
+{
+    uuid_state *state = get_uuid_state(module);
+    Py_VISIT(state->UuidType);
+    return 0;
+}
+
+static int
+uuid_module_clear(PyObject *module)
+{
+    uuid_state *state = get_uuid_state(module);
+    Py_CLEAR(state->UuidType);
     return 0;
 }
 
@@ -379,6 +526,8 @@ static PyMethodDef uuid_methods[] = {
 #endif
     _UUID_GEN_RANDOM_METHODDEF
     _UUID_UUID7_METHODDEF
+    _UUID_UUID8_METHODDEF
+    _UUID__REGISTER_TYPE_METHODDEF
     {NULL, NULL, 0, NULL}           /* sentinel */
 };
 
@@ -395,6 +544,8 @@ static struct PyModuleDef uuidmodule = {
     .m_size = sizeof(uuid_state),
     .m_methods = uuid_methods,
     .m_slots = uuid_slots,
+    .m_traverse = uuid_module_traverse,
+    .m_clear = uuid_module_clear,
 };
 
 PyMODINIT_FUNC
