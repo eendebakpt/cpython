@@ -877,11 +877,21 @@ class BaseTestUUID:
             equal((u.int >> 80) & 0xffff, 0x232a)
             equal((u.int >> 96) & 0xffff_ffff, 0x1ec9_414c)
 
-    def test_uuid7(self):
+    @property
+    def _has_c_uuid7(self):
+        return getattr(self.uuid, '_uuid7_impl', None) is not None
+
+    def test_uuid7_functional(self):
         equal = self.assertEqual
         u = self.uuid.uuid7()
         equal(u.variant, self.uuid.RFC_4122)
         equal(u.version, 7)
+
+    def test_uuid7(self):
+        if self._has_c_uuid7:
+            self.skipTest("C uuid7 cannot be tested with mocks")
+
+        equal = self.assertEqual
 
         # 1 Jan 2023 12:34:56.123_456_789
         timestamp_ns = 1672533296_123_456_789  # ns precision
@@ -946,6 +956,9 @@ class BaseTestUUID:
         us = [self.uuid.uuid7() for _ in range(10_000)]
         equal(us, sorted(us))
 
+        if self._has_c_uuid7:
+            return
+
         with mock.patch.multiple(
             self.uuid,
             _last_timestamp_v7=0,
@@ -1004,6 +1017,9 @@ class BaseTestUUID:
             self.assertLess(u1, u2)
 
     def test_uuid7_timestamp_backwards(self):
+        if self._has_c_uuid7:
+            self.skipTest("C uuid7 cannot be tested with mocks")
+
         equal = self.assertEqual
         # 1 Jan 2023 12:34:56.123_456_789
         timestamp_ns = 1672533296_123_456_789  # ns precision
@@ -1044,6 +1060,9 @@ class BaseTestUUID:
             equal(u.int & 0xffff_ffff, tail)
 
     def test_uuid7_overflow_counter(self):
+        if self._has_c_uuid7:
+            self.skipTest("C uuid7 cannot be tested with mocks")
+
         equal = self.assertEqual
         # 1 Jan 2023 12:34:56.123_456_789
         timestamp_ns = 1672533296_123_456_789  # ns precision

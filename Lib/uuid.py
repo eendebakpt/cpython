@@ -934,6 +934,19 @@ def uuid8(a=None, b=None, c=None):
     return UUID._from_int(int_uuid_8)
 
 
+# Use the C implementation of uuid7 when available.
+# The Python version is kept as a fallback.
+_py_uuid7 = uuid7
+_uuid7_impl = getattr(_uuid, 'uuid7', None) if _uuid is not None else None
+if _uuid7_impl is not None:
+    def uuid7():
+        """Generate a UUID from a Unix timestamp in milliseconds and random bits.
+
+        UUIDv7 objects feature monotonicity within a millisecond.
+        """
+        return UUID(bytes=_uuid7_impl())
+
+
 def main():
     """Run the uuid command line interface."""
     uuid_funcs = {
