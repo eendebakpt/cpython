@@ -940,24 +940,10 @@ _py_uuid8 = uuid8
 if _uuid is not None:
     _uuid._register_type(UUID)
     if hasattr(_uuid, 'uuid7'):
-        def uuid7():
-            """Generate a UUID from a Unix timestamp in milliseconds and random bits.
-
-            UUIDv7 objects feature monotonicity within a millisecond.
-            """
-            return _uuid.uuid7()
+        uuid7 = _uuid.uuid7
         _uuid7_impl = _uuid.uuid7
     if hasattr(_uuid, 'uuid8'):
-        def uuid8(a=None, b=None, c=None):
-            """Generate a UUID from three custom blocks.
-
-            * 'a' is the first 48-bit chunk of the UUID (octets 0-5);
-            * 'b' is the mid 12-bit chunk (octets 6-7);
-            * 'c' is the last 62-bit chunk (octets 8-15).
-
-            When a value is not specified, a random value is generated.
-            """
-            return _uuid.uuid8(a, b, c)
+        uuid8 = _uuid.uuid8
 
 
 def main():
