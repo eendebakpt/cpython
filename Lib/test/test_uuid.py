@@ -908,7 +908,7 @@ class BaseTestUUID:
                     _last_counter_v7=0,
                 ),
                 mock.patch('time.time_ns', return_value=timestamp_ns),
-                mock.patch('os.urandom', return_value=random_data) as urand
+                mock.patch.object(self.uuid, '_gen_random', return_value=random_data) as urand
             ):
                 u = self.uuid.uuid7()
                 urand.assert_called_once_with(10)
@@ -967,7 +967,7 @@ class BaseTestUUID:
 
             with (
                 mock.patch('time.time_ns', return_value=timestamp_ns),
-                mock.patch('os.urandom', return_value=random_data) as urand
+                mock.patch.object(self.uuid, '_gen_random', return_value=random_data) as urand
             ):
                 u1 = self.uuid.uuid7()
                 urand.assert_called_once_with(10)
@@ -988,7 +988,7 @@ class BaseTestUUID:
 
             with (
                 mock.patch('time.time_ns', return_value=next_timestamp_ns),
-                mock.patch('os.urandom', return_value=next_tail_bytes) as urand
+                mock.patch.object(self.uuid, '_gen_random', return_value=next_tail_bytes) as urand
             ):
                 u2 = self.uuid.uuid7()
                 urand.assert_called_once_with(4)
@@ -1026,7 +1026,7 @@ class BaseTestUUID:
                 _last_counter_v7=counter,
             ),
             mock.patch('time.time_ns', return_value=timestamp_ns),
-            mock.patch('os.urandom', return_value=tail_bytes) as urand
+            mock.patch.object(self.uuid, '_gen_random', return_value=tail_bytes) as urand
         ):
             u = self.uuid.uuid7()
             urand.assert_called_once_with(4)
@@ -1065,7 +1065,7 @@ class BaseTestUUID:
                 _last_counter_v7=0x3ff_ffff_ffff,
             ),
             mock.patch('time.time_ns', return_value=timestamp_ns),
-            mock.patch('os.urandom', return_value=random_data) as urand
+            mock.patch.object(self.uuid, '_gen_random', return_value=random_data) as urand
         ):
             u = self.uuid.uuid7()
             urand.assert_called_with(10)

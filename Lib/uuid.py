@@ -635,11 +635,13 @@ try:
     _generate_time_safe = getattr(_uuid, "generate_time_safe", None)
     _has_stable_extractable_node = _uuid.has_stable_extractable_node
     _UuidCreate = getattr(_uuid, "UuidCreate", None)
+    _gen_random = _uuid.gen_random
 except ImportError:
     _uuid = None
     _generate_time_safe = None
     _has_stable_extractable_node = False
     _UuidCreate = None
+    _gen_random = os.urandom
 
 
 def _unix_getnode():
@@ -774,7 +776,7 @@ def uuid3(namespace, name):
 
 def uuid4():
     """Generate a random UUID."""
-    int_uuid_4 = int.from_bytes(os.urandom(16))
+    int_uuid_4 = int.from_bytes(_gen_random(16))
     int_uuid_4 &= _RFC_4122_CLEARFLAGS_MASK
     int_uuid_4 |= _RFC_4122_VERSION_4_FLAGS
     return UUID._from_int(int_uuid_4)
@@ -834,7 +836,7 @@ _last_timestamp_v7 = None
 _last_counter_v7 = 0  # 42-bit counter
 
 def _uuid7_get_counter_and_tail():
-    rand = int.from_bytes(os.urandom(10))
+    rand = int.from_bytes(_gen_random(10))
     # 42-bit counter with MSB set to 0
     counter = (rand >> 32) & 0x1ff_ffff_ffff
     # 32-bit random data
@@ -879,7 +881,7 @@ def uuid7():
             counter, tail = _uuid7_get_counter_and_tail()
         else:
             # 32-bit random data
-            tail = int.from_bytes(os.urandom(4))
+            tail = int.from_bytes(_gen_random(4))
 
     unix_ts_ms = timestamp_ms & 0xffff_ffff_ffff
     counter_msbs = counter >> 30
