@@ -305,20 +305,40 @@ dummy_func(void) {
     }
 
     op(_BINARY_OP_ADD_FLOAT, (left, right -- res, l, r)) {
-        res = sym_new_type(ctx, &PyFloat_Type);
-        l = left;
+        if (PyJitRef_IsUnique(left)) {
+            ADD_OP(_BINARY_OP_ADD_FLOAT_INPLACE, 0, 0);
+            // left is consumed by the inplace op. Mark l as borrowed
+            // so _POP_TOP_FLOAT becomes _POP_TOP_NOP (no decref).
+            l = PyJitRef_Borrow(left);
+        }
+        else {
+            l = left;
+        }
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
         r = right;
     }
 
     op(_BINARY_OP_SUBTRACT_FLOAT, (left, right -- res, l, r)) {
-        res = sym_new_type(ctx, &PyFloat_Type);
-        l = left;
+        if (PyJitRef_IsUnique(left)) {
+            ADD_OP(_BINARY_OP_SUBTRACT_FLOAT_INPLACE, 0, 0);
+            l = PyJitRef_Borrow(left);
+        }
+        else {
+            l = left;
+        }
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
         r = right;
     }
 
     op(_BINARY_OP_MULTIPLY_FLOAT, (left, right -- res, l, r)) {
-        res = sym_new_type(ctx, &PyFloat_Type);
-        l = left;
+        if (PyJitRef_IsUnique(left)) {
+            ADD_OP(_BINARY_OP_MULTIPLY_FLOAT_INPLACE, 0, 0);
+            l = PyJitRef_Borrow(left);
+        }
+        else {
+            l = left;
+        }
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
         r = right;
     }
 
