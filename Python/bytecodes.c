@@ -803,6 +803,36 @@ dummy_func(
             INPUTS_DEAD();
         }
 
+        // Inplace RIGHT variants for commutative ops (add, multiply).
+        // Mutate the uniquely-referenced right operand instead.
+        tier2 op(_BINARY_OP_ADD_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+            assert(PyFloat_CheckExact(left_o));
+            assert(PyFloat_CheckExact(right_o));
+            assert(_PyObject_IsUniquelyReferenced(right_o));
+            STAT_INC(BINARY_OP, hit);
+            ((PyFloatObject *)right_o)->ob_fval += ((PyFloatObject *)left_o)->ob_fval;
+            res = right;
+            l = left;
+            r = PyStackRef_NULL;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_MULTIPLY_FLOAT_INPLACE_RIGHT, (left, right -- res, l, r)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+            assert(PyFloat_CheckExact(left_o));
+            assert(PyFloat_CheckExact(right_o));
+            assert(_PyObject_IsUniquelyReferenced(right_o));
+            STAT_INC(BINARY_OP, hit);
+            ((PyFloatObject *)right_o)->ob_fval *= ((PyFloatObject *)left_o)->ob_fval;
+            res = right;
+            l = left;
+            r = PyStackRef_NULL;
+            INPUTS_DEAD();
+        }
+
         pure op(_BINARY_OP_ADD_UNICODE, (left, right -- res, l, r)) {
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
             PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
