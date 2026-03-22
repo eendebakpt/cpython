@@ -346,12 +346,18 @@ dummy_func(void) {
         if (PyJitRef_IsUnique(left)) {
             ADD_OP(_BINARY_OP_SUBTRACT_FLOAT_INPLACE, 0, 0);
             l = PyJitRef_Borrow(left);
+            r = right;
+        }
+        else if (PyJitRef_IsUnique(right)) {
+            ADD_OP(_BINARY_OP_SUBTRACT_FLOAT_INPLACE_RIGHT, 0, 0);
+            l = left;
+            r = PyJitRef_Borrow(right);
         }
         else {
             l = left;
+            r = right;
         }
         res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
-        r = right;
     }
 
     op(_BINARY_OP_MULTIPLY_FLOAT, (left, right -- res, l, r)) {
