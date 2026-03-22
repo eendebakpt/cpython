@@ -225,6 +225,7 @@
             JitOptRef res;
             JitOptRef v;
             value = stack_pointer[-1];
+            v = value;
             if (
                 sym_is_safe_const(ctx, value)
             ) {
@@ -262,11 +263,9 @@
                 res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
             }
             else if (sym_is_compact_int(value)) {
-                v = value;
                 res = sym_new_compact_int(ctx);
             }
             else {
-                v = value;
                 PyTypeObject *type = sym_get_type(value);
                 if (type == &PyLong_Type || type == &PyFloat_Type) {
                     res = sym_new_type(ctx, type);
