@@ -565,12 +565,18 @@ dummy_func(void) {
     }
 
     op(_UNARY_NEGATIVE, (value -- res, v)) {
-        v = value;
         REPLACE_OPCODE_IF_EVALUATES_PURE(value, res);
-        if (sym_is_compact_int(value)) {
+        if (sym_matches_type(value, &PyFloat_Type) && PyJitRef_IsUnique(value)) {
+            ADD_OP(_UNARY_NEGATIVE_FLOAT_INPLACE, 0, 0);
+            v = PyJitRef_Borrow(value);
+            res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+        }
+        else if (sym_is_compact_int(value)) {
+            v = value;
             res = sym_new_compact_int(ctx);
         }
         else {
+            v = value;
             PyTypeObject *type = sym_get_type(value);
             if (type == &PyLong_Type || type == &PyFloat_Type) {
                 res = sym_new_type(ctx, type);

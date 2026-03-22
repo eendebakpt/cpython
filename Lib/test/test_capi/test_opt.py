@@ -3207,6 +3207,36 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertTrue(inplace_add,
             "Expected an inplace add for unique intermediate results")
 
+    def test_float_negate_inplace_unique(self):
+        # -(a * b): the product is unique, negate it in place
+        def testfunc(args):
+            a, b, n = args
+            total = 0.0
+            for _ in range(n):
+                total += -(a * b)
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (2.0, 3.0, TIER2_THRESHOLD))
+        self.assertAlmostEqual(res, TIER2_THRESHOLD * -6.0)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_UNARY_NEGATIVE_FLOAT_INPLACE", uops)
+
+    def test_float_negate_no_inplace_non_unique(self):
+        # -a where a is a local — not unique, no inplace
+        def testfunc(args):
+            a, n = args
+            total = 0.0
+            for _ in range(n):
+                total += -a
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (2.0, TIER2_THRESHOLD))
+        self.assertAlmostEqual(res, TIER2_THRESHOLD * -2.0)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertNotIn("_UNARY_NEGATIVE_FLOAT_INPLACE", uops)
+
     def test_load_attr_instance_value(self):
         def testfunc(n):
             class C():

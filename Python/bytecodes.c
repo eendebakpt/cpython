@@ -460,6 +460,19 @@ dummy_func(
             DEAD(value);
         }
 
+        // Inplace negation: negate a uniquely-referenced float in place.
+        // Tier 2 only.
+        tier2 op(_UNARY_NEGATIVE_FLOAT_INPLACE, (value -- res, v)) {
+            PyObject *val_o = PyStackRef_AsPyObjectBorrow(value);
+            assert(PyFloat_CheckExact(val_o));
+            assert(_PyObject_IsUniquelyReferenced(val_o));
+            STAT_INC(UNARY_NEGATIVE, hit);
+            ((PyFloatObject *)val_o)->ob_fval = -((PyFloatObject *)val_o)->ob_fval;
+            res = value;
+            v = PyStackRef_NULL;
+            INPUTS_DEAD();
+        }
+
         inst(UNARY_NOT, (value -- res)) {
             assert(PyStackRef_BoolCheck(value));
             res = PyStackRef_IsFalse(value)

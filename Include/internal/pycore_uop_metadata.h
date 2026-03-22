@@ -85,6 +85,7 @@ const uint32_t _PyUop_Flags[MAX_UOP_ID+1] = {
     [_POP_ITER] = HAS_ESCAPES_FLAG,
     [_END_SEND] = HAS_ESCAPES_FLAG | HAS_PURE_FLAG,
     [_UNARY_NEGATIVE] = HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
+    [_UNARY_NEGATIVE_FLOAT_INPLACE] = 0,
     [_UNARY_NOT] = 0,
     [_TO_BOOL] = HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
     [_TO_BOOL_BOOL] = HAS_EXIT_FLAG,
@@ -864,6 +865,15 @@ const _PyUopCachingInfo _PyUop_Caching[MAX_UOP_ID+1] = {
             { -1, -1, -1 },
             { 2, 1, _UNARY_NEGATIVE_r12 },
             { -1, -1, -1 },
+            { -1, -1, -1 },
+        },
+    },
+    [_UNARY_NEGATIVE_FLOAT_INPLACE] = {
+        .best = { 0, 1, 2, 2 },
+        .entries = {
+            { 2, 0, _UNARY_NEGATIVE_FLOAT_INPLACE_r02 },
+            { 2, 1, _UNARY_NEGATIVE_FLOAT_INPLACE_r12 },
+            { 3, 2, _UNARY_NEGATIVE_FLOAT_INPLACE_r23 },
             { -1, -1, -1 },
         },
     },
@@ -3782,6 +3792,9 @@ const uint16_t _PyUop_Uncached[MAX_UOP_REGS_ID+1] = {
     [_POP_ITER_r20] = _POP_ITER,
     [_END_SEND_r31] = _END_SEND,
     [_UNARY_NEGATIVE_r12] = _UNARY_NEGATIVE,
+    [_UNARY_NEGATIVE_FLOAT_INPLACE_r02] = _UNARY_NEGATIVE_FLOAT_INPLACE,
+    [_UNARY_NEGATIVE_FLOAT_INPLACE_r12] = _UNARY_NEGATIVE_FLOAT_INPLACE,
+    [_UNARY_NEGATIVE_FLOAT_INPLACE_r23] = _UNARY_NEGATIVE_FLOAT_INPLACE,
     [_UNARY_NOT_r01] = _UNARY_NOT,
     [_UNARY_NOT_r11] = _UNARY_NOT,
     [_UNARY_NOT_r22] = _UNARY_NOT,
@@ -5694,6 +5707,10 @@ const char *const _PyOpcode_uop_name[MAX_UOP_REGS_ID+1] = {
     [_UNARY_INVERT_r12] = "_UNARY_INVERT_r12",
     [_UNARY_NEGATIVE] = "_UNARY_NEGATIVE",
     [_UNARY_NEGATIVE_r12] = "_UNARY_NEGATIVE_r12",
+    [_UNARY_NEGATIVE_FLOAT_INPLACE] = "_UNARY_NEGATIVE_FLOAT_INPLACE",
+    [_UNARY_NEGATIVE_FLOAT_INPLACE_r02] = "_UNARY_NEGATIVE_FLOAT_INPLACE_r02",
+    [_UNARY_NEGATIVE_FLOAT_INPLACE_r12] = "_UNARY_NEGATIVE_FLOAT_INPLACE_r12",
+    [_UNARY_NEGATIVE_FLOAT_INPLACE_r23] = "_UNARY_NEGATIVE_FLOAT_INPLACE_r23",
     [_UNARY_NOT] = "_UNARY_NOT",
     [_UNARY_NOT_r01] = "_UNARY_NOT_r01",
     [_UNARY_NOT_r11] = "_UNARY_NOT_r11",
@@ -5825,6 +5842,8 @@ int _PyUop_num_popped(int opcode, int oparg)
         case _END_SEND:
             return 3;
         case _UNARY_NEGATIVE:
+            return 1;
+        case _UNARY_NEGATIVE_FLOAT_INPLACE:
             return 1;
         case _UNARY_NOT:
             return 1;
