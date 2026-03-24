@@ -785,6 +785,58 @@ dummy_func(
         macro(BINARY_OP_SUBTRACT_FLOAT) =
             _GUARD_TOS_FLOAT + _GUARD_NOS_FLOAT + unused/5 + _BINARY_OP_SUBTRACT_FLOAT + _POP_TOP_FLOAT + _POP_TOP_FLOAT;
 
+        // Inplace int-float ops: mutate the uniquely-referenced float operand
+        // in place. Tier 2 only.
+        // For INT_FLOAT variants: left=int, right=float(unique), mutate right.
+        tier2 op(_BINARY_OP_ADD_INT_FLOAT_INPLACE, (left, right -- res, l, r)) {
+            INT_FLOAT_INPLACE_OP(left, right, right, left, +);
+            res = right;
+            l = left;
+            r = PyStackRef_NULL;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_SUBTRACT_INT_FLOAT_INPLACE, (left, right -- res, l, r)) {
+            INT_FLOAT_INPLACE_OP(left, right, right, left, -);
+            res = right;
+            l = left;
+            r = PyStackRef_NULL;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE, (left, right -- res, l, r)) {
+            INT_FLOAT_INPLACE_OP(left, right, right, left, *);
+            res = right;
+            l = left;
+            r = PyStackRef_NULL;
+            INPUTS_DEAD();
+        }
+
+        // For FLOAT_INT variants: left=float(unique), right=int, mutate left.
+        tier2 op(_BINARY_OP_ADD_FLOAT_INT_INPLACE, (left, right -- res, l, r)) {
+            INT_FLOAT_INPLACE_OP(left, right, left, right, +);
+            res = left;
+            l = PyStackRef_NULL;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE, (left, right -- res, l, r)) {
+            INT_FLOAT_INPLACE_OP(left, right, left, right, -);
+            res = left;
+            l = PyStackRef_NULL;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_MULTIPLY_FLOAT_INT_INPLACE, (left, right -- res, l, r)) {
+            INT_FLOAT_INPLACE_OP(left, right, left, right, *);
+            res = left;
+            l = PyStackRef_NULL;
+            r = right;
+            INPUTS_DEAD();
+        }
+
         // Inplace float ops: mutate the uniquely-referenced left operand
         // instead of allocating a new float. Tier 2 only.
         // The optimizer sets l to a borrowed value so the following _POP_TOP_FLOAT

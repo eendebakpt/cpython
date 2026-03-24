@@ -3237,6 +3237,69 @@ class TestUopsOptimization(unittest.TestCase):
         uops = get_opnames(ex)
         self.assertNotIn("_UNARY_NEGATIVE_FLOAT_INPLACE", uops)
 
+    def test_int_float_add_inplace(self):
+        # a*b produces unique float, then +1 (float+int) reuses it
+        def testfunc(args):
+            a, b, n = args
+            total = 0.0
+            for _ in range(n):
+                total += a * b + 1  # a*b unique, +1 is float+int inplace
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (2.0, 3.0, TIER2_THRESHOLD))
+        self.assertEqual(res, TIER2_THRESHOLD * 7.0)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_BINARY_OP_ADD_FLOAT_INT_INPLACE", uops)
+
+    def test_int_float_subtract_inplace(self):
+        # a*b produces unique float, then -1 (float-int) reuses it
+        def testfunc(args):
+            a, b, n = args
+            total = 0.0
+            for _ in range(n):
+                total += a * b - 1  # a*b unique, -1 is float-int inplace
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (2.0, 3.0, TIER2_THRESHOLD))
+        self.assertEqual(res, TIER2_THRESHOLD * 5.0)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE", uops)
+
+    def test_int_float_multiply_inplace(self):
+        # a+b produces unique float, then 2*(a+b) (int*float) reuses it
+        def testfunc(args):
+            a, b, n = args
+            total = 0.0
+            for _ in range(n):
+                total += 2 * (a + b)  # (a+b) unique, 2* is int*float inplace
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (1.5, 2.5, TIER2_THRESHOLD))
+        self.assertEqual(res, TIER2_THRESHOLD * 8.0)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE", uops)
+
+    def test_int_float_no_inplace_non_unique(self):
+        # When the float is loaded from a local (not unique),
+        # _BINARY_OP_EXTEND is kept but type info is propagated
+        def testfunc(args):
+            a, b, n = args
+            total = 0.0
+            for _ in range(n):
+                c = a + b  # float+float, c stored to local
+                total += 2 + c  # 2+c: int+float, c not unique
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (1.0, 2.0, TIER2_THRESHOLD))
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        # c is not unique, so _BINARY_OP_EXTEND is kept
+        self.assertIn("_BINARY_OP_EXTEND", uops)
+        self.assertNotIn("_BINARY_OP_ADD_INT_FLOAT_INPLACE", uops)
+
     def test_load_attr_instance_value(self):
         def testfunc(n):
             class C():

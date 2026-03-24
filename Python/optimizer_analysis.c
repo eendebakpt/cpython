@@ -28,6 +28,7 @@
 #include "pycore_uop_ids.h"
 #include "pycore_range.h"
 #include "pycore_unicodeobject.h"
+#include "pycore_code.h"          // _PyBinaryOpSpecializationDescr
 #include "pycore_ceval.h"
 #include "pycore_floatobject.h"
 

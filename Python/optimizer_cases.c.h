@@ -896,6 +896,102 @@
             break;
         }
 
+        case _BINARY_OP_ADD_INT_FLOAT_INPLACE: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _BINARY_OP_SUBTRACT_INT_FLOAT_INPLACE: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _BINARY_OP_ADD_FLOAT_INT_INPLACE: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _BINARY_OP_MULTIPLY_FLOAT_INT_INPLACE: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
         case _BINARY_OP_ADD_FLOAT_INPLACE: {
             JitOptRef res;
             JitOptRef l;
@@ -1054,10 +1150,56 @@
             right = stack_pointer[-1];
             left = stack_pointer[-2];
             PyObject *descr = (PyObject *)this_instr->operand0;
-            (void)descr;
-            res = sym_new_not_null(ctx);
-            l = left;
-            r = right;
+            bool left_is_float = sym_matches_type(left, &PyFloat_Type);
+            bool right_is_float = sym_matches_type(right, &PyFloat_Type);
+            bool left_is_int = sym_matches_type(left, &PyLong_Type);
+            bool right_is_int = sym_matches_type(right, &PyLong_Type);
+            _PyBinaryOpSpecializationDescr *d = (_PyBinaryOpSpecializationDescr *)descr;
+            int oparg = d ? d->oparg : -1;
+            bool is_add = (oparg == NB_ADD || oparg == NB_INPLACE_ADD);
+            bool is_sub = (oparg == NB_SUBTRACT || oparg == NB_INPLACE_SUBTRACT);
+            bool is_mul = (oparg == NB_MULTIPLY || oparg == NB_INPLACE_MULTIPLY);
+            if (left_is_int && right_is_float && PyJitRef_IsUnique(right)
+                && (is_add || is_sub || is_mul)) {
+                if (is_add) {
+                    ADD_OP(_BINARY_OP_ADD_INT_FLOAT_INPLACE, 0, 0);
+                }
+                else if (is_sub) {
+                    ADD_OP(_BINARY_OP_SUBTRACT_INT_FLOAT_INPLACE, 0, 0);
+                }
+                else {
+                    ADD_OP(_BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE, 0, 0);
+                }
+                l = left;
+                r = PyJitRef_Borrow(sym_new_null(ctx));
+                res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+            }
+            else if (left_is_float && right_is_int && PyJitRef_IsUnique(left)
+                 && (is_add || is_sub || is_mul)) {
+                if (is_add) {
+                    ADD_OP(_BINARY_OP_ADD_FLOAT_INT_INPLACE, 0, 0);
+                }
+                else if (is_sub) {
+                    ADD_OP(_BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE, 0, 0);
+                }
+                else {
+                    ADD_OP(_BINARY_OP_MULTIPLY_FLOAT_INT_INPLACE, 0, 0);
+                }
+                l = PyJitRef_Borrow(sym_new_null(ctx));
+                r = right;
+                res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+            }
+            else {
+                if ((left_is_int && right_is_float && (is_add || is_sub || is_mul))
+                    || (left_is_float && right_is_int && (is_add || is_sub || is_mul))) {
+                    res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+                }
+                else {
+                    res = sym_new_not_null(ctx);
+                }
+                l = left;
+                r = right;
+            }
             CHECK_STACK_BOUNDS(1);
             stack_pointer[-2] = res;
             stack_pointer[-1] = l;
