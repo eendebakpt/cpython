@@ -785,6 +785,68 @@ dummy_func(
         macro(BINARY_OP_SUBTRACT_FLOAT) =
             _GUARD_TOS_FLOAT + _GUARD_NOS_FLOAT + unused/5 + _BINARY_OP_SUBTRACT_FLOAT + _POP_TOP_FLOAT + _POP_TOP_FLOAT;
 
+        // Int-float binary ops: one operand is a compact int, the other a float.
+        // The int is converted to double before the operation. Tier 2 only.
+        tier2 op(_BINARY_OP_ADD_INT_FLOAT, (left, right -- res, l, r)) {
+            INT_FLOAT_OP(left, right, right, left, +);
+            PyObject *d = PyFloat_FromDouble(dres);
+            if (d == NULL) { ERROR_NO_POP(); }
+            res = PyStackRef_FromPyObjectSteal(d);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_ADD_FLOAT_INT, (left, right -- res, l, r)) {
+            INT_FLOAT_OP(left, right, left, right, +);
+            PyObject *d = PyFloat_FromDouble(dres);
+            if (d == NULL) { ERROR_NO_POP(); }
+            res = PyStackRef_FromPyObjectSteal(d);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_SUBTRACT_INT_FLOAT, (left, right -- res, l, r)) {
+            INT_FLOAT_OP(left, right, right, left, -);
+            PyObject *d = PyFloat_FromDouble(dres);
+            if (d == NULL) { ERROR_NO_POP(); }
+            res = PyStackRef_FromPyObjectSteal(d);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_SUBTRACT_FLOAT_INT, (left, right -- res, l, r)) {
+            INT_FLOAT_OP(left, right, left, right, -);
+            PyObject *d = PyFloat_FromDouble(dres);
+            if (d == NULL) { ERROR_NO_POP(); }
+            res = PyStackRef_FromPyObjectSteal(d);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_MULTIPLY_INT_FLOAT, (left, right -- res, l, r)) {
+            INT_FLOAT_OP(left, right, right, left, *);
+            PyObject *d = PyFloat_FromDouble(dres);
+            if (d == NULL) { ERROR_NO_POP(); }
+            res = PyStackRef_FromPyObjectSteal(d);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_BINARY_OP_MULTIPLY_FLOAT_INT, (left, right -- res, l, r)) {
+            INT_FLOAT_OP(left, right, left, right, *);
+            PyObject *d = PyFloat_FromDouble(dres);
+            if (d == NULL) { ERROR_NO_POP(); }
+            res = PyStackRef_FromPyObjectSteal(d);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
         // Inplace int-float ops: mutate the uniquely-referenced float operand
         // in place. Tier 2 only.
         // For INT_FLOAT variants: left=int, right=float(unique), mutate right.

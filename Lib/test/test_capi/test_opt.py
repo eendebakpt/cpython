@@ -3296,9 +3296,33 @@ class TestUopsOptimization(unittest.TestCase):
         res, ex = self._run_with_optimizer(testfunc, (1.0, 2.0, TIER2_THRESHOLD))
         self.assertIsNotNone(ex)
         uops = get_opnames(ex)
-        # c is not unique, so _BINARY_OP_EXTEND is kept
-        self.assertIn("_BINARY_OP_EXTEND", uops)
+        # c is not unique, so use base (non-inplace) int-float op
+        self.assertIn("_BINARY_OP_ADD_INT_FLOAT", uops)
         self.assertNotIn("_BINARY_OP_ADD_INT_FLOAT_INPLACE", uops)
+
+    def test_int_float_type_propagation_chain(self):
+        # a+b produces a unique float with known type.
+        # 1+(a+b) uses _BINARY_OP_ADD_INT_FLOAT (type propagation from extend).
+        # The result of 1+(a+b) is also unique+typed, enabling
+        # (1+(a+b))+c to use inplace float add.
+        def testfunc(args):
+            a, b, c, n = args
+            total = 0.0
+            for _ in range(n):
+                total += 1 + (a + b) + c
+            return total
+
+        res, ex = self._run_with_optimizer(testfunc, (1.0, 2.0, 3.0, TIER2_THRESHOLD))
+        self.assertEqual(res, TIER2_THRESHOLD * 7.0)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        # 1+(a+b) should be specialized: a+b is unique float, 1+result is int+float
+        self.assertIn("_BINARY_OP_ADD_INT_FLOAT_INPLACE", uops)
+        # (1+(a+b))+c should use inplace since int-float result is unique
+        self.assertTrue(
+            "_BINARY_OP_ADD_FLOAT_INPLACE" in uops
+            or "_BINARY_OP_ADD_FLOAT_INPLACE_RIGHT" in uops,
+            f"Expected inplace float add for +c in {uops}")
 
     def test_load_attr_instance_value(self):
         def testfunc(n):

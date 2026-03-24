@@ -378,6 +378,80 @@ dummy_func(void) {
         res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
     }
 
+    // Int-float base ops: propagate float type and uniqueness,
+    // and try inplace optimization.
+    op(_BINARY_OP_ADD_INT_FLOAT, (left, right -- res, l, r)) {
+        if (PyJitRef_IsUnique(right)) {
+            ADD_OP(_BINARY_OP_ADD_INT_FLOAT_INPLACE, 0, 0);
+            r = PyJitRef_Borrow(sym_new_null(ctx));
+        }
+        else {
+            r = right;
+        }
+        l = left;
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+    }
+
+    op(_BINARY_OP_SUBTRACT_INT_FLOAT, (left, right -- res, l, r)) {
+        if (PyJitRef_IsUnique(right)) {
+            ADD_OP(_BINARY_OP_SUBTRACT_INT_FLOAT_INPLACE, 0, 0);
+            r = PyJitRef_Borrow(sym_new_null(ctx));
+        }
+        else {
+            r = right;
+        }
+        l = left;
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+    }
+
+    op(_BINARY_OP_MULTIPLY_INT_FLOAT, (left, right -- res, l, r)) {
+        if (PyJitRef_IsUnique(right)) {
+            ADD_OP(_BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE, 0, 0);
+            r = PyJitRef_Borrow(sym_new_null(ctx));
+        }
+        else {
+            r = right;
+        }
+        l = left;
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+    }
+
+    op(_BINARY_OP_ADD_FLOAT_INT, (left, right -- res, l, r)) {
+        if (PyJitRef_IsUnique(left)) {
+            ADD_OP(_BINARY_OP_ADD_FLOAT_INT_INPLACE, 0, 0);
+            l = PyJitRef_Borrow(sym_new_null(ctx));
+        }
+        else {
+            l = left;
+        }
+        r = right;
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+    }
+
+    op(_BINARY_OP_SUBTRACT_FLOAT_INT, (left, right -- res, l, r)) {
+        if (PyJitRef_IsUnique(left)) {
+            ADD_OP(_BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE, 0, 0);
+            l = PyJitRef_Borrow(sym_new_null(ctx));
+        }
+        else {
+            l = left;
+        }
+        r = right;
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+    }
+
+    op(_BINARY_OP_MULTIPLY_FLOAT_INT, (left, right -- res, l, r)) {
+        if (PyJitRef_IsUnique(left)) {
+            ADD_OP(_BINARY_OP_MULTIPLY_FLOAT_INT_INPLACE, 0, 0);
+            l = PyJitRef_Borrow(sym_new_null(ctx));
+        }
+        else {
+            l = left;
+        }
+        r = right;
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
+    }
+
     op(_BINARY_OP_ADD_UNICODE, (left, right -- res, l, r)) {
         res = sym_new_type(ctx, &PyUnicode_Type);
         l = left;
@@ -394,46 +468,51 @@ dummy_func(void) {
         bool is_add = (oparg == NB_ADD || oparg == NB_INPLACE_ADD);
         bool is_sub = (oparg == NB_SUBTRACT || oparg == NB_INPLACE_SUBTRACT);
         bool is_mul = (oparg == NB_MULTIPLY || oparg == NB_INPLACE_MULTIPLY);
-        // Specialize int-float inplace ops when the float is uniquely referenced.
-        if (left_is_int && right_is_float && PyJitRef_IsUnique(right)
-                && (is_add || is_sub || is_mul)) {
+        // Specialize int-float operations when types are known.
+        if (left_is_int && right_is_float && (is_add || is_sub || is_mul)) {
             if (is_add) {
-                ADD_OP(_BINARY_OP_ADD_INT_FLOAT_INPLACE, 0, 0);
+                ADD_OP(PyJitRef_IsUnique(right)
+                    ? _BINARY_OP_ADD_INT_FLOAT_INPLACE
+                    : _BINARY_OP_ADD_INT_FLOAT, 0, 0);
             }
             else if (is_sub) {
-                ADD_OP(_BINARY_OP_SUBTRACT_INT_FLOAT_INPLACE, 0, 0);
+                ADD_OP(PyJitRef_IsUnique(right)
+                    ? _BINARY_OP_SUBTRACT_INT_FLOAT_INPLACE
+                    : _BINARY_OP_SUBTRACT_INT_FLOAT, 0, 0);
             }
             else {
-                ADD_OP(_BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE, 0, 0);
+                ADD_OP(PyJitRef_IsUnique(right)
+                    ? _BINARY_OP_MULTIPLY_INT_FLOAT_INPLACE
+                    : _BINARY_OP_MULTIPLY_INT_FLOAT, 0, 0);
             }
             l = left;
-            r = PyJitRef_Borrow(sym_new_null(ctx));
+            r = PyJitRef_IsUnique(right)
+                ? PyJitRef_Borrow(sym_new_null(ctx)) : right;
             res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
         }
-        else if (left_is_float && right_is_int && PyJitRef_IsUnique(left)
-                && (is_add || is_sub || is_mul)) {
+        else if (left_is_float && right_is_int && (is_add || is_sub || is_mul)) {
             if (is_add) {
-                ADD_OP(_BINARY_OP_ADD_FLOAT_INT_INPLACE, 0, 0);
+                ADD_OP(PyJitRef_IsUnique(left)
+                    ? _BINARY_OP_ADD_FLOAT_INT_INPLACE
+                    : _BINARY_OP_ADD_FLOAT_INT, 0, 0);
             }
             else if (is_sub) {
-                ADD_OP(_BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE, 0, 0);
+                ADD_OP(PyJitRef_IsUnique(left)
+                    ? _BINARY_OP_SUBTRACT_FLOAT_INT_INPLACE
+                    : _BINARY_OP_SUBTRACT_FLOAT_INT, 0, 0);
             }
             else {
-                ADD_OP(_BINARY_OP_MULTIPLY_FLOAT_INT_INPLACE, 0, 0);
+                ADD_OP(PyJitRef_IsUnique(left)
+                    ? _BINARY_OP_MULTIPLY_FLOAT_INT_INPLACE
+                    : _BINARY_OP_MULTIPLY_FLOAT_INT, 0, 0);
             }
-            l = PyJitRef_Borrow(sym_new_null(ctx));
+            l = PyJitRef_IsUnique(left)
+                ? PyJitRef_Borrow(sym_new_null(ctx)) : left;
             r = right;
             res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
         }
         else {
-            // Propagate type info for int-float ops even without inplace.
-            if ((left_is_int && right_is_float && (is_add || is_sub || is_mul))
-                    || (left_is_float && right_is_int && (is_add || is_sub || is_mul))) {
-                res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
-            }
-            else {
-                res = sym_new_not_null(ctx);
-            }
+            res = sym_new_not_null(ctx);
             l = left;
             r = right;
         }

@@ -548,22 +548,29 @@ gen_try_set_executing(PyGenObject *gen)
 #define COMPACT_INT_AS_DOUBLE(obj) \
     ((double)_PyLong_CompactValue((PyLongObject *)(obj)))
 
-// Macro for inplace int-float binary ops (tier 2 only).
-// FLOAT_STACKREF is the float operand (mutated in place, must be unique).
-// INT_STACKREF is the compact int operand.
-// Computes left OP right and writes the result into the float object.
-#define INT_FLOAT_INPLACE_OP(left, right, FLOAT_STACKREF, INT_STACKREF, OP)\
+// Macro for int-float binary ops (tier 2 only).
+// FLOAT_STACKREF is the float operand, INT_STACKREF is the compact int.
+// Computes left OP right (converting each to double as needed).
+// After the macro, dres contains the double result.
+#define INT_FLOAT_OP(left, right, FLOAT_STACKREF, INT_STACKREF, OP)      \
     PyObject *_flt = PyStackRef_AsPyObjectBorrow(FLOAT_STACKREF);        \
     PyObject *_int = PyStackRef_AsPyObjectBorrow(INT_STACKREF);          \
     assert(PyFloat_CheckExact(_flt));                                    \
     assert(_PyLong_CheckExactAndCompact(_int));                          \
-    assert(_PyObject_IsUniquelyReferenced(_flt));                        \
     STAT_INC(BINARY_OP, hit);                                            \
     double _left_d = PyStackRef_AsPyObjectBorrow(left) == _flt           \
         ? ((PyFloatObject *)_flt)->ob_fval : COMPACT_INT_AS_DOUBLE(_int);\
     double _right_d = PyStackRef_AsPyObjectBorrow(right) == _flt         \
         ? ((PyFloatObject *)_flt)->ob_fval : COMPACT_INT_AS_DOUBLE(_int);\
-    ((PyFloatObject *)_flt)->ob_fval = _left_d OP _right_d;
+    double dres = _left_d OP _right_d;
+
+// Macro for inplace int-float binary ops (tier 2 only).
+// Same as INT_FLOAT_OP but also asserts unique reference on the float
+// and writes the result back into the float object.
+#define INT_FLOAT_INPLACE_OP(left, right, FLOAT_STACKREF, INT_STACKREF, OP)\
+    INT_FLOAT_OP(left, right, FLOAT_STACKREF, INT_STACKREF, OP)         \
+    assert(_PyObject_IsUniquelyReferenced(_flt));                        \
+    ((PyFloatObject *)_flt)->ob_fval = dres;
 
 // Macro for inplace float binary ops (tier 2 only).
 // Mutates the uniquely-referenced TARGET operand in place.
