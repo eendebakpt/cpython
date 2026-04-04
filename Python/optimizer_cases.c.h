@@ -42,9 +42,7 @@
         case _LOAD_FAST: {
             JitOptRef value;
             value = GETLOCAL(oparg);
-            if (PyJitRef_IsUnique(value)) {
-                GETLOCAL(oparg) = PyJitRef_RemoveUnique(value);
-            }
+            assert(!PyJitRef_IsUnique(value));
             CHECK_STACK_BOUNDS(1);
             stack_pointer[0] = value;
             stack_pointer += 1;
@@ -55,6 +53,7 @@
         case _LOAD_FAST_BORROW: {
             JitOptRef value;
             value = PyJitRef_Borrow(GETLOCAL(oparg));
+            assert(!PyJitRef_IsUnique(value));
             CHECK_STACK_BOUNDS(1);
             stack_pointer[0] = value;
             stack_pointer += 1;
@@ -67,6 +66,7 @@
             value = GETLOCAL(oparg);
             JitOptRef temp = sym_new_null(ctx);
             GETLOCAL(oparg) = temp;
+            assert(!PyJitRef_IsUnique(value));
             CHECK_STACK_BOUNDS(1);
             stack_pointer[0] = value;
             stack_pointer += 1;
@@ -106,7 +106,7 @@
             JitOptRef trash;
             value = stack_pointer[-1];
             JitOptRef tmp = GETLOCAL(oparg);
-            GETLOCAL(oparg) = value;
+            GETLOCAL(oparg) = PyJitRef_RemoveUnique(value);
             trash = tmp;
             stack_pointer[-1] = trash;
             break;
