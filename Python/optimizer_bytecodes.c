@@ -119,19 +119,25 @@ dummy_func(void) {
 
     op(_LOAD_FAST, (-- value)) {
         value = GETLOCAL(oparg);
-        assert(!PyJitRef_IsUnique(value));
+        if (PyJitRef_IsUnique(value)) {
+            // Consume the unique flag: after this load there are two references
+            // (the local slot and the stack), so the value is no longer unique.
+            GETLOCAL(oparg) = PyJitRef_RemoveUnique(value);
+        }
     }
 
     op(_LOAD_FAST_BORROW, (-- value)) {
+        // Borrow doesn't transfer ownership; strip unique so downstream ops
+        // don't try to steal through a borrowed reference.
         value = PyJitRef_Borrow(GETLOCAL(oparg));
-        assert(!PyJitRef_IsUnique(value));
     }
 
     op(_LOAD_FAST_AND_CLEAR, (-- value)) {
         value = GETLOCAL(oparg);
         JitOptRef temp = sym_new_null(ctx);
         GETLOCAL(oparg) = temp;
-        assert(!PyJitRef_IsUnique(value));
+        // value keeps its unique flag if set: the local is cleared so there
+        // is only one reference (the stack copy).
     }
 
     op(_STORE_ATTR_INSTANCE_VALUE, (offset/1, value, owner -- o)) {
@@ -148,7 +154,8 @@ dummy_func(void) {
 
     op(_SWAP_FAST, (value -- trash)) {
         JitOptRef tmp = GETLOCAL(oparg);
-        GETLOCAL(oparg) = PyJitRef_RemoveUnique(value);
+        // Preserve the unique flag in the local so LOAD_FAST can propagate it.
+        GETLOCAL(oparg) = value;
         trash = tmp;
     }
 
@@ -1552,7 +1559,7 @@ dummy_func(void) {
     }
 
     op(_BUILD_LIST, (values[oparg] -- list)) {
-        list = sym_new_type(ctx, &PyList_Type);
+        list = PyJitRef_MakeUnique(sym_new_type(ctx, &PyList_Type));
     }
 
     op(_BUILD_SLICE, (args[oparg] -- slice)) {
@@ -1618,6 +1625,15 @@ dummy_func(void) {
             res = sym_new_type(ctx, &PyTuple_Type);
         }
         a = arg;
+    }
+
+    op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {
+        if (PyJitRef_IsUnique(seq)) {
+            ADD_OP(_UNPACK_SEQUENCE_UNIQUE_LIST, oparg, 0);
+        }
+        for (int i = 0; i < oparg; i++) {
+            values[i] = sym_new_unknown(ctx);
+        }
     }
 
     op(_GUARD_TOS_LIST, (tos -- tos)) {

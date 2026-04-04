@@ -8854,6 +8854,33 @@
             break;
         }
 
+        case _UNPACK_SEQUENCE_UNIQUE_LIST_r10: {
+            CHECK_CURRENT_CACHED_VALUES(1);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            _PyStackRef seq;
+            _PyStackRef *values;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            oparg = CURRENT_OPARG();
+            seq = _stack_item_0;
+            values = &stack_pointer[0];
+            PyObject *seq_o = PyStackRef_AsPyObjectSteal(seq);
+            assert(PyList_CheckExact(seq_o));
+            assert(PyList_GET_SIZE(seq_o) == oparg);
+            assert(_PyObject_IsUniquelyReferenced(seq_o));
+            STAT_INC(UNPACK_SEQUENCE, hit);
+            PyObject **items = _PyList_ITEMS(seq_o);
+            for (int i = oparg; --i >= 0; ) {
+                *values++ = PyStackRef_FromPyObjectSteal(items[i]);
+            }
+            PyObject_GC_UnTrack(seq_o);
+            _PyStolenList_Free(seq_o);
+            SET_CURRENT_CACHED_VALUES(0);
+            stack_pointer += oparg;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            break;
+        }
+
         case _UNPACK_EX_r10: {
             CHECK_CURRENT_CACHED_VALUES(1);
             assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());

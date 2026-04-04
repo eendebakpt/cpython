@@ -42,7 +42,9 @@
         case _LOAD_FAST: {
             JitOptRef value;
             value = GETLOCAL(oparg);
-            assert(!PyJitRef_IsUnique(value));
+            if (PyJitRef_IsUnique(value)) {
+                GETLOCAL(oparg) = PyJitRef_RemoveUnique(value);
+            }
             CHECK_STACK_BOUNDS(1);
             stack_pointer[0] = value;
             stack_pointer += 1;
@@ -53,7 +55,6 @@
         case _LOAD_FAST_BORROW: {
             JitOptRef value;
             value = PyJitRef_Borrow(GETLOCAL(oparg));
-            assert(!PyJitRef_IsUnique(value));
             CHECK_STACK_BOUNDS(1);
             stack_pointer[0] = value;
             stack_pointer += 1;
@@ -66,7 +67,6 @@
             value = GETLOCAL(oparg);
             JitOptRef temp = sym_new_null(ctx);
             GETLOCAL(oparg) = temp;
-            assert(!PyJitRef_IsUnique(value));
             CHECK_STACK_BOUNDS(1);
             stack_pointer[0] = value;
             stack_pointer += 1;
@@ -106,7 +106,7 @@
             JitOptRef trash;
             value = stack_pointer[-1];
             JitOptRef tmp = GETLOCAL(oparg);
-            GETLOCAL(oparg) = PyJitRef_RemoveUnique(value);
+            GETLOCAL(oparg) = value;
             trash = tmp;
             stack_pointer[-1] = trash;
             break;
@@ -1926,6 +1926,23 @@
         }
 
         case _UNPACK_SEQUENCE_LIST: {
+            JitOptRef seq;
+            JitOptRef *values;
+            seq = stack_pointer[-1];
+            values = &stack_pointer[-1];
+            if (PyJitRef_IsUnique(seq)) {
+                ADD_OP(_UNPACK_SEQUENCE_UNIQUE_LIST, oparg, 0);
+            }
+            for (int i = 0; i < oparg; i++) {
+                values[i] = sym_new_unknown(ctx);
+            }
+            CHECK_STACK_BOUNDS(-1 + oparg);
+            stack_pointer += -1 + oparg;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _UNPACK_SEQUENCE_UNIQUE_LIST: {
             JitOptRef *values;
             values = &stack_pointer[-1];
             for (int _i = oparg; --_i >= 0;) {
@@ -2234,7 +2251,7 @@
 
         case _BUILD_LIST: {
             JitOptRef list;
-            list = sym_new_type(ctx, &PyList_Type);
+            list = PyJitRef_MakeUnique(sym_new_type(ctx, &PyList_Type));
             CHECK_STACK_BOUNDS(1 - oparg);
             stack_pointer[-oparg] = list;
             stack_pointer += 1 - oparg;

@@ -16,6 +16,7 @@ PyAPI_FUNC(PyObject*) _PyList_Extend(PyListObject *, PyObject *);
 PyAPI_FUNC(PyObject) *_PyList_SliceSubscript(PyObject*, PyObject*);
 PyAPI_FUNC(PyObject *) _PyList_BinarySlice(PyObject *, PyObject *, PyObject *);
 extern void _PyList_DebugMallocStats(FILE *out);
+PyAPI_FUNC(void) _PyStolenList_Free(PyObject *self);
 // _PyList_GetItemRef should be used only when the object is known as a list
 // because it doesn't raise TypeError when the object is not a list, whereas PyList_GetItemRef does.
 PyAPI_FUNC(PyObject *) _PyList_GetItemRef(PyListObject *, Py_ssize_t i);

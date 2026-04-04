@@ -551,6 +551,24 @@ PyList_Append(PyObject *op, PyObject *newitem)
 
 /* Methods */
 
+/*
+ * Free a list whose contents have already been stolen and the list
+ * has been untracked by the GC.  Skips per-item Py_DECREF since the
+ * caller has taken ownership of all items.
+ */
+void
+_PyStolenList_Free(PyObject *obj)
+{
+    assert(PyList_CheckExact(obj));
+    PyListObject *op = (PyListObject *)obj;
+    assert(!_PyObject_GC_IS_TRACKED(obj));
+    if (op->ob_item != NULL) {
+        free_list_items(op->ob_item, false);
+        op->ob_item = NULL;
+    }
+    _Py_FREELIST_FREE(lists, op, PyObject_GC_Del);
+}
+
 static void
 list_dealloc(PyObject *self)
 {

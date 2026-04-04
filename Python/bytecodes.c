@@ -34,6 +34,7 @@
 #include "pycore_stackref.h"
 #include "pycore_template.h"      // _PyTemplate_Build()
 #include "pycore_tuple.h"         // _PyStolenTuple_Free(), _PyTuple_ITEMS()
+#include "pycore_list.h"          // _PyStolenList_Free(), _PyList_ITEMS()
 #include "pycore_typeobject.h"    // _PySuper_Lookup()
 
 #include "pycore_dict.h"
@@ -1976,6 +1977,20 @@ dummy_func(
             }
             UNLOCK_OBJECT(seq_o);
             DECREF_INPUTS();
+        }
+
+        op(_UNPACK_SEQUENCE_UNIQUE_LIST, (seq -- values[oparg])) {
+            PyObject *seq_o = PyStackRef_AsPyObjectSteal(seq);
+            assert(PyList_CheckExact(seq_o));
+            assert(PyList_GET_SIZE(seq_o) == oparg);
+            assert(_PyObject_IsUniquelyReferenced(seq_o));
+            STAT_INC(UNPACK_SEQUENCE, hit);
+            PyObject **items = _PyList_ITEMS(seq_o);
+            for (int i = oparg; --i >= 0; ) {
+                *values++ = PyStackRef_FromPyObjectSteal(items[i]);
+            }
+            PyObject_GC_UnTrack(seq_o);
+            _PyStolenList_Free(seq_o);
         }
 
         inst(UNPACK_EX, (seq -- unused[oparg & 0xFF], unused, unused[oparg >> 8], top[0])) {
