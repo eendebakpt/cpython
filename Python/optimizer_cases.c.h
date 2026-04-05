@@ -1185,10 +1185,40 @@
             JitOptRef container;
             JitOptRef res;
             container = stack_pointer[-3];
+            uint32_t type_version = (uint32_t)this_instr->operand0;
             PyTypeObject *type = sym_get_type(container);
+            if (type == NULL) {
+                uint32_t type_version = (uint32_t)this_instr->operand0;
+                if (type_version != 0) {
+                    PyTypeObject *recorded = _PyType_LookupByVersion(type_version);
+                    if (recorded == NULL) {
+                        if (type_version == PyUnicode_Type.tp_version_tag) {
+                            recorded = &PyUnicode_Type;
+                        }
+                        if (type_version == PyList_Type.tp_version_tag) {
+                            recorded = &PyList_Type;
+                        }
+                        if (type_version == PyTuple_Type.tp_version_tag) {
+                            recorded = &PyTuple_Type;
+                        }
+                        if (type_version == PyBytes_Type.tp_version_tag) {
+                            recorded = &PyBytes_Type;
+                        }
+                        if (type_version == PyByteArray_Type.tp_version_tag) {
+                            recorded = &PyByteArray_Type;
+                        }
+                    }
+                    if (recorded != NULL) {
+                        sym_set_type(container, recorded);
+                        type = recorded;
+                    }
+                }
+            }
             if (type == &PyUnicode_Type ||
                 type == &PyList_Type ||
-                type == &PyTuple_Type)
+                type == &PyTuple_Type ||
+                type == &PyBytes_Type ||
+                type == &PyByteArray_Type)
             {
                 res = sym_new_type(ctx, type);
             }

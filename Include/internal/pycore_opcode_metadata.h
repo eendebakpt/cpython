@@ -74,6 +74,8 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 2;
         case BINARY_SLICE:
             return 3;
+        case BINARY_SLICE_JIT:
+            return 3;
         case BUILD_INTERPOLATION:
             return 2 + (oparg & 1);
         case BUILD_LIST:
@@ -564,6 +566,8 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
         case BINARY_OP_SUBTRACT_INT:
             return 1;
         case BINARY_SLICE:
+            return 1;
+        case BINARY_SLICE_JIT:
             return 1;
         case BUILD_INTERPOLATION:
             return 1;
@@ -1109,7 +1113,8 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [BINARY_OP_SUBSCR_USTR_INT] = { true, INSTR_FMT_IXC0000, HAS_EXIT_FLAG },
     [BINARY_OP_SUBTRACT_FLOAT] = { true, INSTR_FMT_IXC0000, HAS_EXIT_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG },
     [BINARY_OP_SUBTRACT_INT] = { true, INSTR_FMT_IXC0000, HAS_EXIT_FLAG },
-    [BINARY_SLICE] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
+    [BINARY_SLICE] = { true, INSTR_FMT_IXC00, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
+    [BINARY_SLICE_JIT] = { true, INSTR_FMT_IXC00, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [BUILD_INTERPOLATION] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [BUILD_LIST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
     [BUILD_MAP] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
@@ -1362,7 +1367,8 @@ _PyOpcode_macro_expansion[256] = {
     [BINARY_OP_SUBSCR_USTR_INT] = { .nuops = 5, .uops = { { _GUARD_TOS_INT, OPARG_SIMPLE, 0 }, { _GUARD_NOS_UNICODE, OPARG_SIMPLE, 0 }, { _BINARY_OP_SUBSCR_USTR_INT, OPARG_SIMPLE, 5 }, { _POP_TOP_INT, OPARG_SIMPLE, 5 }, { _POP_TOP_UNICODE, OPARG_SIMPLE, 5 } } },
     [BINARY_OP_SUBTRACT_FLOAT] = { .nuops = 5, .uops = { { _GUARD_TOS_FLOAT, OPARG_SIMPLE, 0 }, { _GUARD_NOS_FLOAT, OPARG_SIMPLE, 0 }, { _BINARY_OP_SUBTRACT_FLOAT, OPARG_SIMPLE, 5 }, { _POP_TOP_FLOAT, OPARG_SIMPLE, 5 }, { _POP_TOP_FLOAT, OPARG_SIMPLE, 5 } } },
     [BINARY_OP_SUBTRACT_INT] = { .nuops = 5, .uops = { { _GUARD_TOS_INT, OPARG_SIMPLE, 0 }, { _GUARD_NOS_INT, OPARG_SIMPLE, 0 }, { _BINARY_OP_SUBTRACT_INT, OPARG_SIMPLE, 5 }, { _POP_TOP_INT, OPARG_SIMPLE, 5 }, { _POP_TOP_INT, OPARG_SIMPLE, 5 } } },
-    [BINARY_SLICE] = { .nuops = 1, .uops = { { _BINARY_SLICE, OPARG_SIMPLE, 0 } } },
+    [BINARY_SLICE] = { .nuops = 1, .uops = { { _BINARY_SLICE, 2, 0 } } },
+    [BINARY_SLICE_JIT] = { .nuops = 1, .uops = { { _BINARY_SLICE, 2, 1 } } },
     [BUILD_INTERPOLATION] = { .nuops = 1, .uops = { { _BUILD_INTERPOLATION, OPARG_SIMPLE, 0 } } },
     [BUILD_LIST] = { .nuops = 1, .uops = { { _BUILD_LIST, OPARG_SIMPLE, 0 } } },
     [BUILD_MAP] = { .nuops = 1, .uops = { { _BUILD_MAP, OPARG_SIMPLE, 0 } } },
@@ -1557,6 +1563,7 @@ const char *_PyOpcode_OpName[267] = {
     [BINARY_OP_SUBTRACT_FLOAT] = "BINARY_OP_SUBTRACT_FLOAT",
     [BINARY_OP_SUBTRACT_INT] = "BINARY_OP_SUBTRACT_INT",
     [BINARY_SLICE] = "BINARY_SLICE",
+    [BINARY_SLICE_JIT] = "BINARY_SLICE_JIT",
     [BUILD_INTERPOLATION] = "BUILD_INTERPOLATION",
     [BUILD_LIST] = "BUILD_LIST",
     [BUILD_MAP] = "BUILD_MAP",
@@ -1786,6 +1793,7 @@ PyAPI_DATA(const uint8_t) _PyOpcode_Caches[256];
 const uint8_t _PyOpcode_Caches[256] = {
     [RESUME] = 1,
     [TO_BOOL] = 3,
+    [BINARY_SLICE] = 3,
     [STORE_SUBSCR] = 1,
     [SEND] = 1,
     [UNPACK_SEQUENCE] = 1,
@@ -1819,7 +1827,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [125] = 125,
     [126] = 126,
     [127] = 127,
-    [214] = 214,
     [215] = 215,
     [216] = 216,
     [217] = 217,
@@ -1856,6 +1863,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [BINARY_OP_SUBTRACT_FLOAT] = BINARY_OP,
     [BINARY_OP_SUBTRACT_INT] = BINARY_OP,
     [BINARY_SLICE] = BINARY_SLICE,
+    [BINARY_SLICE_JIT] = BINARY_SLICE,
     [BUILD_INTERPOLATION] = BUILD_INTERPOLATION,
     [BUILD_LIST] = BUILD_LIST,
     [BUILD_MAP] = BUILD_MAP,
@@ -2080,7 +2088,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     case 125: \
     case 126: \
     case 127: \
-    case 214: \
     case 215: \
     case 216: \
     case 217: \

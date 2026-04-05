@@ -137,6 +137,13 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t type_version[2];
+} _PyBinarySliceCache;
+
+#define INLINE_CACHE_ENTRIES_BINARY_SLICE CACHE_ENTRIES(_PyBinarySliceCache)
+
+typedef struct {
+    _Py_BackoffCounter counter;
 } _PyForIterCache;
 
 #define INLINE_CACHE_ENTRIES_FOR_ITER CACHE_ENTRIES(_PyForIterCache)
@@ -321,6 +328,7 @@ PyAPI_FUNC(void) _Py_Specialize_ForIter(_PyStackRef iter, _PyStackRef null_or_in
 PyAPI_FUNC(void) _Py_Specialize_Send(_PyStackRef receiver, _Py_CODEUNIT *instr);
 PyAPI_FUNC(void) _Py_Specialize_ToBool(_PyStackRef value, _Py_CODEUNIT *instr);
 PyAPI_FUNC(void) _Py_Specialize_ContainsOp(_PyStackRef value, _Py_CODEUNIT *instr);
+PyAPI_FUNC(void) _Py_Specialize_BinarySlice(_PyStackRef container, _Py_CODEUNIT *instr);
 PyAPI_FUNC(void) _Py_GatherStats_GetIter(_PyStackRef iterable);
 PyAPI_FUNC(void) _Py_Specialize_CallFunctionEx(_PyStackRef func_st, _Py_CODEUNIT *instr);
 PyAPI_FUNC(void) _Py_Specialize_Resume(_Py_CODEUNIT *instr, PyThreadState *tstate, _PyInterpreterFrame *frame);

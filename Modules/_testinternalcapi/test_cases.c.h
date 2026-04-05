@@ -1378,23 +1378,39 @@
             (void)(opcode);
             #endif
             frame->instr_ptr = next_instr;
-            next_instr += 1;
+            next_instr += 4;
             INSTRUCTION_STATS(BINARY_SLICE);
+            PREDICTED_BINARY_SLICE:;
+            _Py_CODEUNIT* const this_instr = next_instr - 4;
+            (void)this_instr;
             _PyStackRef container;
             _PyStackRef start;
             _PyStackRef stop;
             _PyStackRef res;
             // _SPECIALIZE_BINARY_SLICE
             {
+                container = stack_pointer[-3];
+                uint16_t counter = read_u16(&this_instr[1].cache);
+                (void)counter;
                 #if ENABLE_SPECIALIZATION
+                if (ADAPTIVE_COUNTER_TRIGGERS(counter)) {
+                    next_instr = this_instr;
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    _Py_Specialize_BinarySlice(container, next_instr);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                    DISPATCH_SAME_OPARG();
+                }
                 OPCODE_DEFERRED_INC(BINARY_SLICE);
+                ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
                 #endif  /* ENABLE_SPECIALIZATION */
             }
             // _BINARY_SLICE
             {
                 stop = stack_pointer[-1];
                 start = stack_pointer[-2];
-                container = stack_pointer[-3];
+                uint32_t type_version = read_u32(&this_instr[2].cache);
+                (void)type_version;
+                (void)type_version;
                 PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);
                 PyObject *start_o = PyStackRef_AsPyObjectBorrow(start);
                 PyObject *stop_o = PyStackRef_AsPyObjectBorrow(stop);
@@ -1447,6 +1463,84 @@
                 }
                 res = PyStackRef_FromPyObjectSteal(res_o);
             }
+            stack_pointer[0] = res;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
+        TARGET(BINARY_SLICE_JIT) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = BINARY_SLICE_JIT;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 4;
+            INSTRUCTION_STATS(BINARY_SLICE_JIT);
+            static_assert(INLINE_CACHE_ENTRIES_BINARY_SLICE == 3, "incorrect cache size");
+            _PyStackRef container;
+            _PyStackRef start;
+            _PyStackRef stop;
+            _PyStackRef res;
+            /* Skip 1 cache entry */
+            stop = stack_pointer[-1];
+            start = stack_pointer[-2];
+            container = stack_pointer[-3];
+            uint32_t type_version = read_u32(&this_instr[2].cache);
+            (void)type_version;
+            PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);
+            PyObject *start_o = PyStackRef_AsPyObjectBorrow(start);
+            PyObject *stop_o = PyStackRef_AsPyObjectBorrow(stop);
+            PyObject *res_o;
+            if (PyList_CheckExact(container_o)) {
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                res_o = _PyList_BinarySlice(container_o, start_o, stop_o);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+            }
+            else if (PyTuple_CheckExact(container_o)) {
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                res_o = _PyTuple_BinarySlice(container_o, start_o, stop_o);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+            }
+            else if (PyUnicode_CheckExact(container_o)) {
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                res_o = _PyUnicode_BinarySlice(container_o, start_o, stop_o);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+            }
+            else {
+                PyObject *slice = PySlice_New(start_o, stop_o, NULL);
+                if (slice == NULL) {
+                    res_o = NULL;
+                }
+                else {
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    res_o = PyObject_GetItem(container_o, slice);
+                    Py_DECREF(slice);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                }
+            }
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyStackRef tmp = stop;
+            stop = PyStackRef_NULL;
+            stack_pointer[-1] = stop;
+            PyStackRef_CLOSE(tmp);
+            tmp = start;
+            start = PyStackRef_NULL;
+            stack_pointer[-2] = start;
+            PyStackRef_CLOSE(tmp);
+            tmp = container;
+            container = PyStackRef_NULL;
+            stack_pointer[-3] = container;
+            PyStackRef_CLOSE(tmp);
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            stack_pointer += -3;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            if (res_o == NULL) {
+                JUMP_TO_LABEL(error);
+            }
+            res = PyStackRef_FromPyObjectSteal(res_o);
             stack_pointer[0] = res;
             stack_pointer += 1;
             ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);

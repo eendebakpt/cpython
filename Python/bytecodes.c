@@ -996,14 +996,24 @@ dummy_func(
         macro(BINARY_OP_INPLACE_ADD_UNICODE) =
             _GUARD_TOS_UNICODE + _GUARD_NOS_UNICODE + unused/5 + _BINARY_OP_INPLACE_ADD_UNICODE;
 
-        specializing op(_SPECIALIZE_BINARY_SLICE, (container, start, stop -- container, start, stop)) {
-            // Placeholder until we implement BINARY_SLICE specialization
+        family(BINARY_SLICE, INLINE_CACHE_ENTRIES_BINARY_SLICE) = {
+            BINARY_SLICE_JIT,
+        };
+
+        specializing op(_SPECIALIZE_BINARY_SLICE, (counter/1, container, start, stop -- container, start, stop)) {
             #if ENABLE_SPECIALIZATION
+            if (ADAPTIVE_COUNTER_TRIGGERS(counter)) {
+                next_instr = this_instr;
+                _Py_Specialize_BinarySlice(container, next_instr);
+                DISPATCH_SAME_OPARG();
+            }
             OPCODE_DEFERRED_INC(BINARY_SLICE);
+            ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
             #endif  /* ENABLE_SPECIALIZATION */
         }
 
-        op(_BINARY_SLICE, (container, start, stop -- res)) {
+        op(_BINARY_SLICE, (type_version/2, container, start, stop -- res)) {
+            (void)type_version;  // tier 1 ignores it; used by tier 2 optimizer
             PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);
             PyObject *start_o = PyStackRef_AsPyObjectBorrow(start);
             PyObject *stop_o = PyStackRef_AsPyObjectBorrow(stop);
@@ -1033,6 +1043,13 @@ dummy_func(
         }
 
         macro(BINARY_SLICE) = _SPECIALIZE_BINARY_SLICE + _BINARY_SLICE;
+
+        // Purely a tier 2 hint: the tier 1 body is identical to the generic
+        // BINARY_SLICE, but the inline cache carries the container's
+        // tp_version_tag so the tier 2 optimizer can propagate the container
+        // (and result) type across the slice. See
+        // Python/optimizer_bytecodes.c for the propagation rule.
+        macro(BINARY_SLICE_JIT) = unused/1 + _BINARY_SLICE;
 
         specializing op(_SPECIALIZE_STORE_SLICE, (v, container, start, stop -- v, container, start, stop)) {
             // Placeholder until we implement STORE_SLICE specialization

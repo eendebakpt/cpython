@@ -2771,6 +2771,36 @@ success:
     specialize(instr, specialized_op);
 }
 
+Py_NO_INLINE void
+_Py_Specialize_BinarySlice(_PyStackRef container_st, _Py_CODEUNIT *instr)
+{
+    assert(ENABLE_SPECIALIZATION);
+    assert(_PyOpcode_Caches[BINARY_SLICE] == INLINE_CACHE_ENTRIES_BINARY_SLICE);
+    PyObject *container = PyStackRef_AsPyObjectBorrow(container_st);
+    PyTypeObject *tp = Py_TYPE(container);
+    // Only the exact types whose slice result has the same type are worth
+    // recording. The tier 1 body of BINARY_SLICE already fast-paths list,
+    // tuple and str via CheckExact; we record the same set plus bytes and
+    // bytearray, which are type-stable under slicing (and may gain tier 2
+    // guard elimination in downstream ops that guard on these types).
+    if (tp != &PyList_Type && tp != &PyTuple_Type && tp != &PyUnicode_Type &&
+        tp != &PyBytes_Type && tp != &PyByteArray_Type)
+    {
+        SPECIALIZATION_FAIL(BINARY_SLICE, SPEC_FAIL_OTHER);
+        unspecialize(instr);
+        return;
+    }
+    unsigned int tp_version = FT_ATOMIC_LOAD_UINT_RELAXED(tp->tp_version_tag);
+    if (tp_version == 0) {
+        SPECIALIZATION_FAIL(BINARY_SLICE, SPEC_FAIL_OUT_OF_VERSIONS);
+        unspecialize(instr);
+        return;
+    }
+    _PyBinarySliceCache *cache = (_PyBinarySliceCache *)(instr + 1);
+    write_u32(cache->type_version, tp_version);
+    specialize(instr, BINARY_SLICE_JIT);
+}
+
 #ifdef Py_STATS
 static int
 containsop_fail_kind(PyObject *value) {

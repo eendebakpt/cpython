@@ -6265,6 +6265,8 @@
             stop = _stack_item_2;
             start = _stack_item_1;
             container = _stack_item_0;
+            uint32_t type_version = (uint32_t)CURRENT_OPERAND0_32();
+            (void)type_version;
             PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);
             PyObject *start_o = PyStackRef_AsPyObjectBorrow(start);
             PyObject *stop_o = PyStackRef_AsPyObjectBorrow(stop);

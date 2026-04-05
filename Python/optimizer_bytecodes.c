@@ -1946,11 +1946,50 @@ dummy_func(void) {
     }
 
     op(_BINARY_SLICE, (container, start, stop -- res)) {
-        // Slicing a string/list/tuple always returns the same type.
+        // Slicing an exact str/list/tuple/bytes/bytearray returns the same
+        // type. The tier 1 specializer writes the container's tp_version_tag
+        // into the inline cache when it fires; the generated tier 2 trace
+        // carries it here as this_instr->operand0. We use it to refine the
+        // container symbol (and therefore the result) even when no earlier
+        // guard pinned the container's type.
         PyTypeObject *type = sym_get_type(container);
+        if (type == NULL) {
+            uint32_t type_version = (uint32_t)this_instr->operand0;
+            if (type_version != 0) {
+                // _PyType_LookupByVersion only recognizes a fixed set of
+                // "well-known" version constants; built-in types whose
+                // static tp_version_tag isn't in that switch (e.g. str)
+                // fall back to a direct comparison against the live
+                // tp_version_tag of the candidate types.
+                PyTypeObject *recorded = _PyType_LookupByVersion(type_version);
+                if (recorded == NULL) {
+                    if (type_version == PyUnicode_Type.tp_version_tag) {
+                        recorded = &PyUnicode_Type;
+                    }
+                    if (type_version == PyList_Type.tp_version_tag) {
+                        recorded = &PyList_Type;
+                    }
+                    if (type_version == PyTuple_Type.tp_version_tag) {
+                        recorded = &PyTuple_Type;
+                    }
+                    if (type_version == PyBytes_Type.tp_version_tag) {
+                        recorded = &PyBytes_Type;
+                    }
+                    if (type_version == PyByteArray_Type.tp_version_tag) {
+                        recorded = &PyByteArray_Type;
+                    }
+                }
+                if (recorded != NULL) {
+                    sym_set_type(container, recorded);
+                    type = recorded;
+                }
+            }
+        }
         if (type == &PyUnicode_Type ||
             type == &PyList_Type ||
-            type == &PyTuple_Type)
+            type == &PyTuple_Type ||
+            type == &PyBytes_Type ||
+            type == &PyByteArray_Type)
         {
             res = sym_new_type(ctx, type);
         }
