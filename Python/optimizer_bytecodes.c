@@ -409,12 +409,36 @@ dummy_func(void) {
         r = right;
     }
 
+    op(_GUARD_BINARY_OP_EXTEND, (descr/4, left, right -- left, right)) {
+        _PyBinaryOpSpecializationDescr *d = (_PyBinaryOpSpecializationDescr *)descr;
+        if (d != NULL && d->lhs_type != NULL && d->rhs_type != NULL &&
+            sym_matches_type(left, d->lhs_type) &&
+            sym_matches_type(right, d->rhs_type))
+        {
+            // Types are already proven; the guard is tautological.
+            REPLACE_OP(this_instr, _NOP, 0, 0);
+        }
+    }
+
     op(_BINARY_OP_EXTEND, (descr/4, left, right -- res, l, r)) {
         _PyBinaryOpSpecializationDescr *d = (_PyBinaryOpSpecializationDescr *)descr;
-        if (d != NULL && d->result_type != NULL) {
-            res = sym_new_type(ctx, d->result_type);
-            if (d->result_unique) {
-                res = PyJitRef_MakeUnique(res);
+        if (d != NULL) {
+            // The guard has passed, so narrow the operand types for any
+            // downstream ops (and for a potential guard elision pass).
+            if (d->lhs_type != NULL) {
+                sym_set_type(left, d->lhs_type);
+            }
+            if (d->rhs_type != NULL) {
+                sym_set_type(right, d->rhs_type);
+            }
+            if (d->result_type != NULL) {
+                res = sym_new_type(ctx, d->result_type);
+                if (d->result_unique) {
+                    res = PyJitRef_MakeUnique(res);
+                }
+            }
+            else {
+                res = sym_new_not_null(ctx);
             }
         }
         else {

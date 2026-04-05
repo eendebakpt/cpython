@@ -503,6 +503,13 @@ typedef struct {
        aliased to either operand). Used by the tier 2 optimizer to enable
        inplace follow-up ops. */
     int result_unique;
+    /* Operand types that `guard` checks. Set only for guards that are pure
+       exact-type checks (no extra value predicates like compactness, nan or
+       nonzero). Both fields must be non-NULL for the tier 2 optimizer to
+       elide _GUARD_BINARY_OP_EXTEND when the symbolic state already proves
+       the operand types. */
+    PyTypeObject *lhs_type;
+    PyTypeObject *rhs_type;
 } _PyBinaryOpSpecializationDescr;
 
 /* Comparison bit masks. */

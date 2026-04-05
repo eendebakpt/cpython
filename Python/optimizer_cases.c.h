@@ -1156,6 +1156,18 @@
         }
 
         case _GUARD_BINARY_OP_EXTEND: {
+            JitOptRef right;
+            JitOptRef left;
+            right = stack_pointer[-1];
+            left = stack_pointer[-2];
+            PyObject *descr = (PyObject *)this_instr->operand0;
+            _PyBinaryOpSpecializationDescr *d = (_PyBinaryOpSpecializationDescr *)descr;
+            if (d != NULL && d->lhs_type != NULL && d->rhs_type != NULL &&
+                sym_matches_type(left, d->lhs_type) &&
+                sym_matches_type(right, d->rhs_type))
+            {
+                REPLACE_OP(this_instr, _NOP, 0, 0);
+            }
             break;
         }
 
@@ -1169,10 +1181,21 @@
             left = stack_pointer[-2];
             PyObject *descr = (PyObject *)this_instr->operand0;
             _PyBinaryOpSpecializationDescr *d = (_PyBinaryOpSpecializationDescr *)descr;
-            if (d != NULL && d->result_type != NULL) {
-                res = sym_new_type(ctx, d->result_type);
-                if (d->result_unique) {
-                    res = PyJitRef_MakeUnique(res);
+            if (d != NULL) {
+                if (d->lhs_type != NULL) {
+                    sym_set_type(left, d->lhs_type);
+                }
+                if (d->rhs_type != NULL) {
+                    sym_set_type(right, d->rhs_type);
+                }
+                if (d->result_type != NULL) {
+                    res = sym_new_type(ctx, d->result_type);
+                    if (d->result_unique) {
+                        res = PyJitRef_MakeUnique(res);
+                    }
+                }
+                else {
+                    res = sym_new_not_null(ctx);
                 }
             }
             else {

@@ -3836,6 +3836,27 @@ class TestUopsOptimization(unittest.TestCase):
         # propagates PyFloat_Type.
         self.assertNotIn("_GUARD_NOS_FLOAT", uops)
 
+    def test_binary_op_extend_redundant_guard_elided(self):
+        # Back-to-back list concatenations: the first _BINARY_OP_EXTEND narrows
+        # the operand types, so subsequent _GUARD_BINARY_OP_EXTEND instructions
+        # for the same operand pair should be elided by the tier 2 optimizer.
+        def testfunc(n):
+            a = [1, 2]
+            b = [3, 4]
+            for _ in range(n):
+                c = a + b
+                d = a + b
+                e = a + b
+            return c, d, e
+
+        res, ex = self._run_with_optimizer(testfunc, TIER2_THRESHOLD)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        # All three ops use _BINARY_OP_EXTEND...
+        self.assertEqual(uops.count("_BINARY_OP_EXTEND"), 3)
+        # ...but only the first one needs a runtime type guard.
+        self.assertEqual(uops.count("_GUARD_BINARY_OP_EXTEND"), 1)
+
     def test_binary_op_extend_list_concat_type_propagation(self):
         # list + list is specialized via BINARY_OP_EXTEND. The tier 2 optimizer
         # should learn that the result is a list and eliminate subsequent

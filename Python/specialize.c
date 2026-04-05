@@ -2223,32 +2223,32 @@ LONG_FLOAT_ACTION(compactlong_float_true_div, /)
 #undef LONG_FLOAT_ACTION
 
 static _PyBinaryOpSpecializationDescr binaryop_extend_descrs[] = {
-    /* long-long arithmetic */
-    {NB_OR, compactlongs_guard, compactlongs_or, &PyLong_Type, 1},
-    {NB_AND, compactlongs_guard, compactlongs_and, &PyLong_Type, 1},
-    {NB_XOR, compactlongs_guard, compactlongs_xor, &PyLong_Type, 1},
-    {NB_INPLACE_OR, compactlongs_guard, compactlongs_or, &PyLong_Type, 1},
-    {NB_INPLACE_AND, compactlongs_guard, compactlongs_and, &PyLong_Type, 1},
-    {NB_INPLACE_XOR, compactlongs_guard, compactlongs_xor, &PyLong_Type, 1},
+    /* long-long arithmetic (guards also check compactness, so lhs/rhs_type
+       are left NULL: tier 2 cannot elide the guard purely from type info) */
+    {NB_OR, compactlongs_guard, compactlongs_or, &PyLong_Type, 1, NULL, NULL},
+    {NB_AND, compactlongs_guard, compactlongs_and, &PyLong_Type, 1, NULL, NULL},
+    {NB_XOR, compactlongs_guard, compactlongs_xor, &PyLong_Type, 1, NULL, NULL},
+    {NB_INPLACE_OR, compactlongs_guard, compactlongs_or, &PyLong_Type, 1, NULL, NULL},
+    {NB_INPLACE_AND, compactlongs_guard, compactlongs_and, &PyLong_Type, 1, NULL, NULL},
+    {NB_INPLACE_XOR, compactlongs_guard, compactlongs_xor, &PyLong_Type, 1, NULL, NULL},
 
-    /* float-long arithemetic */
-    {NB_ADD, float_compactlong_guard, float_compactlong_add, &PyFloat_Type, 1},
-    {NB_SUBTRACT, float_compactlong_guard, float_compactlong_subtract, &PyFloat_Type, 1},
-    {NB_TRUE_DIVIDE, nonzero_float_compactlong_guard, float_compactlong_true_div, &PyFloat_Type, 1},
-    {NB_MULTIPLY, float_compactlong_guard, float_compactlong_multiply, &PyFloat_Type, 1},
+    /* float-long arithemetic (guards also check compactness / nan / nonzero) */
+    {NB_ADD, float_compactlong_guard, float_compactlong_add, &PyFloat_Type, 1, NULL, NULL},
+    {NB_SUBTRACT, float_compactlong_guard, float_compactlong_subtract, &PyFloat_Type, 1, NULL, NULL},
+    {NB_TRUE_DIVIDE, nonzero_float_compactlong_guard, float_compactlong_true_div, &PyFloat_Type, 1, NULL, NULL},
+    {NB_MULTIPLY, float_compactlong_guard, float_compactlong_multiply, &PyFloat_Type, 1, NULL, NULL},
 
-    /* long-float arithmetic */
-    {NB_ADD, compactlong_float_guard, compactlong_float_add, &PyFloat_Type, 1},
-    {NB_SUBTRACT, compactlong_float_guard, compactlong_float_subtract, &PyFloat_Type, 1},
-    {NB_TRUE_DIVIDE, nonzero_compactlong_float_guard, compactlong_float_true_div, &PyFloat_Type, 1},
-    {NB_MULTIPLY, compactlong_float_guard, compactlong_float_multiply, &PyFloat_Type, 1},
+    /* long-float arithmetic (guards also check compactness / nan / nonzero) */
+    {NB_ADD, compactlong_float_guard, compactlong_float_add, &PyFloat_Type, 1, NULL, NULL},
+    {NB_SUBTRACT, compactlong_float_guard, compactlong_float_subtract, &PyFloat_Type, 1, NULL, NULL},
+    {NB_TRUE_DIVIDE, nonzero_compactlong_float_guard, compactlong_float_true_div, &PyFloat_Type, 1, NULL, NULL},
+    {NB_MULTIPLY, compactlong_float_guard, compactlong_float_multiply, &PyFloat_Type, 1, NULL, NULL},
 
-    /* list-list concatenation: _PyList_Concat always allocates a new list */
-    {NB_ADD, list_list_guard, list_list_add, &PyList_Type, 1},
-    /* tuple-tuple concatenation: _PyTuple_Concat has a zero-length shortcut
-       that can return one of the operands, so the result is not guaranteed
-       to be a freshly allocated object. */
-    {NB_ADD, tuple_tuple_guard, tuple_tuple_add, &PyTuple_Type, 0},
+    /* list-list concatenation: pure-type guard, always fresh result */
+    {NB_ADD, list_list_guard, list_list_add, &PyList_Type, 1, &PyList_Type, &PyList_Type},
+    /* tuple-tuple concatenation: pure-type guard, result may alias rhs
+       on the zero-length shortcut, so result_unique is 0. */
+    {NB_ADD, tuple_tuple_guard, tuple_tuple_add, &PyTuple_Type, 0, &PyTuple_Type, &PyTuple_Type},
 };
 
 static int
