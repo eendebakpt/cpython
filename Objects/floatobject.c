@@ -17,6 +17,9 @@
 #include "pycore_stackref.h"      // PyStackRef_AsPyObjectBorrow()
 #include "pycore_structseq.h"     // _PyStructSequence_FiniBuiltin()
 #include "pycore_tuple.h"         // _PyTuple_FromPair
+#if _PY_SHORT_FLOAT_REPR == 1
+#include "../Python/_ryu/pystrtod_ryu.h"  // _PyRyu_dtoa
+#endif
 
 #include <float.h>                // DBL_MAX
 #include <stdlib.h>               // strtol()
@@ -909,12 +912,21 @@ double_round(double x, int ndigits) {
     Py_ssize_t buflen, mybuflen=100;
     char *buf, *buf_end, shortbuf[100], *mybuf=shortbuf;
     int decpt, sign;
+    int buf_uses_pymem = 0;
     PyObject *result = NULL;
     _Py_SET_53BIT_PRECISION_HEADER;
 
-    /* round to a decimal string */
+    /* round to a decimal string.
+       Use Ryu for ndigits >= 0 (mode 3 fixed-point), Gay's dtoa for
+       ndigits < 0 (mode 3 with negative precision, no Ryu equivalent). */
     _Py_SET_53BIT_PRECISION_START;
-    buf = _Py_dg_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
+    if (ndigits >= 0) {
+        buf = _PyRyu_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
+        buf_uses_pymem = 1;
+    }
+    else {
+        buf = _Py_dg_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
+    }
     _Py_SET_53BIT_PRECISION_END;
     if (buf == NULL) {
         PyErr_NoMemory();
@@ -951,7 +963,10 @@ double_round(double x, int ndigits) {
     if (mybuf != shortbuf)
         PyMem_Free(mybuf);
   exit:
-    _Py_dg_freedtoa(buf);
+    if (buf_uses_pymem)
+        PyMem_Free(buf);
+    else
+        _Py_dg_freedtoa(buf);
     return result;
 }
 
