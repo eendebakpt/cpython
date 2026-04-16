@@ -78,6 +78,149 @@ static inline size_t _pyryu_d2exp_bufsize(int precision) {
 }
 
 /* -------------------------------------------------------------------------
+ * FP fast path for Ryu mode 2 (%e / %g)
+ *
+ * Ryu's d2exp_buffered_n runs the full table-driven algorithm on every
+ * call (~230 ns).  Gay's dtoa mode 2, which Ryu replaces, has an FP
+ * approximation path that short-circuits easy inputs in ~150 ns.  This
+ * benchmark-visible ~20% gap is algorithmic — the adapter can't close it
+ * from the outside.  So we reintroduce Gay's *approach* in-adapter: use
+ * double-precision arithmetic when we can prove the result is correctly
+ * rounded, and fall back to d2exp otherwise.
+ *
+ * Correctness sketch (see _pyryu_fast_mode2 below for the routine):
+ *   Let d > 0 finite, P ∈ [0, 14].  Choose k = floor(log₁₀ d) and let
+ *   v* = d · 10^(P-k) be the true scaled value (a real number with
+ *   10^P ≤ v* < 10^(P+1), i.e. P+1 decimal digits).  We compute
+ *      v  = round_to_double( d · scale )     where scale = 10^|P-k| (exact).
+ *   By IEEE 754, |v − v*| ≤ 0.5·ULP(v).
+ *
+ *   The output m = round_half_even(v*) differs from round_half_even(v)
+ *   only when v and v* straddle a half-integer — i.e. when
+ *      |0.5 − |v − rint(v)||  <  |v − v*| ≤ 0.5·ULP(v).
+ *
+ *   Conservative guard: require 0.5 − err ≥ 2·ULP(v) = |v|·2⁻⁵².  If the
+ *   guard holds, rint(v) equals round_half_even(v*).  If it doesn't, bail
+ *   out to d2exp.
+ *
+ * Precision limit: P ≤ 14 so m < 10¹⁵ < 2⁵³ is exactly representable as
+ * a double, and the cast to uint64_t is lossless.
+ *
+ * Scale range: we only tabulate 10⁰..10²² (exactly representable).  When
+ * |P − k| > 22 we bail out.  This covers |d| in roughly [10⁻²², 10²²] for
+ * typical precision — the common case.  Extreme magnitudes (1e100, 1e-100,
+ * subnormals, etc.) fall back to d2exp with no correctness concern.
+ * ------------------------------------------------------------------------- */
+static const double _pyryu_pow10_exact[23] = {
+    1e0,  1e1,  1e2,  1e3,  1e4,  1e5,  1e6,  1e7,  1e8,  1e9,
+    1e10, 1e11, 1e12, 1e13, 1e14, 1e15, 1e16, 1e17, 1e18, 1e19,
+    1e20, 1e21, 1e22,
+};
+
+static const uint64_t _pyryu_pow10_u64[16] = {
+    1ULL,
+    10ULL,
+    100ULL,
+    1000ULL,
+    10000ULL,
+    100000ULL,
+    1000000ULL,
+    10000000ULL,
+    100000000ULL,
+    1000000000ULL,
+    10000000000ULL,
+    100000000000ULL,
+    1000000000000ULL,
+    10000000000000ULL,
+    100000000000000ULL,
+    1000000000000000ULL,
+};
+
+/* Returns 1 on success with P+1 digits written to digits_out (no NUL, no
+ * sign) and *exp_out set so that d ≈ 0.<digits> × 10^(*exp_out + 1),
+ * matching Gay's decpt convention.  Returns 0 when the FP computation
+ * cannot be proven correctly rounded.
+ *
+ * Precondition: d > 0 finite, 0 ≤ precision ≤ 14.
+ */
+static int
+_pyryu_fast_mode2(double d, int precision,
+                  char *digits_out, int *exp_out)
+{
+    assert(d > 0.0);
+    assert(precision >= 0 && precision <= 14);
+
+    /* Decimal exponent estimate (may be off by one; we check below). */
+    int k = (int)floor(log10(d));
+
+    /* Scale factor: 10^|P-k| from the exact-powers table. */
+    int se = precision - k;
+    double v;
+    if (se >= 0) {
+        if (se > 22) return 0;
+        v = d * _pyryu_pow10_exact[se];
+    }
+    else {
+        if (-se > 22) return 0;
+        v = d / _pyryu_pow10_exact[-se];
+    }
+
+    /* Verify v lies in [10^P, 10^(P+1)).  FP log10 can round k one too
+     * high when d is very close to a power of 10 from below, producing
+     * v ≈ 10^P − ε.  Rint would then round v up to 10^P, which looks
+     * like a legal P+1-digit result but in fact represents 10^k (one
+     * magnitude too high for d) — the output would be silently off by
+     * a factor of 10.  pow10_exact is exact up to 10^22 and precision+1
+     * ≤ 15, so the comparison is always against exact bounds. */
+    if (v < _pyryu_pow10_exact[precision] ||
+        v >= _pyryu_pow10_exact[precision + 1]) {
+        return 0;
+    }
+
+    /* Round to nearest-even integer and compute |v - m|. */
+    double m_d = rint(v);
+    double err = v - m_d;
+    if (err < 0) err = -err;
+
+    /* Slop guard: fail if v is within 2·ULP of a half-integer.  See the
+     * correctness sketch in the comment above. */
+    double err_bound = v * 0x1p-52;
+    if (0.5 - err < err_bound) {
+        return 0;
+    }
+
+    /* Cast to uint64_t.  m_d is in [10^P, 10^(P+1)] ⊆ [1, 10^15] so the
+     * cast is always lossless. */
+    uint64_t mi = (uint64_t)m_d;
+
+    /* Digit count check.  If the initial k was off by one, mi can be 10× too
+     * big (mi == 10^(P+1)) or too small.  The overflow case reshapes
+     * cleanly; for the too-small case we fall back rather than retry. */
+    if (mi == _pyryu_pow10_u64[precision] * 10ULL) {
+        /* v rounded up across a power-of-10 boundary.  Output is
+         * "1" followed by P zeros, exponent bumped. */
+        digits_out[0] = '1';
+        for (int i = 1; i <= precision; i++) {
+            digits_out[i] = '0';
+        }
+        *exp_out = k + 1;
+        return 1;
+    }
+    if (mi < _pyryu_pow10_u64[precision] ||
+        mi >= _pyryu_pow10_u64[precision] * 10ULL) {
+        return 0;
+    }
+
+    /* Emit digits low-to-high. */
+    for (int i = precision; i >= 0; i--) {
+        digits_out[i] = (char)('0' + (mi % 10));
+        mi /= 10;
+    }
+    *exp_out = k;
+    return 1;
+}
+
+/* -------------------------------------------------------------------------
  * parse_ryu_d2s_output
  *
  * Parse the output of d2s_buffered_n into digits/decpt/sign.
@@ -699,15 +842,38 @@ _PyRyu_dtoa(double d, int mode, int ndigits,
         /* ndigits significant digits (exponential / general format).
          * Gay's mode 2 with ndigits=N gives N significant digits total.
          * d2exp with precision=P gives 1 digit before the point and P after,
-         * for a total of P+1 significant digits.
-         * So we pass precision = ndigits - 1.
+         * for a total of P+1 significant digits.  So we pass
+         * precision = ndigits - 1.
          *
-         * Fast path: for typical precision (fits in 256B), Ryu writes to
-         * a stack buffer and parse_ryu_d2exp_output copies out the small
-         * mantissa.  Slow path: heap-allocate a work buffer, parse it in
-         * place, transfer ownership to *out_digits — one heap alloc total.
+         * Three paths, in order of preference:
+         *   (1) FP fast path — see _pyryu_fast_mode2.  Handles the common
+         *       case (non-extreme |d|, precision ≤ 14) in ~130 ns.
+         *   (2) d2exp with stack buffer (precision fits in 256B) + copy-parse.
+         *   (3) d2exp with heap buffer + in-place parse + ownership steal.
          */
         int precision = (ndigits > 0) ? ndigits - 1 : 0;
+
+        if (precision <= 14 && d != 0.0 && isfinite(d)) {
+            char fast_buf[16];  /* P+1 ≤ 15 digits */
+            int fast_exp;
+            double ad = fabs(d);
+            if (_pyryu_fast_mode2(ad, precision, fast_buf, &fast_exp)) {
+                int dlen = precision + 1;
+                /* Strip trailing zeros — Gay's mode-2 convention. */
+                while (dlen > 1 && fast_buf[dlen - 1] == '0') dlen--;
+                char *out = (char *)PyMem_Malloc((size_t)dlen + 1);
+                if (out == NULL) return NULL;
+                memcpy(out, fast_buf, (size_t)dlen);
+                out[dlen] = '\0';
+                *sign = signbit(d) ? 1 : 0;
+                *decpt = fast_exp + 1;
+                *digits_end = out + dlen;
+                out_digits = out;
+                break;
+            }
+            /* Fall through to d2exp on fast-path bail. */
+        }
+
         size_t need = _pyryu_d2exp_bufsize(precision);
         char stack_buf[256];
         if (need <= sizeof(stack_buf)) {
