@@ -1598,5 +1598,235 @@ class HexFloatTestCase(FloatsAreIdenticalMixin, unittest.TestCase):
         self.assertEqual(getattr(f, 'foo', 'none'), 'bar')
 
 
+@support.requires_IEEE_754
+@unittest.skipUnless(getattr(sys, 'float_repr_style', '') == 'short',
+                     "applies only when using short float repr style")
+class DtoaModeTestCase(unittest.TestCase):
+    """Baseline tests for the dtoa-backed float formatting paths.
+
+    These tests exercise the three formatting modes used by CPython's
+    dtoa (or any future replacement):
+
+      - mode 0  : shortest round-trip string  (repr / str)
+      - mode 2  : N significant digits        (%e, %g)
+      - mode 3  : N digits past decimal point (%f)
+      - mode 3 with negative ndigits          (float.__round__)
+
+    The goal is to pin the *exact* outputs so that any dtoa replacement
+    can be validated against them.
+    """
+
+    # --- helpers -----------------------------------------------------------
+
+    def check_repr(self, value, expected):
+        self.assertEqual(repr(value), expected)
+        self.assertEqual(str(value), expected)
+
+    def check_format(self, fmt, value, expected):
+        self.assertEqual(fmt % value, expected)
+
+    # --- mode 0: shortest round-trip (repr) --------------------------------
+
+    def test_repr_zero(self):
+        self.check_repr(0.0,  '0.0')
+        self.check_repr(-0.0, '-0.0')
+
+    def test_repr_one(self):
+        self.check_repr(1.0,  '1.0')
+        self.check_repr(-1.0, '-1.0')
+
+    def test_repr_small_integers(self):
+        for n in range(2, 20):
+            self.assertEqual(repr(float(n)), f'{n}.0')
+
+    def test_repr_fractions(self):
+        # These are the classic cases where the old long repr was ugly.
+        self.check_repr(0.1,  '0.1')
+        self.check_repr(0.2,  '0.2')
+        self.check_repr(0.3,  '0.3')
+        self.check_repr(1/3,  '0.3333333333333333')
+        self.check_repr(2/3,  '0.6666666666666666')
+
+    def test_repr_round_trip(self):
+        # For all of these, float(repr(x)) must recover x exactly.
+        values = [
+            0.1, 0.2, 0.3, 0.7, 1.1, 1.4142135623730951,
+            3.141592653589793, 2.718281828459045,
+            1e15, 1e16, 1e17,
+            1e-4, 1e-5, 1e-100,
+            1.7976931348623157e+308,   # sys.float_info.max
+            5e-324,                    # smallest positive subnormal
+            2.2250738585072014e-308,   # smallest positive normal
+        ]
+        for x in values:
+            with self.subTest(x=x):
+                self.assertEqual(float(repr(x)), x)
+                self.assertEqual(float(repr(-x)), -x)
+
+    def test_repr_subnormals(self):
+        # Subnormal numbers must round-trip through repr.
+        import struct
+        # Walk through the first few and last few subnormals.
+        tiny = 5e-324  # smallest positive subnormal
+        for i in [1, 2, 3, 4, 5, 100, 1000]:
+            x = struct.unpack('d', struct.pack('Q', i))[0]
+            self.assertEqual(float(repr(x)), x, f"subnormal #{i}")
+        # Largest subnormal
+        x = struct.unpack('d', struct.pack('Q', (1 << 52) - 1))[0]
+        self.assertEqual(float(repr(x)), x)
+
+    def test_repr_special(self):
+        self.check_repr(float('inf'),  'inf')
+        self.check_repr(float('-inf'), '-inf')
+        self.assertTrue(math.isnan(float(repr(float('nan')))))
+
+    def test_repr_negative_zero(self):
+        # -0.0 must show the sign.
+        r = repr(-0.0)
+        self.assertEqual(r, '-0.0')
+        self.assertTrue(math.copysign(1.0, float(r)) < 0)
+
+    def test_repr_boundary_exponent(self):
+        # Values that sit at the boundary between fixed and exponential repr.
+        # Python uses exp notation when |x| >= 1e16 or |x| < 1e-4.
+        self.assertNotIn('e', repr(9999999999999998.0))
+        self.assertIn('e', repr(1e16))
+        self.assertNotIn('e', repr(0.001))
+        self.assertIn('e', repr(9.999999999999e-05))
+
+    def test_repr_ties_to_even(self):
+        # Specific values where round-ties-to-even matters for shortest repr.
+        # 1/2**24: the correct shortest repr is 5.960464477539063e-08,
+        # not 5.9604644775390625e-08 (17 sig digits).
+        x = 1 / 2**24
+        r = repr(x)
+        self.assertEqual(r, '5.960464477539063e-08')
+        self.assertEqual(float(r), x)
+
+    # --- mode 2: significant digits (%e, %g) --------------------------------
+
+    def test_e_format_basic(self):
+        self.check_format('%.6e', 0.0,       '0.000000e+00')
+        self.check_format('%.6e', 1.0,       '1.000000e+00')
+        self.check_format('%.6e', -1.0,      '-1.000000e+00')
+        self.check_format('%.6e', 1.5,       '1.500000e+00')
+        self.check_format('%.6e', 123.456,   '1.234560e+02')
+        self.check_format('%.6e', 1e100,     '1.000000e+100')
+        self.check_format('%.6e', 1e-100,    '1.000000e-100')
+
+    def test_e_format_precision(self):
+        self.check_format('%.0e', 1.5,    '2e+00')
+        self.check_format('%.1e', 1.25,   '1.2e+00')
+        self.check_format('%.2e', 1.255,  '1.25e+00')  # 1.255 rounds down (IEEE double < 1.255)
+        self.check_format('%.17e', 0.1,   '1.00000000000000006e-01')
+
+    def test_e_format_ties_to_even(self):
+        # round-ties-to-even: 2.5e+00 rounds to 2, not 3 at precision 0
+        self.check_format('%.0e', 2.5,  '2e+00')
+        self.check_format('%.0e', 3.5,  '4e+00')
+        self.check_format('%.0e', 4.5,  '4e+00')
+
+    def test_e_format_subnormal(self):
+        # Subnormals must not produce garbage.
+        tiny = 5e-324
+        r = '%.6e' % tiny
+        self.assertTrue(r.endswith('e-324'), r)
+        self.assertGreater(float(r), 0.0)
+
+    def test_e_format_special(self):
+        self.check_format('%e', float('inf'),  'inf')
+        self.check_format('%e', float('-inf'), '-inf')
+        self.check_format('%e', float('nan'),  'nan')
+
+    def test_g_format_basic(self):
+        self.check_format('%g',    0.0,     '0')
+        self.check_format('%g',    1.0,     '1')
+        self.check_format('%.6g',  123.456, '123.456')
+        self.check_format('%.4g',  123.456, '123.5')
+        self.check_format('%.2g',  123.456, '1.2e+02')
+
+    def test_g_format_special(self):
+        self.check_format('%g', float('inf'),  'inf')
+        self.check_format('%g', float('-inf'), '-inf')
+        self.check_format('%g', float('nan'),  'nan')
+
+    # --- mode 3: digits past decimal point (%f) ----------------------------
+
+    def test_f_format_basic(self):
+        self.check_format('%.6f', 0.0,       '0.000000')
+        self.check_format('%.6f', 1.0,       '1.000000')
+        self.check_format('%.6f', -1.0,      '-1.000000')
+        self.check_format('%.6f', 0.1,       '0.100000')
+        self.check_format('%.6f', 123.456,   '123.456000')
+        self.check_format('%.0f', 0.5,       '0')   # ties-to-even: 0
+        self.check_format('%.0f', 1.5,       '2')
+        self.check_format('%.0f', 2.5,       '2')   # ties-to-even: 2
+        self.check_format('%.0f', 3.5,       '4')
+
+    def test_f_format_large(self):
+        # Large values must not overflow the buffer.
+        self.check_format('%.0f', 1e15,   '1000000000000000')
+        self.check_format('%.0f', 1e20,   '100000000000000000000' )
+        # The exact value of 1e49 in fixed-point:
+        self.check_format('%.0f', 1e49,
+                          '9999999999999999464902769475481793196872414789632')
+
+    def test_f_format_subnormal(self):
+        tiny = 5e-324
+        r = '%.380f' % tiny  # enough decimals to see the value
+        self.assertIn('1', r)  # must not be all zeros
+
+    def test_f_format_special(self):
+        self.check_format('%f', float('inf'),  'inf')
+        self.check_format('%f', float('-inf'), '-inf')
+        self.check_format('%f', float('nan'),  'nan')
+
+    # --- mode 3 negative ndigits: float.__round__ --------------------------
+
+    def test_round_positive_ndigits(self):
+        # These exercise the dtoa mode-3 path with ndigits >= 0.
+        self.assertEqual(round(1.5,   0),  2.0)
+        self.assertEqual(round(2.5,   0),  2.0)   # ties-to-even
+        self.assertEqual(round(0.125, 2),  0.12)  # ties-to-even
+        self.assertEqual(round(0.375, 2),  0.38)  # ties-to-even
+        self.assertEqual(round(1.4999999999999998, 1), 1.5)
+        self.assertEqual(round(0.1 + 0.2, 1), 0.3)
+
+    def test_round_negative_ndigits(self):
+        # These exercise the dtoa mode-3 path with ndigits < 0.
+        self.assertEqual(round(25.0,   -1), 20.0)   # ties-to-even
+        self.assertEqual(round(35.0,   -1), 40.0)
+        self.assertEqual(round(45.0,   -1), 40.0)   # ties-to-even
+        self.assertEqual(round(55.0,   -1), 60.0)
+        self.assertEqual(round(65.0,   -1), 60.0)   # ties-to-even
+        self.assertEqual(round(75.0,   -1), 80.0)
+        self.assertEqual(round(85.0,   -1), 80.0)   # ties-to-even
+        self.assertEqual(round(95.0,   -1), 100.0)
+        self.assertEqual(round(1234.5, -2), 1200.0)
+        self.assertEqual(round(1250.0, -2), 1200.0)  # ties-to-even
+        self.assertEqual(round(1350.0, -2), 1400.0)  # ties-to-even
+        self.assertEqual(round(999.5,  -1), 1000.0)
+        # Rounding to very negative exponent should give 0.0.
+        self.assertFloatsAreIdentical(round(123.456, -10), 0.0)
+        self.assertFloatsAreIdentical(round(-123.456, -10), -0.0)
+
+    def test_round_negative_ndigits_large_values(self):
+        # Values near the limits of double precision.
+        self.assertEqual(round(1e15 + 0.5, 0),  1e15)   # even
+        self.assertEqual(round(1e300, -295), round(1e300, -295))  # no crash
+
+    def test_round_negative_ndigits_subnormal(self):
+        tiny = 5e-324
+        # Rounding a subnormal to 0 places should not crash.
+        result = round(tiny, 0)
+        self.assertEqual(result, 0.0)
+
+    def assertFloatsAreIdentical(self, x, y):
+        """Assert x == y and same sign (catches -0.0 vs 0.0)."""
+        self.assertEqual(x, y)
+        if x == 0.0:
+            self.assertEqual(math.copysign(1.0, x), math.copysign(1.0, y))
+
+
 if __name__ == '__main__':
     unittest.main()
