@@ -17,6 +17,9 @@
 #include "pycore_stackref.h"      // PyStackRef_AsPyObjectBorrow()
 #include "pycore_structseq.h"     // _PyStructSequence_FiniBuiltin()
 #include "pycore_tuple.h"         // _PyTuple_FromPair
+#if _PY_SHORT_FLOAT_REPR == 1
+#include "../Python/_ryu/pystrtod_wuffs.h" // _PyWuffs_strtod
+#endif
 
 #include <float.h>                // DBL_MAX
 #include <stdlib.h>               // strtol()
@@ -939,7 +942,7 @@ double_round(double x, int ndigits) {
     /* and convert the resulting string back to a double */
     errno = 0;
     _Py_SET_53BIT_PRECISION_START;
-    rounded = _Py_dg_strtod(mybuf, NULL);
+    rounded = _PyWuffs_strtod(mybuf, NULL);
     _Py_SET_53BIT_PRECISION_END;
     if (errno == ERANGE && fabs(rounded) >= 1.)
         PyErr_SetString(PyExc_OverflowError,
