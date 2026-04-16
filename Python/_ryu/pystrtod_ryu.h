@@ -253,6 +253,72 @@ parse_ryu_d2exp_output(const char *ryu_buf, int ryu_len,
 }
 
 /* -------------------------------------------------------------------------
+ * parse_ryu_d2exp_inplace
+ *
+ * Like parse_ryu_d2exp_output, but takes a PyMem_Malloc'd buffer and
+ * rewrites its contents in place — the same buffer is returned as
+ * *out_digits (ownership transferred to the caller, who must free it).
+ * No extra heap allocation is performed.
+ *
+ * Safe because the mantissa is compacted toward the front of the buffer
+ * (write cursor ≤ read cursor − 0 always) and the exponent suffix lies
+ * strictly past the highest write position.
+ * ------------------------------------------------------------------------- */
+static int
+parse_ryu_d2exp_inplace(char *buf, int len,
+                        char **out_digits, int *decpt, int *sign,
+                        char **digits_end)
+{
+    char *p = buf;
+    char *end = buf + len;
+
+    *sign = 0;
+    if (p < end && *p == '-') { *sign = 1; ++p; }
+
+    if (p < end && (*p == 'N' || *p == 'n' || *p == 'I' || *p == 'i')) {
+        size_t special_len = (size_t)(end - p);
+        if (p != buf) memmove(buf, p, special_len);
+        buf[special_len] = '\0';
+        *out_digits = buf;
+        *digits_end = buf + special_len;
+        *decpt = 9999;
+        return 1;
+    }
+
+    int mant_len = 0;
+    int dot_pos = -1;
+    while (p < end && *p != 'e' && *p != 'E') {
+        if (*p == '.') {
+            dot_pos = mant_len;
+        } else {
+            buf[mant_len++] = *p;
+        }
+        ++p;
+    }
+    if (dot_pos < 0) dot_pos = mant_len;
+
+    int exp = 0;
+    if (p < end && (*p == 'e' || *p == 'E')) {
+        ++p;
+        int exp_sign = 1;
+        if (p < end && *p == '-') { exp_sign = -1; ++p; }
+        else if (p < end && *p == '+') { ++p; }
+        while (p < end) { exp = exp * 10 + (*p - '0'); ++p; }
+        exp *= exp_sign;
+    }
+
+    *decpt = dot_pos + exp;
+
+    while (mant_len > 1 && buf[mant_len - 1] == '0')
+        --mant_len;
+
+    buf[mant_len] = '\0';
+    *out_digits = buf;
+    *digits_end = buf + mant_len;
+    return 1;
+}
+
+/* -------------------------------------------------------------------------
  * parse_ryu_d2fixed_output
  *
  * Parse d2fixed_buffered_n output (e.g. "123.456000") into digits/decpt/sign.
@@ -360,6 +426,71 @@ parse_ryu_d2fixed_output(const char *ryu_buf, int ryu_len,
 
     *out_digits = mant;
     *digits_end = mant + mant_len;
+    return 1;
+}
+
+/* -------------------------------------------------------------------------
+ * parse_ryu_d2fixed_inplace
+ *
+ * Like parse_ryu_d2fixed_output, but takes a PyMem_Malloc'd buffer and
+ * rewrites its contents in place — the same buffer is returned as
+ * *out_digits (ownership transferred to the caller).
+ * ------------------------------------------------------------------------- */
+static int
+parse_ryu_d2fixed_inplace(char *buf, int len,
+                          char **out_digits, int *decpt, int *sign,
+                          char **digits_end)
+{
+    char *p = buf;
+    char *end = buf + len;
+
+    *sign = 0;
+    if (p < end && *p == '-') { *sign = 1; ++p; }
+
+    if (p < end && (*p == 'N' || *p == 'n' || *p == 'I' || *p == 'i')) {
+        size_t special_len = (size_t)(end - p);
+        if (p != buf) memmove(buf, p, special_len);
+        buf[special_len] = '\0';
+        *out_digits = buf;
+        *digits_end = buf + special_len;
+        *decpt = 9999;
+        return 1;
+    }
+
+    int mant_len = 0;
+    int int_digits = -1;
+    while (p < end) {
+        if (*p == '.') {
+            int_digits = mant_len;
+        } else {
+            buf[mant_len++] = *p;
+        }
+        ++p;
+    }
+    if (int_digits < 0)
+        int_digits = mant_len;
+
+    int first_nonzero = 0;
+    while (first_nonzero < mant_len && buf[first_nonzero] == '0')
+        ++first_nonzero;
+
+    if (first_nonzero == mant_len) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        *decpt = 1;
+        *out_digits = buf;
+        *digits_end = buf + 1;
+        return 1;
+    }
+
+    *decpt = int_digits - first_nonzero;
+
+    mant_len -= first_nonzero;
+    memmove(buf, buf + first_nonzero, (size_t)mant_len);
+    buf[mant_len] = '\0';
+
+    *out_digits = buf;
+    *digits_end = buf + mant_len;
     return 1;
 }
 
@@ -569,38 +700,68 @@ _PyRyu_dtoa(double d, int mode, int ndigits,
          * Gay's mode 2 with ndigits=N gives N significant digits total.
          * d2exp with precision=P gives 1 digit before the point and P after,
          * for a total of P+1 significant digits.
-         * So we pass precision = ndigits - 1. */
+         * So we pass precision = ndigits - 1.
+         *
+         * Fast path: for typical precision (fits in 256B), Ryu writes to
+         * a stack buffer and parse_ryu_d2exp_output copies out the small
+         * mantissa.  Slow path: heap-allocate a work buffer, parse it in
+         * place, transfer ownership to *out_digits — one heap alloc total.
+         */
         int precision = (ndigits > 0) ? ndigits - 1 : 0;
-        char *buf = (char *)PyMem_Malloc(_pyryu_d2exp_bufsize(precision));
-        if (buf == NULL)
-            return NULL;
-        int len = d2exp_buffered_n(d, (uint32_t)precision, buf);
-        int ok = parse_ryu_d2exp_output(buf, len, &out_digits, decpt, sign,
-                                        digits_end);
-        PyMem_Free(buf);
-        if (!ok)
-            return NULL;
+        size_t need = _pyryu_d2exp_bufsize(precision);
+        char stack_buf[256];
+        if (need <= sizeof(stack_buf)) {
+            int len = d2exp_buffered_n(d, (uint32_t)precision, stack_buf);
+            if (!parse_ryu_d2exp_output(stack_buf, len, &out_digits, decpt,
+                                        sign, digits_end))
+                return NULL;
+        }
+        else {
+            char *buf = (char *)PyMem_Malloc(need);
+            if (buf == NULL)
+                return NULL;
+            int len = d2exp_buffered_n(d, (uint32_t)precision, buf);
+            if (!parse_ryu_d2exp_inplace(buf, len, &out_digits, decpt,
+                                         sign, digits_end)) {
+                PyMem_Free(buf);
+                return NULL;
+            }
+        }
         break;
     }
     case 3: {
         /* ndigits digits after the decimal point (fixed-point format).
          * ndigits < 0 means round to the nearest multiple of 10^(-ndigits),
-         * used by float.__round__ with a negative argument. */
+         * used by float.__round__ with a negative argument.
+         *
+         * Fast path: for typical precision (fits in 768B — enough for every
+         * double's integer part plus ≲ 450 fractional digits), use a stack
+         * buffer + copy-parse.  Slow path: heap + in-place parse + steal.
+         */
         if (ndigits < 0) {
             if (!ryu_mode3_neg(d, -ndigits, &out_digits, decpt, sign,
                                digits_end))
                 return NULL;
             break;
         }
-        char *buf = (char *)PyMem_Malloc(_pyryu_d2fixed_bufsize(ndigits));
+        size_t need = _pyryu_d2fixed_bufsize(ndigits);
+        char stack_buf[768];
+        if (need <= sizeof(stack_buf)) {
+            int len = d2fixed_buffered_n(d, (uint32_t)ndigits, stack_buf);
+            if (!parse_ryu_d2fixed_output(stack_buf, len, &out_digits,
+                                          decpt, sign, digits_end))
+                return NULL;
+            break;
+        }
+        char *buf = (char *)PyMem_Malloc(need);
         if (buf == NULL)
             return NULL;
         int len = d2fixed_buffered_n(d, (uint32_t)ndigits, buf);
-        int ok = parse_ryu_d2fixed_output(buf, len, &out_digits, decpt, sign,
-                                          digits_end);
-        PyMem_Free(buf);
-        if (!ok)
+        if (!parse_ryu_d2fixed_inplace(buf, len, &out_digits, decpt, sign,
+                                       digits_end)) {
+            PyMem_Free(buf);
             return NULL;
+        }
         break;
     }
     default:
