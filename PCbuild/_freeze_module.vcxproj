@@ -139,7 +139,9 @@
     <ClCompile Include="..\Objects\enumobject.c" />
     <ClCompile Include="..\Objects\exceptions.c" />
     <ClCompile Include="..\Objects\fileobject.c" />
-    <ClCompile Include="..\Objects\floatobject.c" />
+    <ClCompile Include="..\Objects\floatobject.c">
+      <AdditionalIncludeDirectories>$(PySourcePath)Python;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\Objects\frameobject.c" />
     <ClCompile Include="..\Objects\funcobject.c" />
     <ClCompile Include="..\Objects\genericaliasobject.c" />
@@ -261,7 +263,9 @@
     <ClCompile Include="..\Python\pystats.c" />
     <ClCompile Include="..\Python\pystrcmp.c" />
     <ClCompile Include="..\Python\pystrhex.c" />
-    <ClCompile Include="..\Python\pystrtod.c" />
+    <ClCompile Include="..\Python\pystrtod.c">
+      <AdditionalIncludeDirectories>$(PySourcePath)Python;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\Python\Python-ast.c" />
     <ClCompile Include="..\Python\pythonrun.c" />
     <ClCompile Include="..\Python\Python-tokenize.c" />

@@ -1,0 +1,60 @@
+Ryu - Fast float-to-string conversion
+======================================
+
+Upstream:  https://github.com/ulfjack/ryu
+Author:    Ulf Adams
+Commit:    4c0618b0e44f7ef027ebae05d2cc7812048f7c8f  (2026-02-10)
+License:   Apache License 2.0  (see LICENSE-Apache2)
+        OR Boost Software License 1.0  (see LICENSE-Boost)
+
+Files vendored
+--------------
+ryu.h               Public API (d2s_buffered_n, d2fixed_buffered_n, d2exp_buffered_n, ...)
+common.h            Shared inline utilities (log2pow5, copy_special_str, double_to_bits, ...)
+digit_table.h       Two-digit lookup table used by digit output routines
+d2s_intrinsics.h    Platform-specific 128-bit / intrinsic helpers
+d2s_full_table.h    Full lookup tables for d2s (DOUBLE_POW5_INV_SPLIT, DOUBLE_POW5_SPLIT)
+d2s_small_table.h   Smaller lookup tables (used when RYU_OPTIMIZE_SIZE is defined)
+d2fixed_full_table.h Lookup tables for d2fixed / d2exp
+d2s.c               Shortest-representation conversion (mode 0 / repr)
+d2fixed.c           Fixed-point and exponential conversion (mode 2/3 / %f, %e, %g)
+LICENSE-Apache2     Apache License 2.0
+LICENSE-Boost       Boost Software License 1.0
+
+Local modifications
+-------------------
+d2s.c, d2fixed.c: changed '#include "ryu/foo.h"' to '#include "_ryu/foo.h"' so
+the files compile correctly when the build system's working directory is Python/.
+
+No other modifications have been made to the upstream Ryu source.
+
+
+Wuffs - Float parsing (string-to-double)
+=========================================
+
+Upstream:  https://github.com/google/wuffs
+Commit:    988af1c03c6a23f3a90bd5f2c8529fd3cfa8daeb
+License:   Apache License 2.0  OR  MIT License  (see LICENSE-Wuffs)
+
+Files vendored
+--------------
+floatconv_wuffs.h   Self-contained extract: HPD + Eisel-Lemire + parse_number_f64
+LICENSE-Wuffs       Combined Apache 2.0 / MIT license from Wuffs upstream
+
+CPython adapter (not from upstream)
+------------------------------------
+pystrtod_wuffs.h    Thin wrapper: _PyWuffs_strtod() with strtod-compatible API
+
+Local modifications to floatconv_wuffs.h
+-----------------------------------------
+Extracted from wuffs-v0.4.c (single-file release) and
+floatconv-submodule-code.c.  The following changes were made; no algorithmic
+changes were made:
+1. Removed all code outside string-to-double parsing (f16/f32 conversions,
+   rendering, Wuffs IO machinery).
+2. Added self-contained type definitions and utility inlines at the top so
+   the file compiles standalone without any other Wuffs headers.
+3. Replaced WUFFS_BASE__MAYBE_STATIC with 'static' (internal use only).
+4. Replaced 'extern const char ...' declarations with static definitions.
+5. Added _MSC_VER/_M_X64 branch to multiply_u64 and count_leading_zeroes_u64
+   for Visual Studio x64 / ARM64 builds.
