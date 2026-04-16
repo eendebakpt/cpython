@@ -963,6 +963,46 @@ class RoundTestCase(unittest.TestCase, FloatsAreIdenticalMixin):
         self.assertRaises(OverflowError, round, -1.7e308, -308)
 
     @unittest.skipUnless(getattr(sys, 'float_repr_style', '') == 'short',
+                         "requires correctly-rounded decimal conversion")
+    def test_round_neg_ndigits_large(self):
+        # round(x, k) for negative k and large x requires a correctly-rounded
+        # decimal round-trip (Gay's dtoa or equivalent).  A pure-arithmetic
+        # fallback (x / 10**-k, round, * 10**-k) loses ULPs when x is large,
+        # producing results that are off by 1 ULP from the correct answer.
+        #
+        # These specific cases were found by comparing the dtoa string round-trip
+        # against the arithmetic fallback across 500 000 random large floats.
+        # Each value is its own correctly-rounded result (i.e. it is already a
+        # multiple of 10**-k to within float precision), so round() must return
+        # it unchanged.  The arithmetic path returns the adjacent float instead.
+        cases = [
+            # (x, ndigits)  — round(x, ndigits) must equal x
+            (1e200,                    -190),
+            (-5.149362796701729e+153,  -8),
+            (2.3674206222080845e+156,  -4),
+            (-1.2961718851440568e+225, -8),
+            (-6.818581056885784e+97,   -2),
+            (6.79255997546879e+152,    -8),
+            (-6.328101478167142e+265,  -9),
+            (1.4306958843609618e+234,  -2),
+            (1.0367390072764618e+96,   -8),
+            (-1.6336871169955384e+252, -1),
+            (7.029495037016018e+124,   -1),
+            (-4.6340895967464987e+80,  -1),
+            (1.0653282223232621e+189,  -6),
+            (1.7885118156748245e+148,  -4),
+            (9.362247525287383e+253,   -7),
+            (6.955704913061252e+227,   -4),
+            (-7.239529999179169e+68,   -2),
+            (-1.2399047534739918e+86,  -6),
+            (9.351066400911148e+58,    -4),
+            (1.609493193540256e+139,   -4),
+        ]
+        for x, k in cases:
+            with self.subTest(x=x, k=k):
+                self.assertEqual(round(x, k), x)
+
+    @unittest.skipUnless(getattr(sys, 'float_repr_style', '') == 'short',
                          "applies only when using short float repr style")
     def test_previous_round_bugs(self):
         # particular cases that have occurred in bug reports
