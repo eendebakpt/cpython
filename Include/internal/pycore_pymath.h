@@ -59,14 +59,15 @@ static inline void _Py_ADJUST_ERANGE2(double x, double y)
 
 //--- HAVE_PY_SET_53BIT_PRECISION macro ------------------------------------
 //
-// The functions _Py_dg_strtod() and _Py_dg_dtoa() in Python/dtoa.c (which are
-// required to support the short float repr introduced in Python 3.1) require
-// that the floating-point unit that's being used for arithmetic operations on
-// C doubles is set to use 53-bit precision.  It also requires that the FPU
-// rounding mode is round-half-to-even, but that's less often an issue.
+// The function _Py_dg_dtoa() in Python/dtoa.c (which is required to support
+// the short float repr introduced in Python 3.1) and _PyWuffs_strtod() in
+// Python/_ryu/pystrtod_wuffs.h require that the floating-point unit that's
+// being used for arithmetic operations on C doubles is set to use 53-bit
+// precision.  It also requires that the FPU rounding mode is
+// round-half-to-even, but that's less often an issue.
 //
 // If your FPU isn't already set to 53-bit precision/round-half-to-even, and
-// you want to make use of _Py_dg_strtod() and _Py_dg_dtoa(), then you should:
+// you want to make use of _PyWuffs_strtod() and _Py_dg_dtoa(), then you should:
 //
 //     #define HAVE_PY_SET_53BIT_PRECISION 1
 //
