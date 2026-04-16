@@ -671,6 +671,12 @@
     <ClCompile Include="..\Python\remote_debugging.c" />
     <ClCompile Include="..\Python\qsbr.c" />
     <ClCompile Include="..\Python\dtoa.c" />
+    <ClCompile Include="..\Python\_ryu\d2s.c">
+      <AdditionalIncludeDirectories>$(PySourcePath)Python;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ClCompile Include="..\Python\_ryu\d2fixed.c">
+      <AdditionalIncludeDirectories>$(PySourcePath)Python;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="..\Python\Python-ast.c" />
     <ClCompile Include="..\Python\Python-tokenize.c" />
     <ClCompile Include="..\Python\pythonrun.c" />

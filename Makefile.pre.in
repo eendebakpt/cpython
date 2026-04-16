@@ -508,6 +508,8 @@ PYTHON_OBJS=	\
 		Python/pystrtod.o \
 		Python/pystrhex.o \
 		Python/dtoa.o \
+		Python/_ryu/d2s.o \
+		Python/_ryu/d2fixed.o \
 		Python/fileutils.o \
 		Python/suggestions.o \
 		Python/perf_trampoline.o \
@@ -3204,6 +3206,12 @@ regen-jit:
 # https://bugs.llvm.org//show_bug.cgi?id=31928
 Python/dtoa.o: Python/dtoa.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_ALIASING) -o $@ $<
+
+Python/_ryu/d2s.o: Python/_ryu/d2s.c
+	$(CC) -c $(PY_CORE_CFLAGS) -I$(srcdir)/Python -o $@ $<
+
+Python/_ryu/d2fixed.o: Python/_ryu/d2fixed.c
+	$(CC) -c $(PY_CORE_CFLAGS) -I$(srcdir)/Python -o $@ $<
 
 Python/ceval.o: Python/ceval.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_CEVAL) -o $@ $<
