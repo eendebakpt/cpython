@@ -4,6 +4,10 @@
 #include "pycore_dtoa.h"          // _Py_dg_strtod()
 #include "pycore_pymath.h"        // _PY_SHORT_FLOAT_REPR
 
+#if _PY_SHORT_FLOAT_REPR == 1
+#include "_ryu/pystrtod_ryu.h"    // _PyRyu_dtoa()
+#endif
+
 #include <locale.h>               // localeconv()
 
 /* Case-insensitive string match used for nan and inf detection; t should be
@@ -977,15 +981,27 @@ format_float_short(double d, char format_code,
     Py_ssize_t bufsize = 0;
     char *digits, *digits_end;
     int decpt_as_int, sign, exp_len, exp = 0, use_exp = 0;
+    int digits_use_pymem = 0;  /* 1 if digits was allocated by PyMem_Malloc */
     Py_ssize_t decpt, digits_len, vdigits_start, vdigits_end;
     _Py_SET_53BIT_PRECISION_HEADER;
 
-    /* _Py_dg_dtoa returns a digit string (no decimal point or exponent).
-       Must be matched by a call to _Py_dg_freedtoa. */
-    _Py_SET_53BIT_PRECISION_START;
-    digits = _Py_dg_dtoa(d, mode, precision, &decpt_as_int, &sign,
-                         &digits_end);
-    _Py_SET_53BIT_PRECISION_END;
+    /* Use Ryu for modes 0/2/3 with non-negative precision.
+       The result is a PyMem_Malloc'd digit string freed below with PyMem_Free.
+       Fall back to _Py_dg_dtoa only for mode 3 with negative precision
+       (used by float.__round__ with negative ndigits). */
+    if (mode != 3 || precision >= 0) {
+        _Py_SET_53BIT_PRECISION_START;
+        digits = _PyRyu_dtoa(d, mode, precision, &decpt_as_int, &sign,
+                             &digits_end);
+        _Py_SET_53BIT_PRECISION_END;
+        digits_use_pymem = 1;
+    }
+    else {
+        _Py_SET_53BIT_PRECISION_START;
+        digits = _Py_dg_dtoa(d, mode, precision, &decpt_as_int, &sign,
+                             &digits_end);
+        _Py_SET_53BIT_PRECISION_END;
+    }
 
     decpt = (Py_ssize_t)decpt_as_int;
     if (digits == NULL) {
@@ -1211,8 +1227,12 @@ format_float_short(double d, char format_code,
            memory that isn't ours. But it's an okay debugging test. */
         assert(p-buf < bufsize);
     }
-    if (digits)
-        _Py_dg_freedtoa(digits);
+    if (digits) {
+        if (digits_use_pymem)
+            PyMem_Free(digits);
+        else
+            _Py_dg_freedtoa(digits);
+    }
 
     return buf;
 }
