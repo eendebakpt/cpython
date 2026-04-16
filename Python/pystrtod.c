@@ -981,27 +981,17 @@ format_float_short(double d, char format_code,
     Py_ssize_t bufsize = 0;
     char *digits, *digits_end;
     int decpt_as_int, sign, exp_len, exp = 0, use_exp = 0;
-    int digits_use_pymem = 0;  /* 1 if digits was allocated by PyMem_Malloc */
     Py_ssize_t decpt, digits_len, vdigits_start, vdigits_end;
     _Py_SET_53BIT_PRECISION_HEADER;
 
-    /* Use Ryu for modes 0/2/3 with non-negative precision.
-       The result is a PyMem_Malloc'd digit string freed below with PyMem_Free.
-       Fall back to _Py_dg_dtoa only for mode 3 with negative precision
-       (used by float.__round__ with negative ndigits). */
-    if (mode != 3 || precision >= 0) {
-        _Py_SET_53BIT_PRECISION_START;
-        digits = _PyRyu_dtoa(d, mode, precision, &decpt_as_int, &sign,
-                             &digits_end);
-        _Py_SET_53BIT_PRECISION_END;
-        digits_use_pymem = 1;
-    }
-    else {
-        _Py_SET_53BIT_PRECISION_START;
-        digits = _Py_dg_dtoa(d, mode, precision, &decpt_as_int, &sign,
-                             &digits_end);
-        _Py_SET_53BIT_PRECISION_END;
-    }
+    /* Ryu handles every (mode, precision) combination we use:
+       modes 0/2/3, with negative precision routed through the mode-3
+       negative-ndigits adapter.  The result is a PyMem_Malloc'd digit
+       string freed below with PyMem_Free. */
+    _Py_SET_53BIT_PRECISION_START;
+    digits = _PyRyu_dtoa(d, mode, precision, &decpt_as_int, &sign,
+                         &digits_end);
+    _Py_SET_53BIT_PRECISION_END;
 
     decpt = (Py_ssize_t)decpt_as_int;
     if (digits == NULL) {
@@ -1228,10 +1218,7 @@ format_float_short(double d, char format_code,
         assert(p-buf < bufsize);
     }
     if (digits) {
-        if (digits_use_pymem)
-            PyMem_Free(digits);
-        else
-            _Py_dg_freedtoa(digits);
+        PyMem_Free(digits);
     }
 
     return buf;

@@ -7,11 +7,11 @@
  *
  *   mode 0  – shortest round-trip string  (repr / str)
  *   mode 2  – N significant digits        (%e, %g)
- *   mode 3  – N digits past decimal point (%f), ndigits >= 0 only
- *
- * The negative-ndigits case of mode 3 (used by float.__round__ with a
- * negative argument) is NOT handled here; callers must use _Py_dg_dtoa for
- * that path.
+ *   mode 3  – N digits past decimal point (%f); supports ndigits >= 0 via
+ *             d2fixed_buffered_n, and ndigits < 0 (float.__round__ with a
+ *             negative argument) via a small adapter that rounds to the
+ *             nearest multiple of 10^(-ndigits) using the exact digit
+ *             expansion of floor(|d|) plus a "fractional part > 0" bit.
  *
  * Output contract (matches Gay's dtoa):
  *   - Returns a PyMem_Malloc'd buffer containing raw decimal digits only
@@ -40,19 +40,42 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>           /* fabs, floor, signbit, isnan, isinf */
 #include "pymem.h"          /* PyMem_Malloc / PyMem_Free */
 #include "_ryu/ryu.h"       /* d2s_buffered_n, d2exp_buffered_n,
                                d2fixed_buffered_n */
 
-/* Maximum buffer sizes for Ryu's output:
- *   d2s    : up to 25 chars  (sign + 17 digits + 'E' + sign + 3-digit exp)
- *   d2exp  : up to 2000 chars (for very high precision; Ryu uses 2000 in d2exp)
- *   d2fixed: up to 2000 chars
- * We use a generous stack buffer for d2s and heap for the others.
+/* Maximum buffer sizes for Ryu's output.
+ *
+ * d2s always fits in ~25 chars (sign + 17 digits + 'E' + sign + 3-digit exp).
+ *
+ * d2exp and d2fixed write a size proportional to the requested precision.
+ * Python's format code accepts arbitrarily large precisions (e.g. "%.123456f"),
+ * so we must size the heap buffer dynamically — a fixed 2000-byte buffer
+ * would be smashed.  Worst-case output sizes (from reading the Ryu source):
+ *
+ *   d2fixed: [sign] + up to 309 integer digits + '.' + precision + NUL
+ *          ≤ 312 + precision
+ *   d2exp  : [sign] + 1 digit + '.' + precision + 'e' + sign + 4 exp + NUL
+ *          ≤ 10 + precision
+ *
+ * The helpers below round up generously (+64 slack) and clamp to a modest
+ * minimum so negative/zero precision still allocates a sane-sized buffer.
+ * _PYRYU_D2FIXED_BUFSIZE is retained as a small stack buffer for the
+ * integer-digit extraction in ryu_mode3_neg (precision=0 path).
  */
 #define _PYRYU_D2S_BUFSIZE   32
-#define _PYRYU_D2EXP_BUFSIZE 2000
-#define _PYRYU_D2FIXED_BUFSIZE 2000
+#define _PYRYU_D2FIXED_BUFSIZE 512
+static inline size_t _pyryu_d2fixed_bufsize(int precision) {
+    size_t p = (precision > 0) ? (size_t)precision : 0;
+    size_t n = p + 384;
+    return n < 512 ? 512 : n;
+}
+static inline size_t _pyryu_d2exp_bufsize(int precision) {
+    size_t p = (precision > 0) ? (size_t)precision : 0;
+    size_t n = p + 96;
+    return n < 128 ? 128 : n;
+}
 
 /* -------------------------------------------------------------------------
  * parse_ryu_d2s_output
@@ -341,6 +364,188 @@ parse_ryu_d2fixed_output(const char *ryu_buf, int ryu_len,
 }
 
 /* -------------------------------------------------------------------------
+ * ryu_mode3_neg
+ *
+ * Mode 3 with negative ndigits = -k (k >= 1): round |d| to the nearest
+ * multiple of 10^k with banker's tie-to-even against the *exact* value
+ * of d.  Gay's _Py_dg_dtoa(d, 3, -k, ...) does the same thing.
+ *
+ * Algorithm:
+ *   1. Extract sign and handle NaN/Inf/0.
+ *   2. Let ix = floor(|d|).  Since doubles with |d| >= 2^52 are already
+ *      integers, floor() is exact for every finite double.
+ *   3. Call d2fixed_buffered_n(ix, 0) to obtain the exact decimal digits
+ *      of ix.  (No banker-rounding happens because ix is an integer.)
+ *   4. frac_nonzero = (|d| != ix).  This is the only information from the
+ *      sub-integer part that matters for rounding at an integer-scale
+ *      position: for k >= 1, the tie between Q*10^k and (Q+1)*10^k occurs
+ *      exactly at R == 10^k/2 with f == 0.
+ *   5. Split the integer digit string into Q (high |ix_len|-k digits) and
+ *      R (low k digits).  Compare R against 10^k/2 (= "5" + (k-1) "0"s).
+ *   6. Round:
+ *        R < 10^k/2          : keep Q
+ *        R > 10^k/2          : Q += 1
+ *        R == 10^k/2, f > 0  : Q += 1
+ *        R == 10^k/2, f == 0 : banker's (Q += 1 iff Q's last digit is odd)
+ *   7. Output digits = decimal of Q with trailing zeros stripped,
+ *      decpt = k + len(Q_before_stripping) (so value = digits * 10^exp
+ *      with exp = decpt - len(digits) == k + stripped_zero_count,
+ *      preserving the Q * 10^k value).  If Q == 0, emit "0" with decpt=1.
+ *
+ * Returns 1 on success, 0 on memory failure.
+ * ------------------------------------------------------------------------- */
+static int
+ryu_mode3_neg(double d, int k,
+              char **out_digits, int *decpt, int *sign, char **digits_end)
+{
+    assert(k >= 1);
+
+    *sign = signbit(d) ? 1 : 0;
+
+    /* NaN / Infinity.  Emit the literal string (no sign — caller tracks it
+     * via *sign) and decpt=9999, matching Gay's dtoa convention. */
+    if (isnan(d) || isinf(d)) {
+        const char *lit = isnan(d) ? "NaN" : "Infinity";
+        size_t n = strlen(lit);
+        char *buf = (char *)PyMem_Malloc(n + 1);
+        if (buf == NULL) return 0;
+        memcpy(buf, lit, n + 1);
+        *out_digits = buf;
+        *digits_end = buf + n;
+        *decpt = 9999;
+        return 1;
+    }
+
+    /* Zero (signed or unsigned). */
+    if (d == 0.0) {
+        char *buf = (char *)PyMem_Malloc(2);
+        if (buf == NULL) return 0;
+        buf[0] = '0'; buf[1] = '\0';
+        *out_digits = buf;
+        *digits_end = buf + 1;
+        *decpt = 1;
+        return 1;
+    }
+
+    double ax = fabs(d);
+    double ix = floor(ax);
+    int frac_nonzero = (ax != ix);
+
+    /* Exact integer digits of ix.  d2fixed with precision=0 on an integer
+     * input performs no rounding: Ryu's first loop emits the exact digits
+     * from POW10_SPLIT tables, and the fractional-rounding loop finds no
+     * nonzero fractional digits. */
+    char intbuf[_PYRYU_D2FIXED_BUFSIZE];
+    int intlen = d2fixed_buffered_n(ix, 0, intbuf);
+    /* ix >= 0, so no leading '-' in intbuf. */
+
+    /* Case: integer part has fewer digits than k.  Value < 10^(k-1) since
+     * intlen <= k-1 and d2fixed emits at least one digit.  That is strictly
+     * less than 10^k/2, so we round down to 0 regardless of fractional. */
+    if (intlen < k) {
+        char *buf = (char *)PyMem_Malloc(2);
+        if (buf == NULL) return 0;
+        buf[0] = '0'; buf[1] = '\0';
+        *out_digits = buf;
+        *digits_end = buf + 1;
+        *decpt = 1;
+        return 1;
+    }
+
+    int q_len = intlen - k;  /* digits of Q_before_rounding; may be 0 */
+
+    /* Compare R (the low k digits) against 10^k/2 ("5" + (k-1) zeros). */
+    int cmp;
+    {
+        char r_first = intbuf[q_len];
+        if (r_first < '5') {
+            cmp = -1;
+        }
+        else if (r_first > '5') {
+            cmp = 1;
+        }
+        else {
+            cmp = 0;
+            for (int i = q_len + 1; i < intlen; i++) {
+                if (intbuf[i] != '0') {
+                    cmp = 1;
+                    break;
+                }
+            }
+        }
+    }
+
+    int round_up;
+    if (cmp < 0) {
+        round_up = 0;
+    }
+    else if (cmp > 0) {
+        round_up = 1;
+    }
+    else {
+        /* R == 10^k/2 exactly */
+        if (frac_nonzero) {
+            round_up = 1;
+        }
+        else {
+            char q_last = (q_len > 0) ? intbuf[q_len - 1] : '0';
+            round_up = ((q_last - '0') & 1) ? 1 : 0;
+        }
+    }
+
+    /* Build Q as a digit string, with room for a possible carry-out. */
+    char *qbuf = (char *)PyMem_Malloc((size_t)q_len + 2);
+    if (qbuf == NULL) return 0;
+    if (q_len == 0) {
+        qbuf[0] = round_up ? '1' : '0';
+        qbuf[1] = '\0';
+    }
+    else {
+        memcpy(qbuf, intbuf, (size_t)q_len);
+        qbuf[q_len] = '\0';
+        if (round_up) {
+            int i = q_len - 1;
+            while (i >= 0 && qbuf[i] == '9') {
+                qbuf[i] = '0';
+                i--;
+            }
+            if (i >= 0) {
+                qbuf[i]++;
+            }
+            else {
+                /* Carry propagated past leading digit — prepend '1'. */
+                memmove(qbuf + 1, qbuf, (size_t)q_len);
+                qbuf[0] = '1';
+                qbuf[q_len + 1] = '\0';
+            }
+        }
+    }
+    int qlen = (int)strlen(qbuf);
+
+    /* Special case: rounded value is 0. */
+    if (qlen == 1 && qbuf[0] == '0') {
+        *out_digits = qbuf;
+        *digits_end = qbuf + 1;
+        *decpt = 1;
+        return 1;
+    }
+
+    /* value = Q * 10^k with Q's decimal digits = qbuf; decpt = k + qlen.
+     * Strip trailing zeros from qbuf (decpt is unchanged since the
+     * represented value is invariant under digits -> digits+"0" with
+     * exp += 0 per our decpt formula). */
+    *decpt = k + qlen;
+    while (qlen > 1 && qbuf[qlen - 1] == '0') {
+        qlen--;
+    }
+    qbuf[qlen] = '\0';
+
+    *out_digits = qbuf;
+    *digits_end = qbuf + qlen;
+    return 1;
+}
+
+/* -------------------------------------------------------------------------
  * _PyRyu_dtoa  – main entry point
  * ------------------------------------------------------------------------- */
 static char *
@@ -366,7 +571,7 @@ _PyRyu_dtoa(double d, int mode, int ndigits,
          * for a total of P+1 significant digits.
          * So we pass precision = ndigits - 1. */
         int precision = (ndigits > 0) ? ndigits - 1 : 0;
-        char *buf = (char *)PyMem_Malloc(_PYRYU_D2EXP_BUFSIZE);
+        char *buf = (char *)PyMem_Malloc(_pyryu_d2exp_bufsize(precision));
         if (buf == NULL)
             return NULL;
         int len = d2exp_buffered_n(d, (uint32_t)precision, buf);
@@ -379,9 +584,15 @@ _PyRyu_dtoa(double d, int mode, int ndigits,
     }
     case 3: {
         /* ndigits digits after the decimal point (fixed-point format).
-         * ndigits must be >= 0 here (negative case uses _Py_dg_dtoa). */
-        assert(ndigits >= 0);
-        char *buf = (char *)PyMem_Malloc(_PYRYU_D2FIXED_BUFSIZE);
+         * ndigits < 0 means round to the nearest multiple of 10^(-ndigits),
+         * used by float.__round__ with a negative argument. */
+        if (ndigits < 0) {
+            if (!ryu_mode3_neg(d, -ndigits, &out_digits, decpt, sign,
+                               digits_end))
+                return NULL;
+            break;
+        }
+        char *buf = (char *)PyMem_Malloc(_pyryu_d2fixed_bufsize(ndigits));
         if (buf == NULL)
             return NULL;
         int len = d2fixed_buffered_n(d, (uint32_t)ndigits, buf);

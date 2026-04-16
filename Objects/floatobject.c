@@ -5,7 +5,7 @@
 
 #include "Python.h"
 #include "pycore_abstract.h"      // _PyNumber_Index()
-#include "pycore_dtoa.h"          // _Py_dg_dtoa()
+#include "pycore_dtoa.h"          // _Py_dg_strtod()
 #include "pycore_floatobject.h"   // _PyFloat_FormatAdvancedWriter()
 #include "pycore_freelist.h"      // _Py_FREELIST_FREE(), _Py_FREELIST_POP()
 #include "pycore_initconfig.h"    // _PyStatus_OK()
@@ -18,7 +18,7 @@
 #include "pycore_structseq.h"     // _PyStructSequence_FiniBuiltin()
 #include "pycore_tuple.h"         // _PyTuple_FromPair
 #if _PY_SHORT_FLOAT_REPR == 1
-#include "../Python/_ryu/pystrtod_ryu.h"  // _PyRyu_dtoa
+#include "_ryu/pystrtod_ryu.h"    // _PyRyu_dtoa
 #endif
 
 #include <float.h>                // DBL_MAX
@@ -912,21 +912,14 @@ double_round(double x, int ndigits) {
     Py_ssize_t buflen, mybuflen=100;
     char *buf, *buf_end, shortbuf[100], *mybuf=shortbuf;
     int decpt, sign;
-    int buf_uses_pymem = 0;
     PyObject *result = NULL;
     _Py_SET_53BIT_PRECISION_HEADER;
 
-    /* round to a decimal string.
-       Use Ryu for ndigits >= 0 (mode 3 fixed-point), Gay's dtoa for
-       ndigits < 0 (mode 3 with negative precision, no Ryu equivalent). */
+    /* Round to a decimal string.  Ryu handles both ndigits >= 0 (mode 3
+       fixed-point via d2fixed_buffered_n) and ndigits < 0 (nearest
+       multiple of 10^(-ndigits) via the mode-3 negative adapter). */
     _Py_SET_53BIT_PRECISION_START;
-    if (ndigits >= 0) {
-        buf = _PyRyu_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
-        buf_uses_pymem = 1;
-    }
-    else {
-        buf = _Py_dg_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
-    }
+    buf = _PyRyu_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
     _Py_SET_53BIT_PRECISION_END;
     if (buf == NULL) {
         PyErr_NoMemory();
@@ -963,10 +956,7 @@ double_round(double x, int ndigits) {
     if (mybuf != shortbuf)
         PyMem_Free(mybuf);
   exit:
-    if (buf_uses_pymem)
-        PyMem_Free(buf);
-    else
-        _Py_dg_freedtoa(buf);
+    PyMem_Free(buf);
     return result;
 }
 

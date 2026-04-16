@@ -3213,6 +3213,15 @@ Python/_ryu/d2s.o: Python/_ryu/d2s.c
 Python/_ryu/d2fixed.o: Python/_ryu/d2fixed.c
 	$(CC) -c $(PY_CORE_CFLAGS) -I$(srcdir)/Python -o $@ $<
 
+# pystrtod.c and floatobject.c include Python/_ryu/pystrtod_ryu.h which in
+# turn includes "_ryu/ryu.h"; the latter resolves relative to Python/, so
+# both translation units need Python/ on the include path.
+Python/pystrtod.o: Python/pystrtod.c
+	$(CC) -c $(PY_CORE_CFLAGS) -I$(srcdir)/Python -o $@ $<
+
+Objects/floatobject.o: Objects/floatobject.c
+	$(CC) -c $(PY_CORE_CFLAGS) -I$(srcdir)/Python -o $@ $<
+
 Python/ceval.o: Python/ceval.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_CEVAL) -o $@ $<
 
