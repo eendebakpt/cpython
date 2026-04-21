@@ -1,7 +1,7 @@
 /* -*- Mode: C; c-file-style: "python" -*- */
 
 #include <Python.h>
-#include "pycore_dtoa.h"          // _Py_dg_strtod()
+#include "pycore_dtoa.h"          // _Py_wuffs_strtod(), _Py_fmt_dtoa()
 #include "pycore_pymath.h"        // _PY_SHORT_FLOAT_REPR
 
 #include <locale.h>               // localeconv()
@@ -101,7 +101,7 @@ _PyOS_ascii_strtod(const char *nptr, char **endptr)
     errno = 0;
 
     _Py_SET_53BIT_PRECISION_START;
-    result = _Py_dg_strtod(nptr, endptr);
+    result = _Py_wuffs_strtod(nptr, endptr);
     _Py_SET_53BIT_PRECISION_END;
 
     if (*endptr == nptr)
