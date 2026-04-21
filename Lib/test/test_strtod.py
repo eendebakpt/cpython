@@ -429,5 +429,24 @@ class StrtodTests(unittest.TestCase):
         for s in test_strings:
             self.check_strtod(s)
 
+    def test_halfway_plus_epsilon_long_mantissa(self):
+        """Regression test for long-mantissa halfway-plus-epsilon cases.
+
+        The construction is "(exact midpoint between 1.0 and the next
+        double)" + 800 zeros + "1". The value sits strictly *above* the
+        halfway by 10**-857, so bignum-backed strtod must round UP to
+        1.0 + 2**-52 rather than ties-to-even DOWN to 1.0.
+
+        This is the exact shape that breaks a shortest-then-round
+        strtod that truncates its mantissa buffer without carrying a
+        "non-zero was dropped" flag through to the tie-break — the
+        truncated form looks like an exact halfway and rounds the
+        wrong way. fast_float's Eisel-Lemire + digit-comparison
+        bignum fallback handles this correctly.
+        """
+        halfway = "1.00000000000000011102230246251565404236316680908203125"
+        s = halfway + "0" * 800 + "1"
+        self.assertEqual(float(s), 1.0 + 2 ** -52)
+
 if __name__ == "__main__":
     unittest.main()
