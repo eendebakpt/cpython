@@ -900,7 +900,7 @@ float___ceil___impl(PyObject *self)
 
 #if _PY_SHORT_FLOAT_REPR == 1
 /* version of double_round that uses the correctly-rounded string<->double
-   conversions from Python/dtoa.c */
+   conversions from the fmt/wuffs shims in Python/_fmt/ and Python/_wuffs/. */
 
 static PyObject *
 double_round(double x, int ndigits) {
@@ -914,7 +914,7 @@ double_round(double x, int ndigits) {
 
     /* round to a decimal string */
     _Py_SET_53BIT_PRECISION_START;
-    buf = _Py_dg_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
+    buf = _Py_fmt_dtoa(x, 3, ndigits, &decpt, &sign, &buf_end);
     _Py_SET_53BIT_PRECISION_END;
     if (buf == NULL) {
         PyErr_NoMemory();
@@ -951,7 +951,7 @@ double_round(double x, int ndigits) {
     if (mybuf != shortbuf)
         PyMem_Free(mybuf);
   exit:
-    _Py_dg_freedtoa(buf);
+    _Py_fmt_dtoa_free(buf);
     return result;
 }
 

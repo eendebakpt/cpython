@@ -980,11 +980,12 @@ format_float_short(double d, char format_code,
     Py_ssize_t decpt, digits_len, vdigits_start, vdigits_end;
     _Py_SET_53BIT_PRECISION_HEADER;
 
-    /* _Py_dg_dtoa returns a digit string (no decimal point or exponent).
-       Must be matched by a call to _Py_dg_freedtoa. */
+    /* fmt-backed drop-in for _Py_dg_dtoa. Returns a digit string (no
+       decimal point or exponent). Must be matched by a call to
+       _Py_fmt_dtoa_free. Covers all three modes bit-exactly. */
     _Py_SET_53BIT_PRECISION_START;
-    digits = _Py_dg_dtoa(d, mode, precision, &decpt_as_int, &sign,
-                         &digits_end);
+    digits = _Py_fmt_dtoa(d, mode, precision, &decpt_as_int, &sign,
+                          &digits_end);
     _Py_SET_53BIT_PRECISION_END;
 
     decpt = (Py_ssize_t)decpt_as_int;
@@ -1212,7 +1213,7 @@ format_float_short(double d, char format_code,
         assert(p-buf < bufsize);
     }
     if (digits)
-        _Py_dg_freedtoa(digits);
+        _Py_fmt_dtoa_free(digits);
 
     return buf;
 }

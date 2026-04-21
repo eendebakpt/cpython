@@ -103,8 +103,11 @@ char *_Py_fmt_dtoa(double d, int mode, int ndigits,
     bool fixed;
     if (mode == 2) {
         specs.set_type(fmt::presentation_type::exp);
-        // max(1, ndigits) significant digits, fmt wants precision = N - 1.
-        precision = (ndigits < 1 ? 1 : ndigits) - 1;
+        // fmt::detail::format_float with specs=exp emits exactly `precision`
+        // digits (no leading-digit adjustment — that's only for specs=fixed,
+        // where adjust_precision adds the decade). So for N significant
+        // digits we pass precision = N directly.
+        precision = (ndigits < 1 ? 1 : ndigits);
         fixed = false;
     } else {
         // Treat any unrecognised mode as 3 (matches _Py_dg_dtoa's fallthrough).
