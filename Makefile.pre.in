@@ -294,7 +294,13 @@ PY_ENABLE_SHARED=	@PY_ENABLE_SHARED@
 STATIC_LIBPYTHON=	@STATIC_LIBPYTHON@
 
 
-LIBS=		@LIBS@
+LIBS=		@LIBS@ -lstdc++
+# -lstdc++ is required because the two C++ TUs below (Python/_fmt/fmt_dtoa.cc
+# and Python/_fast_float/fast_float_strtod.cc) reference std::bad_alloc /
+# std::runtime_error vtables and operator delete. Both libraries take care
+# to avoid <locale> / <iostream>, so the runtime dep stays small. Long-term
+# this should move into configure.ac as a conditional on "does libpython
+# have a C++ TU".
 LIBM=		@LIBM@
 LIBC=		@LIBC@
 SYSLIBS=	$(LIBM) $(LIBC)
@@ -508,6 +514,8 @@ PYTHON_OBJS=	\
 		Python/pystrtod.o \
 		Python/pystrhex.o \
 		Python/dtoa.o \
+		Python/_fmt/fmt_dtoa.o \
+		Python/_fast_float/fast_float_strtod.o \
 		Python/fileutils.o \
 		Python/suggestions.o \
 		Python/perf_trampoline.o \
@@ -3229,6 +3237,31 @@ regen-jit:
 # https://bugs.llvm.org//show_bug.cgi?id=31928
 Python/dtoa.o: Python/dtoa.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_ALIASING) -o $@ $<
+
+# PY_CORE_CFLAGS carries a few C-only flags (-std=c11,
+# -Werror=implicit-function-declaration, -Wstrict-prototypes); strip them
+# for the C++ TUs below so cc1plus doesn't warn.
+_CXX_CORE_CFLAGS = $(filter-out -std=c11 -std=c99 -Werror=implicit-function-declaration -Wstrict-prototypes,$(PY_CORE_CFLAGS))
+
+# Vendored {fmt} float-to-string path — see Python/_fmt/README.vendor.
+# Built with -fno-exceptions -fno-rtti so libpython doesn't acquire a
+# libstdc++ runtime dependency beyond what operator new pulls in.
+Python/_fmt/fmt_dtoa.o: Python/_fmt/fmt_dtoa.cc Python/_fmt/format.h \
+		Python/_fmt/format-inl.h Python/_fmt/base.h
+	$(CXX) -c $(_CXX_CORE_CFLAGS) -std=c++17 -fno-exceptions -fno-rtti \
+		-IPython/_fmt -o $@ $<
+
+# Vendored fast_float string-to-float path — see Python/_fast_float/README.vendor.
+# Header-only, so we compile exactly one .cc (our shim) that #includes the
+# umbrella `fast_float.h`.
+Python/_fast_float/fast_float_strtod.o: Python/_fast_float/fast_float_strtod.cc \
+		Python/_fast_float/fast_float.h Python/_fast_float/parse_number.h \
+		Python/_fast_float/float_common.h Python/_fast_float/ascii_number.h \
+		Python/_fast_float/decimal_to_binary.h Python/_fast_float/digit_comparison.h \
+		Python/_fast_float/bigint.h Python/_fast_float/fast_table.h \
+		Python/_fast_float/constexpr_feature_detect.h
+	$(CXX) -c $(_CXX_CORE_CFLAGS) -std=c++17 -fno-exceptions -fno-rtti \
+		-IPython/_fast_float -o $@ $<
 
 Python/ceval.o: Python/ceval.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_CEVAL) -o $@ $<
