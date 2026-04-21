@@ -1,0 +1,45 @@
+Vendored subset of the Wuffs library, used by Python/pystrtod.c for
+string-to-float conversion (replaces _Py_dg_strtod from Python/dtoa.c).
+
+Upstream:    https://github.com/google/wuffs
+Version:     v0.4 amalgamated single-file release
+Commit:      126a80a (main branch at time of drop, 2026-04-21)
+License:     Apache-2.0 OR MIT (dual; see LICENSE-APACHE)
+
+Files included:
+
+    wuffs-v0.4.c    — single-file amalgamated Wuffs release. Despite the
+                      .c extension, this doubles as both the header and
+                      the implementation — see WUFFS_IMPLEMENTATION
+                      below.
+    LICENSE-APACHE  — upstream dual-license text
+
+Size note. The amalgamated source is ~3.3 MB because it ships every
+Wuffs module (image codecs, JSON, compression, etc.). We only compile in
+the `base` module's `floatconv` sub-module by defining
+
+    WUFFS_CONFIG__STATIC_FUNCTIONS
+    WUFFS_CONFIG__MODULES
+    WUFFS_CONFIG__MODULE__BASE
+    WUFFS_CONFIG__MODULE__BASE__CORE
+    WUFFS_CONFIG__MODULE__BASE__FLOATCONV
+    WUFFS_CONFIG__MODULE__BASE__INTCONV
+    WUFFS_IMPLEMENTATION
+
+in the TU that compiles wuffs-v0.4.c. Unused modules become empty after
+the preprocessor pass; the resulting object file is ~80–100 KB.
+
+The actual bridge between Wuffs and CPython is Python/_wuffs/wuffs_strtod.c,
+which wraps wuffs_base__parse_number_f64 behind an extern _Py_wuffs_strtod
+entry point matching the old _Py_dg_strtod calling convention (takes an
+ASCII C string, returns a double, writes the end-of-parse pointer into
+*endptr, sets errno = ERANGE on over/underflow).
+
+Updating:
+
+    curl -L -o Python/_wuffs/wuffs-v0.4.c \
+        https://raw.githubusercontent.com/google/wuffs/<SHA>/release/c/wuffs-v0.4.c
+    curl -L -o Python/_wuffs/LICENSE-APACHE \
+        https://raw.githubusercontent.com/google/wuffs/<SHA>/LICENSE
+
+Then update this file's commit line.
