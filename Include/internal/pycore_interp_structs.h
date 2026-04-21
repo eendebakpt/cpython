@@ -454,44 +454,11 @@ typedef struct _PyOptimizationConfig {
     bool uops_optimize_enabled;
 } _PyOptimizationConfig;
 
-struct
-Bigint {
-    struct Bigint *next;
-    int k, maxwds, sign, wds;
-    uint32_t x[1];
-};
-
-#if defined(Py_USING_MEMORY_DEBUGGER) || _PY_SHORT_FLOAT_REPR == 0
-
-struct _dtoa_state {
-    int _not_used;
-};
-
-#else  // !Py_USING_MEMORY_DEBUGGER && _PY_SHORT_FLOAT_REPR != 0
-
-/* The size of the Bigint freelist */
-#define Bigint_Kmax 7
-
-/* The size of the cached powers of 5 array */
-#define Bigint_Pow5size 8
-
-#ifndef PRIVATE_MEM
-#define PRIVATE_MEM 2304
-#endif
-#define Bigint_PREALLOC_SIZE \
-    ((PRIVATE_MEM+sizeof(double)-1)/sizeof(double))
-
-struct _dtoa_state {
-    // p5s is an array of powers of 5 of the form:
-    // 5**(2**(i+2)) for 0 <= i < Bigint_Pow5size
-    struct Bigint *p5s[Bigint_Pow5size];
-    // XXX This should be freed during runtime fini.
-    struct Bigint *freelist[Bigint_Kmax+1];
-    double preallocated[Bigint_PREALLOC_SIZE];
-    double *preallocated_next;
-};
-
-#endif  // !Py_USING_MEMORY_DEBUGGER
+// `struct Bigint` and `struct _dtoa_state` used to live here to back the
+// David Gay dtoa's per-interpreter `Bigint` freelist and 2 KB pre-allocated
+// arena. With dtoa replaced by fmt + fast_float, neither is reachable — fmt
+// uses stdlib malloc via its own allocator template and fast_float uses
+// stack-bounded state.
 
 struct _py_code_state {
     PyMutex mutex;
@@ -988,7 +955,6 @@ struct _is {
     struct _py_object_state object_state;
     struct _Py_unicode_state unicode;
     struct _Py_long_state long_state;
-    struct _dtoa_state dtoa;
     struct _py_func_state func_state;
     struct _py_code_state code_state;
 

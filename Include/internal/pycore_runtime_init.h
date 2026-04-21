@@ -11,7 +11,6 @@ extern "C" {
 #include "pycore_structs.h"
 #include "pycore_ceval_state.h"   // _PyEval_RUNTIME_PERF_INIT
 #include "pycore_debug_offsets.h"  // _Py_DebugOffsets_INIT()
-#include "pycore_dtoa.h"          // _dtoa_state_INIT()
 #include "pycore_faulthandler.h"  // _faulthandler_runtime_state_INIT
 #include "pycore_floatobject.h"   // _py_float_format_*
 #include "pycore_function.h"
@@ -142,7 +141,6 @@ extern PyTypeObject _PyExc_MemoryError;
             .wr_seq = QSBR_INITIAL, \
             .rd_seq = QSBR_INITIAL, \
         }, \
-        .dtoa = _dtoa_state_INIT(&(INTERP)), \
         .dict_state = _dict_state_INIT, \
         .mem_free_queue = _Py_mem_free_queue_INIT(INTERP.mem_free_queue), \
         .func_state = { \

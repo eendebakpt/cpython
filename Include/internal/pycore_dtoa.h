@@ -11,33 +11,16 @@ extern "C" {
 #include "pycore_pymath.h"        // _PY_SHORT_FLOAT_REPR
 
 
-#if defined(Py_USING_MEMORY_DEBUGGER) || _PY_SHORT_FLOAT_REPR == 0
-
-#define _dtoa_state_INIT(INTERP) \
-    {0}
-
-#else
-
-#define _dtoa_state_INIT(INTERP) \
-    { \
-        .preallocated_next = (INTERP)->dtoa.preallocated, \
-    }
-#endif
-
-extern double _Py_dg_strtod(const char *str, char **ptr);
-extern char* _Py_dg_dtoa(double d, int mode, int ndigits,
-                         int *decpt, int *sign, char **rve);
-extern void _Py_dg_freedtoa(char *s);
-
-
-extern PyStatus _PyDtoa_Init(PyInterpreterState *interp);
-extern void _PyDtoa_Fini(PyInterpreterState *interp);
-
-// Replacements for the two David Gay entry points above. _Py_fmt_dtoa is
-// backed by Python/_fmt/ (a vendored trim of fmtlib). _Py_fast_float_strtod
-// is backed by Python/_fast_float/ (a vendored drop of fast_float). Calling
-// conventions match _Py_dg_dtoa / _Py_dg_strtod respectively so pystrtod.c
-// can swap them in without touching call-site logic.
+// Float <-> string conversion entry points for libpython. Both replace
+// David Gay's dtoa machinery that previously lived in Python/dtoa.c:
+//
+//   * _Py_fmt_dtoa is backed by a vendored trim of fmtlib ({fmt}) in
+//     Python/_fmt/. Mirrors _Py_dg_dtoa's calling convention for modes
+//     0/2/3. The returned char* is PyMem_Malloc'd — pair each call with
+//     _Py_fmt_dtoa_free.
+//
+//   * _Py_fast_float_strtod is backed by a vendored drop of fast_float
+//     in Python/_fast_float/. Mirrors _Py_dg_strtod's calling convention.
 extern char* _Py_fmt_dtoa(double d, int mode, int ndigits,
                           int *decpt, int *sign, char **rve);
 extern void _Py_fmt_dtoa_free(char *s);

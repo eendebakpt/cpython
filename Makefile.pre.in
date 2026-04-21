@@ -513,7 +513,6 @@ PYTHON_OBJS=	\
 		Python/pystrcmp.o \
 		Python/pystrtod.o \
 		Python/pystrhex.o \
-		Python/dtoa.o \
 		Python/_fmt/fmt_dtoa.o \
 		Python/_fast_float/fast_float_strtod.o \
 		Python/fileutils.o \
@@ -3230,13 +3229,6 @@ regen-jit:
 # Some make's put the object file in the current directory
 .c.o:
 	$(CC) -c $(PY_CORE_CFLAGS) -o $@ $<
-
-# bpo-30104: dtoa.c uses union to cast double to unsigned long[2]. clang 4.0
-# with -O2 or higher and strict aliasing miscompiles the ratio() function
-# causing rounding issues. Compile dtoa.c using -fno-strict-aliasing on clang.
-# https://bugs.llvm.org//show_bug.cgi?id=31928
-Python/dtoa.o: Python/dtoa.c
-	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_ALIASING) -o $@ $<
 
 # PY_CORE_CFLAGS carries a few C-only flags (-std=c11,
 # -Werror=implicit-function-declaration, -Wstrict-prototypes); strip them
