@@ -1,0 +1,50 @@
+Vendored subset of the fast_float C++ library, used by Python/pystrtod.c
+for string-to-float conversion (replaces _Py_dg_strtod from the old
+Python/dtoa.c).
+
+Upstream:    https://github.com/fastfloat/fast_float
+Version:     v8.0.0 (commit 77cc847)
+License:     Apache-2.0 OR MIT OR BSL-1.0 (triple; see LICENSE-* files)
+
+Files included (all 9 upstream headers; fast_float is header-only and
+#include'ing `fast_float.h` transitively pulls in the rest):
+
+    fast_float.h              — umbrella header, sole entry point for users
+    parse_number.h            — dispatch into the parser pipeline
+    float_common.h            — IEEE 754 bit layout, limits, adjusted_mantissa
+    ascii_number.h            — fast byte-level digit parsing
+    decimal_to_binary.h       — Clinger fast-path + Eisel-Lemire 64-bit path
+    digit_comparison.h        — big-int fallback for hard halfway cases
+    bigint.h                  — 4000-bit fixed-capacity bigint backing the
+                                fallback
+    fast_table.h              — precomputed power-of-10 table
+    constexpr_feature_detect.h — compiler-probe macros
+    LICENSE-APACHE, LICENSE-MIT, LICENSE-BOOST
+
+Algorithm: Clinger's "small value" fast path → Eisel-Lemire 64-bit → if
+indeterminate, digit-comparison bignum. This is the same two-phase
+design used by Rust std, Go's strconv, DuckDB, Apache Arrow, folly, etc.
+Correctness is known-good for every halfway case a double can express,
+including the wuffs-HPD failure mode documented in test_strtod.
+
+Integration: Python/_fast_float/fast_float_strtod.cc wraps
+`fast_float::from_chars` behind a C ABI entry point
+_Py_fast_float_strtod that mirrors the old _Py_dg_strtod calling
+convention (ASCII C string in, double out, *endptr points past the
+consumed portion, errno = ERANGE on over/underflow).
+
+Build configuration:
+
+    $(CXX) -std=c++17 -fno-exceptions -fno-rtti
+
+fast_float is header-only; the only .cc file in this directory is our
+own shim. No throw sites in the hot path when -fno-exceptions is set —
+parse errors are returned via `std::errc`.
+
+Updating:
+
+    git clone --branch vX.Y.Z --depth 1 https://github.com/fastfloat/fast_float.git
+    cp fast_float/include/fast_float/*.h Python/_fast_float/
+    cp fast_float/LICENSE-* Python/_fast_float/
+
+Then update this file's version and commit hash.
