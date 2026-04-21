@@ -1,0 +1,43 @@
+Vendored subset of the {fmt} library, used by Python/pystrtod.c for
+float-to-string conversion (replaces the David Gay dtoa machinery that
+lived in Python/dtoa.c).
+
+Upstream:    https://github.com/fmtlib/fmt
+Version:     12.1.0 (tag v12.1.0, commit 407c905)
+License:     MIT (see LICENSE in this directory)
+
+Files included:
+
+    format.h        — core float formatting path, Dragon4 bignum, Dragonbox
+                      shortest entry point declaration
+    format-inl.h    — out-of-line Dragonbox tables and helpers; #include'd
+                      exactly once from fmt_dtoa.cc
+    base.h          — buffer, basic_fp, and utility types that format.h
+                      depends on
+    LICENSE         — upstream MIT license text
+
+Deliberately excluded: chrono.h, color.h, compile.h, core.h, os.h,
+ostream.h, printf.h, ranges.h, std.h, xchar.h, args.h. None of these are
+reachable from the float path; keeping them out of the tree avoids
+dragging locale/iostream/chrono dependencies into libpython.
+
+The actual bridge between fmt and CPython is Python/_fmt/fmt_dtoa.cc,
+which wraps fmt::detail::format_float and fmt::detail::dragonbox::to_decimal
+behind an extern "C" _Py_fmt_dtoa entry point matching the old
+_Py_dg_dtoa calling convention.
+
+Build configuration:
+
+    $(CXX) -std=c++17 -fno-exceptions -fno-rtti
+
+fmt auto-detects -fno-exceptions via __cpp_exceptions and replaces its
+throw sites with assertion failures. No RTTI is required on the float
+path.
+
+Updating:
+
+    git clone --branch vX.Y.Z --depth 1 https://github.com/fmtlib/fmt.git
+    cp fmt/include/fmt/{format.h,format-inl.h,base.h} Python/_fmt/
+    cp fmt/LICENSE Python/_fmt/
+
+Then update this file's version and commit hash.
