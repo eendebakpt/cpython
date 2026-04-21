@@ -940,7 +940,7 @@ double_round(double x, int ndigits) {
     /* and convert the resulting string back to a double */
     errno = 0;
     _Py_SET_53BIT_PRECISION_START;
-    rounded = _Py_dg_strtod(mybuf, NULL);
+    rounded = _Py_fast_float_strtod(mybuf, NULL);
     _Py_SET_53BIT_PRECISION_END;
     if (errno == ERANGE && fabs(rounded) >= 1.)
         PyErr_SetString(PyExc_OverflowError,

@@ -40,9 +40,13 @@ _Py_fast_float_strtod(const char *nptr, char **endptr)
     const char *last = nptr + std::strlen(nptr);
     double value = 0.0;
 
+    // fast_float's `general` default rejects leading '+' and "inf"/"nan".
+    // _Py_dg_strtod accepted leading '+' (C strtod does too) and left
+    // "inf"/"nan" to pystrtod.c's _Py_parse_inf_or_nan fallback — match both.
     auto result = fast_float::from_chars(
         nptr, last, value,
         fast_float::chars_format::general
+        | fast_float::chars_format::allow_leading_plus
         | fast_float::chars_format::no_infnan);
 
     if (result.ec == std::errc::invalid_argument) {
