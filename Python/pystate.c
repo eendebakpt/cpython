@@ -8,7 +8,6 @@
 #include "pycore_ceval.h"         // _PyEval_AcquireLock()
 #include "pycore_codecs.h"        // _PyCodec_Fini()
 #include "pycore_critical_section.h" // _PyCriticalSection_Resume()
-#include "pycore_dtoa.h"          // _dtoa_state_INIT()
 #include "pycore_freelist.h"      // _PyObject_ClearFreeLists()
 #include "pycore_initconfig.h"    // _PyStatus_OK()
 #include "pycore_interpframe.h"   // _PyThreadState_HasStackSpace()
@@ -637,10 +636,8 @@ init_interpreter(PyInterpreterState *interp,
 
     interp->opt_config.specialization_enabled = !is_env_enabled("PYTHON_SPECIALIZATION_OFF");
     interp->opt_config.uops_optimize_enabled = !is_env_disabled("PYTHON_UOPS_OPTIMIZE");
-    if (interp != &runtime->_main_interpreter) {
-        /* Fix the self-referential, statically initialized fields. */
-        interp->dtoa = (struct _dtoa_state)_dtoa_state_INIT(interp);
-    }
+    /* The _dtoa_state fix-up that used to live here went away with the
+       removal of Python/dtoa.c. */
 #if !defined(Py_GIL_DISABLED) && defined(Py_STACKREF_DEBUG)
     interp->next_stackref = INITIAL_STACKREF_INDEX;
     _Py_hashtable_allocator_t alloc = {

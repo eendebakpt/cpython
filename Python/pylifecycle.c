@@ -955,10 +955,8 @@ pycore_interp_init(PyThreadState *tstate)
         return status;
     }
 
-    status = _PyDtoa_Init(interp);
-    if (_PyStatus_EXCEPTION(status)) {
-        return status;
-    }
+    // (_PyDtoa_Init used to run here; the dtoa-specific per-interpreter
+    // state was retired along with Python/dtoa.c.)
 
     // The GC must be initialized before the first GC collection.
     status = _PyGC_Init(interp);
@@ -2130,8 +2128,8 @@ finalize_interp_clear(PyThreadState *tstate)
 
     finalize_interp_types(tstate->interp);
 
-    /* Finalize dtoa at last so that finalizers calling repr of float doesn't crash */
-    _PyDtoa_Fini(tstate->interp);
+    /* (_PyDtoa_Fini used to run here; the dtoa-specific per-interpreter
+       state was retired along with Python/dtoa.c.) */
 
     /* Free any delayed free requests immediately */
     _PyMem_FiniDelayed(tstate->interp);
