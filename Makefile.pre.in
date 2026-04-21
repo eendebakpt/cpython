@@ -294,7 +294,13 @@ PY_ENABLE_SHARED=	@PY_ENABLE_SHARED@
 STATIC_LIBPYTHON=	@STATIC_LIBPYTHON@
 
 
-LIBS=		@LIBS@
+LIBS=		@LIBS@ -lstdc++
+# -lstdc++ is required because Python/_fmt/fmt_dtoa.cc (the float-to-string
+# shim backed by fmtlib) references std::bad_alloc / std::runtime_error
+# vtables. This is the price of using a C++ library in libpython; fmt takes
+# care to avoid the locale and iostream slices (FMT_OPTIMIZE_SIZE=2) so the
+# runtime dep is small. Long-term this should move into configure.ac as a
+# conditional on "does libpython have a C++ TU".
 LIBM=		@LIBM@
 LIBC=		@LIBC@
 SYSLIBS=	$(LIBM) $(LIBC)
@@ -508,6 +514,8 @@ PYTHON_OBJS=	\
 		Python/pystrtod.o \
 		Python/pystrhex.o \
 		Python/dtoa.o \
+		Python/_fmt/fmt_dtoa.o \
+		Python/_wuffs/wuffs_strtod.o \
 		Python/fileutils.o \
 		Python/suggestions.o \
 		Python/perf_trampoline.o \
@@ -3229,6 +3237,25 @@ regen-jit:
 # https://bugs.llvm.org//show_bug.cgi?id=31928
 Python/dtoa.o: Python/dtoa.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_ALIASING) -o $@ $<
+
+# Vendored {fmt} float-to-string path — see Python/_fmt/README.vendor.
+# Compiled as C++17 with exceptions and RTTI disabled so libpython doesn't
+# acquire a libstdc++ runtime dependency beyond what operator new pulls in.
+# PY_CORE_CFLAGS carries a handful of C-only flags (-std=c11,
+# -Werror=implicit-function-declaration, -Wstrict-prototypes) that C++
+# compilers warn about; strip them for this TU.
+_FMT_CXX_CFLAGS = $(filter-out -std=c11 -std=c99 -Werror=implicit-function-declaration -Wstrict-prototypes,$(PY_CORE_CFLAGS))
+Python/_fmt/fmt_dtoa.o: Python/_fmt/fmt_dtoa.cc Python/_fmt/format.h \
+		Python/_fmt/format-inl.h Python/_fmt/base.h
+	$(CXX) -c $(_FMT_CXX_CFLAGS) -std=c++17 -fno-exceptions -fno-rtti \
+		-IPython/_fmt -o $@ $<
+
+# Vendored Wuffs string-to-float path — see Python/_wuffs/README.vendor.
+# wuffs-v0.4.c is 3.3 MB of amalgamated C; the WUFFS_CONFIG__MODULE__BASE__*
+# defines restrict compilation to just the floatconv sub-module.
+Python/_wuffs/wuffs_strtod.o: Python/_wuffs/wuffs_strtod.c \
+		Python/_wuffs/wuffs-v0.4.c
+	$(CC) -c $(PY_CORE_CFLAGS) -IPython/_wuffs -o $@ $<
 
 Python/ceval.o: Python/ceval.c
 	$(CC) -c $(PY_CORE_CFLAGS) $(CFLAGS_CEVAL) -o $@ $<
