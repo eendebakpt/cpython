@@ -14228,46 +14228,27 @@ can_immortalize_safely(PyObject *s)
 }
 #endif
 
-static /* non-null */ PyObject*
-intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
-              bool immortalize)
+PyObject*
+_PyUnicode_InternSlow(PyInterpreterState *interp, PyObject *s /* stolen */,
+                     int immortalize)
 {
-    // Note that this steals a reference to `s`, but in many cases that
-    // stolen ref is returned, requiring no decref/incref.
-
-#ifdef Py_DEBUG
     assert(s != NULL);
     assert(_PyUnicode_CHECK(s));
-#else
-    if (s == NULL || !PyUnicode_Check(s)) {
-        return s;
-    }
-#endif
+    assert(PyUnicode_CheckExact(s));
 
-    /* If it's a subclass, we don't really know what putting
-       it in the interned dict might do. */
-    if (!PyUnicode_CheckExact(s)) {
-        return s;
-    }
-
-    /* Is it already interned? */
     switch (PyUnicode_CHECK_INTERNED(s)) {
         case SSTATE_NOT_INTERNED:
-            // no, go on
             break;
         case SSTATE_INTERNED_MORTAL:
 #ifndef Py_GIL_DISABLED
-            // yes but we might need to make it immortal
             if (immortalize) {
                 immortalize_interned(s);
             }
             return s;
 #else
-            // not fully interned yet; fall through to the locking path
             break;
 #endif
         default:
-            // all done
             return s;
     }
 
@@ -14284,17 +14265,10 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
         immortalize = 1;
     }
 
-    /* if it's a short string, get the singleton */
-    if (PyUnicode_GET_LENGTH(s) == 1 &&
-                PyUnicode_KIND(s) == PyUnicode_1BYTE_KIND) {
-        PyObject *r = LATIN1(*(unsigned char*)PyUnicode_DATA(s));
-        assert(PyUnicode_CHECK_INTERNED(r));
-        Py_DECREF(s);
-        return r;
-    }
-#ifdef Py_DEBUG
+    /* all 256 latin-1 singletons are pre-registered in INTERNED_STRINGS by
+       init_global_interned_strings(), so the hashtable probe below handles
+       them without a special case. */
     assert(!unicode_is_singleton(s));
-#endif
 
     /* Look in the global cache now. */
     {
@@ -14387,11 +14361,6 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
 
     /* INTERNED_MORTAL -> INTERNED_IMMORTAL (if needed) */
 
-#ifdef Py_DEBUG
-    if (_Py_IsImmortal(s)) {
-        assert(immortalize);
-    }
-#endif
     if (immortalize) {
         immortalize_interned(s);
     }
@@ -14399,21 +14368,6 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
     FT_MUTEX_UNLOCK(INTERN_MUTEX);
     return s;
 }
-
-void
-_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
-{
-    *p = intern_common(interp, *p, 1);
-    assert(*p);
-}
-
-void
-_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
-{
-    *p = intern_common(interp, *p, 0);
-    assert(*p);
-}
-
 
 void
 _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p)
@@ -14425,6 +14379,10 @@ _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p)
 void
 PyUnicode_InternInPlace(PyObject **p)
 {
+    /* Public API: tolerate NULL, non-unicode, and unicode subclasses. */
+    if (*p == NULL || !PyUnicode_CheckExact(*p)) {
+        return;
+    }
     PyInterpreterState *interp = _PyInterpreterState_GET();
     _PyUnicode_InternMortal(interp, p);
 }
@@ -14434,6 +14392,9 @@ PyAPI_FUNC(void) PyUnicode_InternImmortal(PyObject **);
 void
 PyUnicode_InternImmortal(PyObject **p)
 {
+    if (*p == NULL || !PyUnicode_CheckExact(*p)) {
+        return;
+    }
     PyInterpreterState *interp = _PyInterpreterState_GET();
     _PyUnicode_InternImmortal(interp, p);
 }

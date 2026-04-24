@@ -360,9 +360,37 @@ extern PyTypeObject _PyUnicodeASCIIIter_Type;
 
 // All these are "ref-neutral", like the public PyUnicode_InternInPlace.
 
-// Explicit interning routines:
-PyAPI_FUNC(void) _PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **);
-PyAPI_FUNC(void) _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **);
+PyAPI_FUNC(PyObject*) _PyUnicode_InternSlow(
+    PyInterpreterState *interp, PyObject *s, int immortalize);
+
+// Inline fast path: skip the call when already interned (gh-96459).
+static inline void
+_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
+{
+    PyObject *s = *p;
+    assert(s != NULL);
+    assert(PyUnicode_Check(s));
+    unsigned int st = PyUnicode_CHECK_INTERNED(s);
+    if (st == SSTATE_INTERNED_IMMORTAL || st == SSTATE_INTERNED_IMMORTAL_STATIC) {
+        return;
+    }
+    *p = _PyUnicode_InternSlow(interp, s, 1);
+    assert(*p);
+}
+
+static inline void
+_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
+{
+    PyObject *s = *p;
+    assert(s != NULL);
+    assert(PyUnicode_Check(s));
+    if (PyUnicode_CHECK_INTERNED(s) != SSTATE_NOT_INTERNED) {
+        return;
+    }
+    *p = _PyUnicode_InternSlow(interp, s, 0);
+    assert(*p);
+}
+
 // Left here to help backporting:
 PyAPI_FUNC(void) _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p);
 // Only for singletons in the _PyRuntime struct:
