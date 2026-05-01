@@ -33,6 +33,8 @@ PyAPI_FUNC(PyObject *) _PyTuple_Concat(PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) _PyTuple_FromPair(PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) _PyTuple_FromPairSteal(PyObject *, PyObject *);
 
+PyAPI_FUNC(int) _PyTuple_Contains(PyObject *, PyObject *);
+
 typedef struct {
     PyObject_HEAD
     Py_ssize_t it_index;

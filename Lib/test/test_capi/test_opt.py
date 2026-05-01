@@ -2635,7 +2635,7 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertIn("_STORE_SUBSCR_DICT_KNOWN_HASH", uops)
         self.assertNotIn("_STORE_SUBSCR_DICT", uops)
 
-    def test_contains_op(self):
+    def test_contains_op_list(self):
         def testfunc(n):
             x = 0
             items = [1, 2, 3]
@@ -2648,9 +2648,84 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertEqual(res, TIER2_THRESHOLD)
         self.assertIsNotNone(ex)
         uops = get_opnames(ex)
-        self.assertIn("_CONTAINS_OP", uops)
+        self.assertIn("_CONTAINS_OP_LIST", uops)
         self.assertIn("_POP_TOP_NOP", uops)
         self.assertLessEqual(count_ops(ex, "_POP_TOP"), 2)
+
+    def test_contains_op_tuple(self):
+        def testfunc(n):
+            x = 0
+            items = (1, 2, 3)
+            for _ in range(n):
+                if 2 in items:
+                    x += 1
+            return x
+
+        res, ex = self._run_with_optimizer(testfunc, TIER2_THRESHOLD)
+        self.assertEqual(res, TIER2_THRESHOLD)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_CONTAINS_OP_TUPLE", uops)
+        self.assertIn("_POP_TOP_NOP", uops)
+        self.assertLessEqual(count_ops(ex, "_POP_TOP"), 2)
+
+    def test_contains_op_str(self):
+        def testfunc(n):
+            x = 0
+            s = "hello"
+            for _ in range(n):
+                if "l" in s:
+                    x += 1
+            return x
+
+        res, ex = self._run_with_optimizer(testfunc, TIER2_THRESHOLD)
+        self.assertEqual(res, TIER2_THRESHOLD)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_CONTAINS_OP_STR", uops)
+        self.assertIn("_POP_TOP_NOP", uops)
+        self.assertLessEqual(count_ops(ex, "_POP_TOP"), 2)
+
+    def _check_contains_op_recorded_type(self, inner, container, guard_op, op):
+        """Recorded-type path: a container whose static type is unknown but
+        whose runtime type is recorded should emit `guard_op` + `op`."""
+        self.assertEqual(inner(container), TIER2_THRESHOLD)
+        ex_inner = get_first_executor(inner)
+        self.assertIsNotNone(ex_inner)
+        uops = get_opnames(ex_inner)
+        self.assertIn(guard_op, uops)
+        self.assertIn(op, uops)
+        self.assertNotIn("_CONTAINS_OP", uops)
+
+    def test_contains_op_list_recorded(self):
+        def inner(c):
+            cnt = 0
+            for _ in range(TIER2_THRESHOLD):
+                if 1 in c:
+                    cnt += 1
+            return cnt
+        self._check_contains_op_recorded_type(
+            inner, [1, 2, 3], "_GUARD_TOS_LIST", "_CONTAINS_OP_LIST")
+
+    def test_contains_op_tuple_recorded(self):
+        def inner(c):
+            cnt = 0
+            for _ in range(TIER2_THRESHOLD):
+                if 1 in c:
+                    cnt += 1
+            return cnt
+        self._check_contains_op_recorded_type(
+            inner, (1, 2, 3), "_GUARD_TOS_TUPLE", "_CONTAINS_OP_TUPLE")
+
+    def test_contains_op_str_recorded(self):
+        def inner(c):
+            cnt = 0
+            for _ in range(TIER2_THRESHOLD):
+                if "l" in c:
+                    cnt += 1
+            return cnt
+        self._check_contains_op_recorded_type(
+            inner, "hello", "_GUARD_TOS_UNICODE", "_CONTAINS_OP_STR")
 
     def test_contains_op_set(self):
         def testfunc(n):

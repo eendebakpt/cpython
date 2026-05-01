@@ -839,10 +839,56 @@ dummy_func(void) {
     }
 
     op(_CONTAINS_OP, (left, right -- b, l, r)) {
+        // Tier-2-only specialization for list / tuple / str.  When the
+        // container's static type is known, rewrite this_instr; when it
+        // isn't, fall back to the runtime type recorded by _RECORD_TOS_TYPE
+        // and emit a speculative type guard so the trace deopts cleanly if
+        // the observed type doesn't reproduce.
+        PyTypeObject *tp = sym_get_type(right);
+        int emitted_guard = 0;
+        if (tp == NULL) {
+            PyTypeObject *probable = sym_get_probable_type(right);
+            int guard_op = 0;
+            if (probable == &PyList_Type) {
+                guard_op = _GUARD_TOS_LIST;
+            }
+            else if (probable == &PyTuple_Type) {
+                guard_op = _GUARD_TOS_TUPLE;
+            }
+            else if (probable == &PyUnicode_Type) {
+                guard_op = _GUARD_TOS_UNICODE;
+            }
+            if (guard_op) {
+                ADD_OP(guard_op, 0, 0);
+                sym_set_type(right, probable);
+                tp = probable;
+                emitted_guard = 1;
+            }
+        }
+        int specialized_op = 0;
+        if (tp == &PyList_Type) {
+            specialized_op = _CONTAINS_OP_LIST;
+        }
+        else if (tp == &PyTuple_Type) {
+            specialized_op = _CONTAINS_OP_TUPLE;
+        }
+        else if (tp == &PyUnicode_Type) {
+            specialized_op = _CONTAINS_OP_STR;
+        }
         b = sym_new_type(ctx, &PyBool_Type);
         l = left;
         r = right;
-        REPLACE_OPCODE_IF_EVALUATES_PURE(left, right, b);
+        if (specialized_op) {
+            if (emitted_guard) {
+                ADD_OP(specialized_op, oparg, 0);
+            }
+            else {
+                REPLACE_OP(this_instr, specialized_op, oparg, 0);
+            }
+        }
+        else {
+            REPLACE_OPCODE_IF_EVALUATES_PURE(left, right, b);
+        }
     }
 
     op(_CONTAINS_OP_SET, (left, right -- b, l, r)) {
@@ -863,6 +909,24 @@ dummy_func(void) {
             sym_matches_type(right, &PyFrozenDict_Type)) {
             REPLACE_OPCODE_IF_EVALUATES_PURE(left, right, b);
         }
+    }
+
+    op(_CONTAINS_OP_LIST, (left, right -- b, l, r)) {
+        b = sym_new_type(ctx, &PyBool_Type);
+        l = left;
+        r = right;
+    }
+
+    op(_CONTAINS_OP_TUPLE, (left, right -- b, l, r)) {
+        b = sym_new_type(ctx, &PyBool_Type);
+        l = left;
+        r = right;
+    }
+
+    op(_CONTAINS_OP_STR, (left, right -- b, l, r)) {
+        b = sym_new_type(ctx, &PyBool_Type);
+        l = left;
+        r = right;
     }
 
     op(_LOAD_CONST, (-- value)) {

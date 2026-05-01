@@ -20,6 +20,7 @@
 #include "pycore_interpolation.h" // _PyInterpolation_Build()
 #include "pycore_intrinsics.h"
 #include "pycore_lazyimportobject.h"  // PyLazyImport_CheckExact()
+#include "pycore_list.h"          // _PyList_Contains()
 #include "pycore_long.h"          // _PyLong_ExactDealloc(), _PyLong_GetZero()
 #include "pycore_moduleobject.h"  // PyModuleObject
 #include "pycore_object.h"        // _PyObject_GC_TRACK()
@@ -3302,7 +3303,8 @@ dummy_func(
             #endif  /* ENABLE_SPECIALIZATION */
         }
 
-        macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;
+        macro(CONTAINS_OP) =
+            _SPECIALIZE_CONTAINS_OP + _RECORD_TOS_TYPE + _CONTAINS_OP + POP_TOP + POP_TOP;
 
         op(_GUARD_TOS_ANY_SET, (tos -- tos)) {
             PyObject *o = PyStackRef_AsPyObjectBorrow(tos);
@@ -3347,6 +3349,54 @@ dummy_func(
             assert(PyAnyDict_CheckExact(right_o));
             STAT_INC(CONTAINS_OP, hit);
             int res = PyDict_Contains(right_o, left_o);
+            if (res < 0) {
+                ERROR_NO_POP();
+            }
+            b = (res ^ oparg) ? PyStackRef_True : PyStackRef_False;
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_CONTAINS_OP_LIST, (left, right -- b, l, r)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+
+            assert(PyList_CheckExact(right_o));
+            STAT_INC(CONTAINS_OP, hit);
+            int res = _PyList_Contains(right_o, left_o);
+            if (res < 0) {
+                ERROR_NO_POP();
+            }
+            b = (res ^ oparg) ? PyStackRef_True : PyStackRef_False;
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_CONTAINS_OP_TUPLE, (left, right -- b, l, r)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+
+            assert(PyTuple_CheckExact(right_o));
+            STAT_INC(CONTAINS_OP, hit);
+            int res = _PyTuple_Contains(right_o, left_o);
+            if (res < 0) {
+                ERROR_NO_POP();
+            }
+            b = (res ^ oparg) ? PyStackRef_True : PyStackRef_False;
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
+        tier2 op(_CONTAINS_OP_STR, (left, right -- b, l, r)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+
+            assert(PyUnicode_CheckExact(right_o));
+            STAT_INC(CONTAINS_OP, hit);
+            int res = PyUnicode_Contains(right_o, left_o);
             if (res < 0) {
                 ERROR_NO_POP();
             }

@@ -246,6 +246,9 @@ const uint32_t _PyUop_Flags[MAX_UOP_ID+1] = {
     [_GUARD_TOS_FROZENSET] = HAS_EXIT_FLAG,
     [_CONTAINS_OP_SET] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
     [_CONTAINS_OP_DICT] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
+    [_CONTAINS_OP_LIST] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
+    [_CONTAINS_OP_TUPLE] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
+    [_CONTAINS_OP_STR] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
     [_CHECK_EG_MATCH] = HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
     [_CHECK_EXC_MATCH] = HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
     [_IMPORT_NAME] = HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
@@ -2341,6 +2344,33 @@ const _PyUopCachingInfo _PyUop_Caching[MAX_UOP_ID+1] = {
             { -1, -1, -1 },
         },
     },
+    [_CONTAINS_OP_LIST] = {
+        .best = { 2, 2, 2, 2 },
+        .entries = {
+            { -1, -1, -1 },
+            { -1, -1, -1 },
+            { 3, 2, _CONTAINS_OP_LIST_r23 },
+            { -1, -1, -1 },
+        },
+    },
+    [_CONTAINS_OP_TUPLE] = {
+        .best = { 2, 2, 2, 2 },
+        .entries = {
+            { -1, -1, -1 },
+            { -1, -1, -1 },
+            { 3, 2, _CONTAINS_OP_TUPLE_r23 },
+            { -1, -1, -1 },
+        },
+    },
+    [_CONTAINS_OP_STR] = {
+        .best = { 2, 2, 2, 2 },
+        .entries = {
+            { -1, -1, -1 },
+            { -1, -1, -1 },
+            { 3, 2, _CONTAINS_OP_STR_r23 },
+            { -1, -1, -1 },
+        },
+    },
     [_CHECK_EG_MATCH] = {
         .best = { 2, 2, 2, 2 },
         .entries = {
@@ -4370,6 +4400,9 @@ const uint16_t _PyUop_Uncached[MAX_UOP_REGS_ID+1] = {
     [_GUARD_TOS_FROZENSET_r33] = _GUARD_TOS_FROZENSET,
     [_CONTAINS_OP_SET_r23] = _CONTAINS_OP_SET,
     [_CONTAINS_OP_DICT_r23] = _CONTAINS_OP_DICT,
+    [_CONTAINS_OP_LIST_r23] = _CONTAINS_OP_LIST,
+    [_CONTAINS_OP_TUPLE_r23] = _CONTAINS_OP_TUPLE,
+    [_CONTAINS_OP_STR_r23] = _CONTAINS_OP_STR,
     [_CHECK_EG_MATCH_r22] = _CHECK_EG_MATCH,
     [_CHECK_EXC_MATCH_r22] = _CHECK_EXC_MATCH,
     [_IMPORT_NAME_r21] = _IMPORT_NAME,
@@ -5083,8 +5116,14 @@ const char *const _PyOpcode_uop_name[MAX_UOP_REGS_ID+1] = {
     [_CONTAINS_OP_r23] = "_CONTAINS_OP_r23",
     [_CONTAINS_OP_DICT] = "_CONTAINS_OP_DICT",
     [_CONTAINS_OP_DICT_r23] = "_CONTAINS_OP_DICT_r23",
+    [_CONTAINS_OP_LIST] = "_CONTAINS_OP_LIST",
+    [_CONTAINS_OP_LIST_r23] = "_CONTAINS_OP_LIST_r23",
     [_CONTAINS_OP_SET] = "_CONTAINS_OP_SET",
     [_CONTAINS_OP_SET_r23] = "_CONTAINS_OP_SET_r23",
+    [_CONTAINS_OP_STR] = "_CONTAINS_OP_STR",
+    [_CONTAINS_OP_STR_r23] = "_CONTAINS_OP_STR_r23",
+    [_CONTAINS_OP_TUPLE] = "_CONTAINS_OP_TUPLE",
+    [_CONTAINS_OP_TUPLE_r23] = "_CONTAINS_OP_TUPLE_r23",
     [_CONVERT_VALUE] = "_CONVERT_VALUE",
     [_CONVERT_VALUE_r11] = "_CONVERT_VALUE_r11",
     [_COPY] = "_COPY",
@@ -6524,6 +6563,12 @@ int _PyUop_num_popped(int opcode, int oparg)
         case _CONTAINS_OP_SET:
             return 2;
         case _CONTAINS_OP_DICT:
+            return 2;
+        case _CONTAINS_OP_LIST:
+            return 2;
+        case _CONTAINS_OP_TUPLE:
+            return 2;
+        case _CONTAINS_OP_STR:
             return 2;
         case _CHECK_EG_MATCH:
             return 2;
