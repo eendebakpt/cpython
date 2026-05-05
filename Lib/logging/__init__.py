@@ -24,6 +24,7 @@ To use, simply 'import logging' and log away!
 """
 
 import sys, os, time, io, re, traceback, warnings, weakref, collections.abc
+import functools
 
 from types import GenericAlias
 from string import Template
@@ -280,6 +281,13 @@ else:
 #   The logging record
 #---------------------------------------------------------------------------
 
+@functools.lru_cache(maxsize=256)
+def _basename_module(pathname):
+    filename = os.path.basename(pathname)
+    module = os.path.splitext(filename)[0]
+    return filename, module
+
+
 class LogRecord(object):
     """
     A LogRecord instance represents an event being logged.
@@ -326,8 +334,7 @@ class LogRecord(object):
         self.levelno = level
         self.pathname = pathname
         try:
-            self.filename = os.path.basename(pathname)
-            self.module = os.path.splitext(self.filename)[0]
+            self.filename, self.module = _basename_module(pathname)
         except (TypeError, ValueError, AttributeError):
             self.filename = pathname
             self.module = "Unknown module"
