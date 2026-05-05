@@ -5889,7 +5889,12 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertIsNotNone(ex)
         uops = get_opnames(ex)
         self.assertNotIn("_LOAD_SUPER_ATTR_METHOD", uops)
-        self.assertEqual(uops.count("_GUARD_NOS_TYPE_VERSION"), 2)
+        # method1 uses zero-arg super(): the __class__ closure cell is folded
+        # to a constant by the optimizer, so no _GUARD_NOS_TYPE_VERSION is
+        # needed. method2 uses explicit super(B, self): B comes from a
+        # non-__class__ closure cell of the enclosing test method, which is
+        # not folded, so it still needs a runtime type-version guard.
+        self.assertEqual(uops.count("_GUARD_NOS_TYPE_VERSION"), 1)
         self.assertTrue(ex.is_valid())
         # this should change the type version of A, which should invalidate the executor
         A.method1 = lambda self: 1
@@ -5900,7 +5905,79 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertIsNotNone(ex)
         uops = get_opnames(ex)
         self.assertNotIn("_LOAD_SUPER_ATTR_METHOD", uops)
-        self.assertEqual(uops.count("_GUARD_NOS_TYPE_VERSION"), 2)
+        self.assertEqual(uops.count("_GUARD_NOS_TYPE_VERSION"), 1)
+
+    def test_call_super_resolves_to_non_descriptor(self):
+        # super(T, self).__new__(cls) resolves to object.__new__, which is a
+        # builtin_function_or_method (no METHOD_DESCRIPTOR, no tp_descr_get).
+        # The optimizer should still fold it to a constant rather than fall
+        # back to the runtime MRO walk in _LOAD_SUPER_ATTR_METHOD.
+        class Mixin1:
+            pass
+        class Mixin2:
+            pass
+
+        class C(Mixin1, Mixin2):
+            def make_explicit(self, cls):
+                return super(C, self).__new__(cls)
+            def make_zero(self, cls):
+                return super().__new__(cls)
+
+        c = C()
+
+        def testfunc_explicit(n):
+            for _ in range(n):
+                c.make_explicit(C)
+
+        def testfunc_zero(n):
+            for _ in range(n):
+                c.make_zero(C)
+
+        for fn in (testfunc_explicit, testfunc_zero):
+            res, ex = self._run_with_optimizer(fn, TIER2_THRESHOLD)
+            self.assertIsNotNone(ex, fn.__name__)
+            uops = get_opnames(ex)
+            self.assertNotIn("_LOAD_SUPER_ATTR_METHOD", uops, fn.__name__)
+            self.assertTrue(ex.is_valid(), fn.__name__)
+
+    def test_zero_arg_super_class_cell_folded(self):
+        # The implicit `__class__` closure cell that the compiler creates
+        # for any function using zero-arg `super()` is set once by class
+        # creation and never reassigned in normal use. The JIT optimizer
+        # folds the LOAD_DEREF of that cell into a constant, so the
+        # super-attr fold reaches the same shape as explicit super(T, c):
+        # no runtime _LOAD_DEREF for the class, no type-version guard, and
+        # no _LOAD_SUPER_ATTR_METHOD MRO walk.
+        class Base:
+            def m(self):
+                return 1
+
+        class Derived(Base):
+            def m(self):
+                return super().m() + 1
+
+        d = Derived()
+
+        def testfunc(n):
+            x = 0
+            for _ in range(n):
+                x += d.m()
+            return x
+
+        res, ex = self._run_with_optimizer(testfunc, TIER2_THRESHOLD)
+        self.assertEqual(res, 2 * TIER2_THRESHOLD)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertNotIn("_LOAD_SUPER_ATTR_METHOD", uops)
+        # The __class__ cell load was folded -> no runtime LOAD_DEREF for
+        # it inside the inlined Derived.m frame, and no NOS type-version
+        # guard is needed (the class is now a const symbol in the trace).
+        self.assertNotIn("_GUARD_NOS_TYPE_VERSION", uops)
+        # Type-watcher invalidation still wires up: changing Base
+        # invalidates the executor.
+        self.assertTrue(ex.is_valid())
+        Base.m = lambda self: 99
+        self.assertFalse(ex.is_valid())
 
     def test_settrace_then_polymorphic_call_does_not_crash(self):
         script_helper.assert_python_ok("-c", textwrap.dedent("""

@@ -25,6 +25,7 @@
 #include "pycore_optimizer.h"
 #include "pycore_object.h"
 #include "pycore_function.h"
+#include "pycore_runtime.h"        // _Py_ID()
 #include "pycore_uop_ids.h"
 #include "pycore_range.h"
 #include "pycore_unicodeobject.h"
@@ -464,7 +465,17 @@ lookup_super_attr(JitOptContext *ctx, _PyBloomFilter *dependencies,
         }
         return sym_new_not_null(ctx);
     }
-    if ((Py_TYPE(lookup)->tp_flags & Py_TPFLAGS_METHOD_DESCRIPTOR) == 0) {
+    PyTypeObject *lookup_type = Py_TYPE(lookup);
+    bool is_method = (lookup_type->tp_flags & Py_TPFLAGS_METHOD_DESCRIPTOR) != 0;
+    /* Two safe-to-fold cases:
+       - Method descriptor: do_super_lookup returns res unchanged, sets *method=1,
+         and the bytecode emits (attr, self) on the stack.
+       - Non-descriptor (tp_descr_get == NULL): do_super_lookup also returns res
+         unchanged (no binding), and the bytecode emits (attr, NULL).
+       Other cases (regular descriptors with tp_descr_get) require calling
+       tp_descr_get at runtime to bind to obj, which we cannot fold to a
+       constant. */
+    if (!is_method && lookup_type->tp_descr_get != NULL) {
         Py_DECREF(lookup);
         return sym_new_not_null(ctx);
     }
@@ -472,12 +483,23 @@ lookup_super_attr(JitOptContext *ctx, _PyBloomFilter *dependencies,
     if (_Py_IsImmortal(lookup) || (obj_type->tp_flags & Py_TPFLAGS_IMMUTABLETYPE)) {
         opcode = immortal;
     }
-    ADD_OP(_SWAP, 3, 0);
-    ADD_OP(_POP_TOP, 0, 0);
-    ADD_OP(_POP_TOP, 0, 0);
-    ADD_OP(opcode, 0, (uintptr_t)lookup);
-    if (suffix != _NOP) {
-        ADD_OP(suffix, 2, 0);
+    if (is_method) {
+        /* Stack: [..., global_super, class, self] -> [..., attr, self] */
+        ADD_OP(_SWAP, 3, 0);
+        ADD_OP(_POP_TOP, 0, 0);
+        ADD_OP(_POP_TOP, 0, 0);
+        ADD_OP(opcode, 0, (uintptr_t)lookup);
+        if (suffix != _NOP) {
+            ADD_OP(suffix, 2, 0);
+        }
+    }
+    else {
+        /* Stack: [..., global_super, class, self] -> [..., attr, NULL] */
+        ADD_OP(_POP_TOP, 0, 0);
+        ADD_OP(_POP_TOP, 0, 0);
+        ADD_OP(_POP_TOP, 0, 0);
+        ADD_OP(opcode, 0, (uintptr_t)lookup);
+        ADD_OP(_PUSH_NULL, 0, 0);
     }
     // if obj_type is immutable, then all its superclasses are immutable
     if ((obj_type->tp_flags & Py_TPFLAGS_IMMUTABLETYPE) == 0) {

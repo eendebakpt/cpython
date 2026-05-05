@@ -1086,6 +1086,15 @@ dummy_func(void) {
         self_or_null = self_st;
         PyTypeObject *su_type = (PyTypeObject *)sym_get_const(ctx, class_st);
         PyTypeObject *obj_type = sym_get_type(self_st);
+        /* Classmethod-style super(): self is itself a class. supercheck()
+           returns the class as obj_type in that case. Mirror that here so the
+           fold can fire on super(T, cls).method(...) patterns. */
+        if (obj_type != NULL && PyType_IsSubtype(obj_type, &PyType_Type)) {
+            PyObject *self_const = sym_get_const(ctx, self_st);
+            if (self_const != NULL && PyType_Check(self_const)) {
+                obj_type = (PyTypeObject *)self_const;
+            }
+        }
         PyObject *name = get_co_name(ctx, oparg >> 2);
         attr = lookup_super_attr(ctx, dependencies, this_instr,
                                  su_type, obj_type, name,
@@ -2506,6 +2515,47 @@ dummy_func(void) {
             }
             else {
                 res = sym_new_const(ctx, cnst);
+            }
+        }
+    }
+
+    op(_LOAD_DEREF, ( -- value)) {
+        /* Fold loads of the implicit `__class__` closure cell into a
+           constant. The cell is set exactly once by class-creation
+           machinery (type.__new__) and is not normally reassigned. This
+           lets zero-arg `super()` reach the same class-symbol-known state
+           as explicit `super(T, c)`, so the super-attr fold can fire and
+           drop the runtime _LOAD_SUPER_ATTR_METHOD MRO walk. */
+        value = sym_new_not_null(ctx);
+        PyFunctionObject *func = ctx->frame->func;
+        PyCodeObject *co = ctx->frame->code;
+        if (func != NULL && co != NULL && func->func_closure != NULL &&
+            PyTuple_CheckExact(func->func_closure)) {
+            int first_free = co->co_nlocalsplus - co->co_nfreevars;
+            int free_idx = oparg - first_free;
+            if (free_idx >= 0 && free_idx < co->co_nfreevars) {
+                PyObject *name = PyTuple_GET_ITEM(co->co_localsplusnames, oparg);
+                if (name == &_Py_ID(__class__)) {
+                    PyObject *cell = PyTuple_GET_ITEM(func->func_closure, free_idx);
+                    if (cell != NULL && PyCell_Check(cell)) {
+                        PyObject *cell_val = PyCell_GET(cell);
+                        if (cell_val != NULL && PyType_Check(cell_val)) {
+                            /* Watch the class type so any change (MRO,
+                               attr-write, etc.) invalidates the executor. */
+                            watch_type((PyTypeObject *)cell_val, dependencies);
+                            if (_Py_IsImmortal(cell_val)) {
+                                REPLACE_OP(this_instr, _LOAD_CONST_INLINE_BORROW,
+                                           0, (uintptr_t)cell_val);
+                                value = PyJitRef_Borrow(sym_new_const(ctx, cell_val));
+                            }
+                            else {
+                                REPLACE_OP(this_instr, _LOAD_CONST_INLINE,
+                                           0, (uintptr_t)cell_val);
+                                value = sym_new_const(ctx, cell_val);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
