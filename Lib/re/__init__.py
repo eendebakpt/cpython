@@ -331,6 +331,8 @@ assert _MAXCACHE2 < _MAXCACHE
 
 def _compile(pattern, flags):
     # internal: compile pattern
+    if type(pattern) is Pattern and flags == 0:
+        return pattern
     if isinstance(flags, RegexFlag):
         flags = flags.value
     try:
