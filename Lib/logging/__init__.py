@@ -193,7 +193,10 @@ _srcfile = os.path.normcase(addLevelName.__code__.co_filename)
 # using a stacklevel value greater than one.
 def _is_internal_frame(frame):
     """Signal whether the frame is a CPython or logging module internal."""
-    filename = os.path.normcase(frame.f_code.co_filename)
+    co_filename = frame.f_code.co_filename
+    if co_filename is _srcfile:
+        return True
+    filename = os.path.normcase(co_filename)
     return filename == _srcfile or (
         "importlib" in filename and "_bootstrap" in filename
     )
