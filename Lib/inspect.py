@@ -1706,8 +1706,15 @@ def _check_instance(obj, attr):
 
 
 def _check_class(klass, attr):
+    # Cache last metaclass seen: consecutive MRO entries usually share one.
+    last_meta = None
+    last_unshadowed = False
     for entry in _static_getmro(klass):
-        if _shadowed_dict(type(entry)) is _sentinel and attr in entry.__dict__:
+        meta = type(entry)
+        if meta is not last_meta:
+            last_meta = meta
+            last_unshadowed = _shadowed_dict(meta) is _sentinel
+        if last_unshadowed and attr in entry.__dict__:
             return entry.__dict__[attr]
     return _sentinel
 
@@ -1740,6 +1747,9 @@ def _shadowed_dict(klass):
     # destroyed, and the dynamically created classes happen to be the only
     # objects that hold strong references to other objects that take up a
     # significant amount of memory.
+    # Fast path: `type` is the dominant caller; result is always _sentinel.
+    if klass is type:
+        return _sentinel
     return _shadowed_dict_from_weakref_mro_tuple(
         *[make_weakref(entry) for entry in _static_getmro(klass)]
     )
