@@ -296,8 +296,12 @@ dummy_func(void) {
         // narrowing unlocks a meaningful downstream win:
         //   - NB_TRUE_DIVIDE: enables the specialized float path below.
         //   - NB_REMAINDER: lets the float result type propagate.
-        // NB_POWER is excluded: speculative guards there regressed
-        // test_power_type_depends_on_input_values (GH-127844).
+        //   - NB_POWER (LHS only, when RHS is statically a non-Long-subclass
+        //     int): enables the float ** int specialized path. The result is
+        //     unambiguously float, so this avoids the GH-127844 regression
+        //     (which arose from speculating types when the result type itself
+        //     depends on values).
+        bool is_power = (oparg == NB_POWER || oparg == NB_INPLACE_POWER);
         if (is_truediv || is_remainder) {
             if (!sym_has_type(rhs)
                     && sym_get_probable_type(rhs) == &PyFloat_Type) {
@@ -311,6 +315,12 @@ dummy_func(void) {
                 sym_set_type(lhs, &PyFloat_Type);
                 lhs_float = true;
             }
+        }
+        else if (is_power && rhs_int && !lhs_float
+                 && sym_get_probable_type(lhs) == &PyFloat_Type) {
+            ADD_OP(_GUARD_NOS_FLOAT, 0, 0);
+            sym_set_type(lhs, &PyFloat_Type);
+            lhs_float = true;
         }
         if (is_truediv && lhs_float && rhs_float) {
             if (PyJitRef_IsUnique(lhs)) {
@@ -356,7 +366,10 @@ dummy_func(void) {
                 res = sym_new_unknown(ctx);
             }
             else if (lhs_float) {
-                // Case C:
+                // Case C: emit a specialized op that bypasses generic
+                // binary_op1 dispatch and inlines x ** 2 as a single
+                // float multiply.
+                emit_op = _BINARY_OP_POW_FLOAT_INT;
                 res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
             }
             else if (!sym_is_const(ctx, rhs)) {

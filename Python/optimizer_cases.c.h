@@ -1158,6 +1158,22 @@
             break;
         }
 
+        case _BINARY_OP_POW_FLOAT_INT: {
+            JitOptRef res;
+            JitOptRef l;
+            JitOptRef r;
+            res = sym_new_not_null(ctx);
+            l = sym_new_not_null(ctx);
+            r = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[-2] = res;
+            stack_pointer[-1] = l;
+            stack_pointer[0] = r;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
         case _BINARY_OP_ADD_UNICODE: {
             JitOptRef right;
             JitOptRef left;
@@ -5342,6 +5358,7 @@
             bool is_remainder = (oparg == NB_REMAINDER
                              || oparg == NB_INPLACE_REMAINDER);
             int emit_op = _BINARY_OP;
+            bool is_power = (oparg == NB_POWER || oparg == NB_INPLACE_POWER);
             if (is_truediv || is_remainder) {
                 if (!sym_has_type(rhs)
                     && sym_get_probable_type(rhs) == &PyFloat_Type) {
@@ -5355,6 +5372,12 @@
                     sym_set_type(lhs, &PyFloat_Type);
                     lhs_float = true;
                 }
+            }
+            else if (is_power && rhs_int && !lhs_float
+                 && sym_get_probable_type(lhs) == &PyFloat_Type) {
+                ADD_OP(_GUARD_NOS_FLOAT, 0, 0);
+                sym_set_type(lhs, &PyFloat_Type);
+                lhs_float = true;
             }
             if (is_truediv && lhs_float && rhs_float) {
                 if (PyJitRef_IsUnique(lhs)) {
@@ -5386,6 +5409,7 @@
                     res = sym_new_unknown(ctx);
                 }
                 else if (lhs_float) {
+                    emit_op = _BINARY_OP_POW_FLOAT_INT;
                     res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyFloat_Type));
                 }
                 else if (!sym_is_const(ctx, rhs)) {

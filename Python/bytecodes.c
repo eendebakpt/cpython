@@ -942,6 +942,48 @@ dummy_func(
             INPUTS_DEAD();
         }
 
+        // float ** int -- only emitted by the tier 2 optimizer when both
+        // operand types are known. Inlines x ** 2, the most common exponent
+        // in numeric code (vector magnitudes, distances, variance, etc.) as
+        // a single float multiply. Other exponents fall through to float's
+        // nb_power slot, skipping generic binary_op1 dispatch and tp_as_number
+        // lookup of the LHS.
+        tier2 op(_BINARY_OP_POW_FLOAT_INT, (left, right -- res, l, r)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+            assert(PyFloat_CheckExact(left_o));
+            assert(PyLong_CheckExact(right_o));
+            STAT_INC(BINARY_OP, hit);
+            double iv = ((PyFloatObject *)left_o)->ob_fval;
+            PyObject *res_o;
+            /* Fast path: x ** 2 for finite x with |x| <= sqrt(DBL_MAX).
+             * Compares `iv * iv` against itself via isinf gives the same
+             * behavior as float_pow's ERANGE check, but for the (very common)
+             * small-magnitude case we get a single multiply.
+             * Other exponents and overflow fall back to float_pow, which
+             * preserves the OverflowError semantics. */
+            if (_PyLong_IsCompact((PyLongObject *)right_o)
+                    && _PyLong_CompactValue((PyLongObject *)right_o) == 2) {
+                double dres = iv * iv;
+                if (!isinf(dres) && !isnan(dres)) {
+                    res_o = PyFloat_FromDouble(dres);
+                }
+                else {
+                    res_o = PyFloat_Type.tp_as_number->nb_power(left_o, right_o, Py_None);
+                }
+            }
+            else {
+                res_o = PyFloat_Type.tp_as_number->nb_power(left_o, right_o, Py_None);
+            }
+            if (res_o == NULL) {
+                ERROR_NO_POP();
+            }
+            res = PyStackRef_FromPyObjectSteal(res_o);
+            l = left;
+            r = right;
+            INPUTS_DEAD();
+        }
+
         pure op(_BINARY_OP_ADD_UNICODE, (left, right -- res, l, r)) {
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
             PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);

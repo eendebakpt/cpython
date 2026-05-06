@@ -6236,6 +6236,71 @@
             break;
         }
 
+        case _BINARY_OP_POW_FLOAT_INT_r23: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            _PyStackRef right;
+            _PyStackRef left;
+            _PyStackRef res;
+            _PyStackRef l;
+            _PyStackRef r;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            right = _stack_item_1;
+            left = _stack_item_0;
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+            assert(PyFloat_CheckExact(left_o));
+            assert(PyLong_CheckExact(right_o));
+            STAT_INC(BINARY_OP, hit);
+            double iv = ((PyFloatObject *)left_o)->ob_fval;
+            PyObject *res_o;
+            if (_PyLong_IsCompact((PyLongObject *)right_o)
+                && _PyLong_CompactValue((PyLongObject *)right_o) == 2) {
+                double dres = iv * iv;
+                if (!isinf(dres) && !isnan(dres)) {
+                    res_o = PyFloat_FromDouble(dres);
+                }
+                else {
+                    stack_pointer[0] = left;
+                    stack_pointer[1] = right;
+                    stack_pointer += 2;
+                    ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    res_o = PyFloat_Type.tp_as_number->nb_power(left_o, right_o, Py_None);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                    stack_pointer += -2;
+                }
+            }
+            else {
+                stack_pointer[0] = left;
+                stack_pointer[1] = right;
+                stack_pointer += 2;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                res_o = PyFloat_Type.tp_as_number->nb_power(left_o, right_o, Py_None);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+                stack_pointer += -2;
+            }
+            if (res_o == NULL) {
+                stack_pointer[0] = left;
+                stack_pointer[1] = right;
+                stack_pointer += 2;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            res = PyStackRef_FromPyObjectSteal(res_o);
+            l = left;
+            r = right;
+            _tos_cache2 = r;
+            _tos_cache1 = l;
+            _tos_cache0 = res;
+            SET_CURRENT_CACHED_VALUES(3);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            break;
+        }
+
         case _BINARY_OP_ADD_UNICODE_r03: {
             CHECK_CURRENT_CACHED_VALUES(0);
             assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
