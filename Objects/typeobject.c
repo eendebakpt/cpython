@@ -2533,8 +2533,26 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
         _PyObject_GC_Link(obj);
     }
     // Zero out the object after the PyObject header. The header fields are
-    // initialized by _PyObject_Init[Var]().
-    memset((char *)obj + sizeof(PyObject), 0, size - sizeof(PyObject));
+    // initialized by _PyObject_Init[Var]() below.
+    //
+    // For inline-values types, _PyObject_InitInlineValues() (called below)
+    // writes the PyDictValues header and NULLs every value slot, so we can
+    // skip those bytes here and only zero the region between the PyObject
+    // header and tp_basicsize (i.e. any __slots__ / variable items). The
+    // insertion-order bytes after the values array are not read until they
+    // are written (their valid range is bounded by `values->size`), so
+    // leaving them uninitialized is safe.
+    size_t zero_size;
+    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
+        assert(type->tp_itemsize == 0);
+        zero_size = (size_t)type->tp_basicsize - sizeof(PyObject);
+    }
+    else {
+        zero_size = size - sizeof(PyObject);
+    }
+    if (zero_size) {
+        memset((char *)obj + sizeof(PyObject), 0, zero_size);
+    }
 
     if (type->tp_itemsize == 0) {
         _PyObject_Init(obj, type);
