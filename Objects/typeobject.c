@@ -2507,19 +2507,40 @@ PyObject *
 _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
 {
     PyObject *obj;
-    /* The +1 on nitems is needed for most types but not all. We could save a
-     * bit of space by allocating one less item in certain cases, depending on
-     * the type. However, given the extra complexity (e.g. an additional type
-     * flag to indicate when that is safe) it does not seem worth the memory
-     * savings. An example type that doesn't need the +1 is a subclass of
-     * tuple. See GH-100659 and GH-81381. */
-    size_t size = _PyObject_VAR_SIZE(type, nitems+1);
-
+    size_t size;
+    size_t zero_size;
     const size_t presize = _PyType_PreHeaderSize(type);
+
     if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
+        // Fast path: plain Python class. INLINE_VALUES implies
+        // tp_itemsize == 0 (so nitems is irrelevant for sizing and
+        // callers always pass 0), MANAGED_DICT (so presize != 0),
+        // HEAPTYPE, and GC tracking.
         assert(type->tp_itemsize == 0);
-        size += _PyInlineValuesSize(type);
+        assert(nitems == 0);
+        assert(type->tp_flags & Py_TPFLAGS_MANAGED_DICT);
+        assert(type->tp_flags & Py_TPFLAGS_HEAPTYPE);
+        assert(PyType_IS_GC(type));
+        size = (size_t)type->tp_basicsize + _PyInlineValuesSize(type);
+        // _PyObject_InitInlineValues() (below) writes the PyDictValues
+        // header and NULLs every value slot, so we only need to zero any
+        // __slots__ region between PyObject and tp_basicsize. The
+        // insertion-order bytes after the values array are not read
+        // until written (bounded by `values->size`), so leaving them
+        // uninitialized is safe.
+        zero_size = (size_t)type->tp_basicsize - sizeof(PyObject);
     }
+    else {
+        /* The +1 on nitems is needed for most types but not all. We could save
+         * a bit of space by allocating one less item in certain cases,
+         * depending on the type. However, given the extra complexity (e.g. an
+         * additional type flag to indicate when that is safe) it does not
+         * seem worth the memory savings. An example type that doesn't need
+         * the +1 is a subclass of tuple. See GH-100659 and GH-81381. */
+        size = _PyObject_VAR_SIZE(type, nitems+1);
+        zero_size = size - sizeof(PyObject);
+    }
+
     char *alloc = _PyObject_MallocWithType(type, size + presize);
     if (alloc  == NULL) {
         return PyErr_NoMemory();
@@ -2532,9 +2553,9 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
     if (PyType_IS_GC(type)) {
         _PyObject_GC_Link(obj);
     }
-    // Zero out the object after the PyObject header. The header fields are
-    // initialized by _PyObject_Init[Var]().
-    memset((char *)obj + sizeof(PyObject), 0, size - sizeof(PyObject));
+    if (zero_size) {
+        memset((char *)obj + sizeof(PyObject), 0, zero_size);
+    }
 
     if (type->tp_itemsize == 0) {
         _PyObject_Init(obj, type);
