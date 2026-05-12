@@ -2503,10 +2503,65 @@ _PyType_NewManagedObject(PyTypeObject *type)
     return obj;
 }
 
+// Fast path for the common case: plain Python class with inline values
+// (Py_TPFLAGS_INLINE_VALUES). These instances are fixed-size (tp_itemsize == 0),
+// have a pre-header (managed dict slot), are GC-tracked, and the entire post-
+// header area is initialized by _PyObject_InitInlineValues -- so we skip the
+// memset of the inline-values region. Only a __slots__-style slot region
+// between sizeof(PyObject) and tp_basicsize still needs zeroing.
+//
+// Returns NULL on allocation failure (PyErr_NoMemory already set).
+static inline PyObject *
+alloc_inline_values_instance(PyTypeObject *type)
+{
+    assert(type->tp_itemsize == 0);
+    assert(type->tp_flags & Py_TPFLAGS_INLINE_VALUES);
+    assert(type->tp_flags & Py_TPFLAGS_MANAGED_DICT);
+    assert(type->tp_flags & Py_TPFLAGS_HEAPTYPE);
+    assert(PyType_IS_GC(type));
+
+    const size_t basicsize = (size_t)type->tp_basicsize;
+    const size_t presize = _PyType_PreHeaderSize(type);
+    assert(presize != 0);  // MANAGED_DICT implies a pre-header
+    const size_t size = basicsize + _PyInlineValuesSize(type);
+
+    char *alloc = _PyObject_MallocWithType(type, size + presize);
+    if (alloc == NULL) {
+        return PyErr_NoMemory();
+    }
+    PyObject *obj = (PyObject *)(alloc + presize);
+
+    // MANAGED_DICT / MANAGED_WEAKREF slots, initialized to NULL.
+    ((PyObject **)alloc)[0] = NULL;
+    ((PyObject **)alloc)[1] = NULL;
+
+    _PyObject_GC_Link(obj);
+
+    // Most user classes have no __slots__ so basicsize == sizeof(PyObject)
+    // and there is nothing to zero here. _PyObject_InitInlineValues() below
+    // handles the inline-values area.
+    if (basicsize > sizeof(PyObject)) {
+        memset((char *)obj + sizeof(PyObject), 0,
+               basicsize - sizeof(PyObject));
+    }
+
+    _PyObject_Init(obj, type);
+    _PyObject_InitInlineValues(obj, type);
+    return obj;
+}
+
 PyObject *
 _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
 {
-    PyObject *obj;
+    // Fast path: plain inline-values class (the dominant case for
+    // Python-defined classes). All instances of such classes have
+    // tp_itemsize == 0, so the caller's `nitems` argument is irrelevant
+    // for sizing -- we ignore it. The general path below sets ob_size
+    // via _PyObject_InitVar for variable-size types only.
+    if ((type->tp_flags & Py_TPFLAGS_INLINE_VALUES) && type->tp_itemsize == 0) {
+        return alloc_inline_values_instance(type);
+    }
+
     /* The +1 on nitems is needed for most types but not all. We could save a
      * bit of space by allocating one less item in certain cases, depending on
      * the type. However, given the extra complexity (e.g. an additional type
@@ -2514,17 +2569,13 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
      * savings. An example type that doesn't need the +1 is a subclass of
      * tuple. See GH-100659 and GH-81381. */
     size_t size = _PyObject_VAR_SIZE(type, nitems+1);
-
     const size_t presize = _PyType_PreHeaderSize(type);
-    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
-        assert(type->tp_itemsize == 0);
-        size += _PyInlineValuesSize(type);
-    }
+
     char *alloc = _PyObject_MallocWithType(type, size + presize);
-    if (alloc  == NULL) {
+    if (alloc == NULL) {
         return PyErr_NoMemory();
     }
-    obj = (PyObject *)(alloc + presize);
+    PyObject *obj = (PyObject *)(alloc + presize);
     if (presize) {
         ((PyObject **)alloc)[0] = NULL;
         ((PyObject **)alloc)[1] = NULL;
@@ -2532,36 +2583,14 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
     if (PyType_IS_GC(type)) {
         _PyObject_GC_Link(obj);
     }
-    // Zero out the object after the PyObject header. The header fields are
-    // initialized by _PyObject_Init[Var]() below.
-    //
-    // For inline-values types, _PyObject_InitInlineValues() (called below)
-    // writes the PyDictValues header and NULLs every value slot, so we can
-    // skip those bytes here and only zero the region between the PyObject
-    // header and tp_basicsize (i.e. any __slots__ / variable items). The
-    // insertion-order bytes after the values array are not read until they
-    // are written (their valid range is bounded by `values->size`), so
-    // leaving them uninitialized is safe.
-    size_t zero_size;
-    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
-        assert(type->tp_itemsize == 0);
-        zero_size = (size_t)type->tp_basicsize - sizeof(PyObject);
-    }
-    else {
-        zero_size = size - sizeof(PyObject);
-    }
-    if (zero_size) {
-        memset((char *)obj + sizeof(PyObject), 0, zero_size);
-    }
+    // Zero from end of PyObject header through the end of allocated body.
+    memset((char *)obj + sizeof(PyObject), 0, size - sizeof(PyObject));
 
     if (type->tp_itemsize == 0) {
         _PyObject_Init(obj, type);
     }
     else {
         _PyObject_InitVar((PyVarObject *)obj, type, nitems);
-    }
-    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
-        _PyObject_InitInlineValues(obj, type);
     }
     return obj;
 }
