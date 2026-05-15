@@ -1,0 +1,7 @@
+Argument Clinic no longer emits a :c:type:`!_PyArg_Parser`, keyword tuple
+and :c:func:`!_PyArg_UnpackKeywords` call for methods that take a
+*defining class* and whose remaining parameters are all positional-only
+(for example :meth:`decimal.Decimal.from_float`).  Such methods now parse
+their arguments directly, like other positional-only functions.  As a
+consequence their error messages for a wrong number of arguments, or for
+keyword arguments, now match those of ordinary positional-only functions.
