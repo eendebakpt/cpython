@@ -109,19 +109,28 @@ memoryview__from_flags(PyObject *type, PyObject *const *args, Py_ssize_t nargs, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *object;
     int flags;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        object = args[0];
+        flags = PyLong_AsInt(args[1]);
+        if (flags == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    object = args[0];
-    flags = PyLong_AsInt(args[1]);
-    if (flags == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        object = args[0];
+        flags = PyLong_AsInt(args[1]);
+        if (flags == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = memoryview__from_flags_impl((PyTypeObject *)type, object, flags);
 
@@ -505,4 +514,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=348b6ddb98a1f412 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7f08d7eaa1869c21 input=a9049054013a1b77]*/

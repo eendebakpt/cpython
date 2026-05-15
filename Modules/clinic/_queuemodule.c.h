@@ -165,15 +165,20 @@ _queue_SimpleQueue_put_nowait(PyObject *self, PyObject *const *args, Py_ssize_t 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *item;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        item = args[0];
     }
-    item = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        item = args[0];
+    }
     Py_BEGIN_CRITICAL_SECTION(self);
     return_value = _queue_SimpleQueue_put_nowait_impl((simplequeueobject *)self, item);
     Py_END_CRITICAL_SECTION();
@@ -388,4 +393,4 @@ _queue_SimpleQueue___sizeof__(PyObject *self, PyObject *Py_UNUSED(ignored))
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=4af5d1b1ea31ac7d input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e109b9da15730288 input=a9049054013a1b77]*/

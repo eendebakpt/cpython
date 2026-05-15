@@ -2316,17 +2316,23 @@ test_keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *a;
     PyObject *b;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        a = args[0];
+        b = args[1];
     }
-    a = args[0];
-    b = args[1];
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        a = args[0];
+        b = args[1];
+    }
     return_value = test_keywords_impl(module, a, b);
 
 exit:
@@ -2335,7 +2341,7 @@ exit:
 
 static PyObject *
 test_keywords_impl(PyObject *module, PyObject *a, PyObject *b)
-/*[clinic end generated code: output=591462ba3858e446 input=0d3484844749c05b]*/
+/*[clinic end generated code: output=f926a920c3c0a57f input=0d3484844749c05b]*/
 
 
 /*[clinic input]
@@ -2737,17 +2743,23 @@ test_posonly_keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *a;
     PyObject *b;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        a = args[0];
+        b = args[1];
     }
-    a = args[0];
-    b = args[1];
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        a = args[0];
+        b = args[1];
+    }
     return_value = test_posonly_keywords_impl(module, a, b);
 
 exit:
@@ -2756,7 +2768,7 @@ exit:
 
 static PyObject *
 test_posonly_keywords_impl(PyObject *module, PyObject *a, PyObject *b)
-/*[clinic end generated code: output=7ddf55a744ba53dc input=1767b0ebdf06060e]*/
+/*[clinic end generated code: output=dd7f791148b0a560 input=1767b0ebdf06060e]*/
 
 
 /*[clinic input]
@@ -4678,15 +4690,20 @@ test_paramname_module(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *mod;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        mod = args[0];
     }
-    mod = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        mod = args[0];
+    }
     return_value = test_paramname_module_impl(module, mod);
 
 exit:
@@ -4695,7 +4712,7 @@ exit:
 
 static PyObject *
 test_paramname_module_impl(PyObject *module, PyObject *mod)
-/*[clinic end generated code: output=b979bb1c03b16911 input=afefe259667f13ba]*/
+/*[clinic end generated code: output=eca9b0d6d40db11f input=afefe259667f13ba]*/
 
 /*[clinic input]
 mangle1
@@ -4758,7 +4775,6 @@ mangle1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[9];
     PyObject *__clinic_args;
     PyObject *__clinic_kwnames;
     PyObject *__clinic_return_value;
@@ -4769,20 +4785,34 @@ mangle1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     PyObject *__clinic_nargs;
     PyObject *__clinic_noptargs;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 9, /*maxpos*/ 9, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 9) {
+        __clinic_args = args[0];
+        __clinic_kwnames = args[1];
+        __clinic_return_value = args[2];
+        __clinic__keywords = args[3];
+        __clinic__parser = args[4];
+        __clinic_argsbuf = args[5];
+        __clinic_fastargs = args[6];
+        __clinic_nargs = args[7];
+        __clinic_noptargs = args[8];
     }
-    __clinic_args = args[0];
-    __clinic_kwnames = args[1];
-    __clinic_return_value = args[2];
-    __clinic__keywords = args[3];
-    __clinic__parser = args[4];
-    __clinic_argsbuf = args[5];
-    __clinic_fastargs = args[6];
-    __clinic_nargs = args[7];
-    __clinic_noptargs = args[8];
+    else {
+        PyObject *argsbuf[9];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 9, /*maxpos*/ 9, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        __clinic_args = args[0];
+        __clinic_kwnames = args[1];
+        __clinic_return_value = args[2];
+        __clinic__keywords = args[3];
+        __clinic__parser = args[4];
+        __clinic_argsbuf = args[5];
+        __clinic_fastargs = args[6];
+        __clinic_nargs = args[7];
+        __clinic_noptargs = args[8];
+    }
     return_value = mangle1_impl(module, __clinic_args, __clinic_kwnames, __clinic_return_value, __clinic__keywords, __clinic__parser, __clinic_argsbuf, __clinic_fastargs, __clinic_nargs, __clinic_noptargs);
 
 exit:
@@ -4794,7 +4824,7 @@ mangle1_impl(PyObject *module, PyObject *args, PyObject *kwnames,
              PyObject *return_value, PyObject *_keywords, PyObject *_parser,
              PyObject *argsbuf, PyObject *fastargs, PyObject *nargs,
              PyObject *noptargs)
-/*[clinic end generated code: output=8993a3111845dfc3 input=a3ed51bdedf8a3c7]*/
+/*[clinic end generated code: output=56db81733320158e input=a3ed51bdedf8a3c7]*/
 
 /*[clinic input]
 mangle2
@@ -4848,19 +4878,26 @@ mangle2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     PyObject *__clinic_args;
     PyObject *__clinic_kwargs;
     PyObject *__clinic_return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        __clinic_args = args[0];
+        __clinic_kwargs = args[1];
+        __clinic_return_value = args[2];
     }
-    __clinic_args = args[0];
-    __clinic_kwargs = args[1];
-    __clinic_return_value = args[2];
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        __clinic_args = args[0];
+        __clinic_kwargs = args[1];
+        __clinic_return_value = args[2];
+    }
     return_value = mangle2_impl(module, __clinic_args, __clinic_kwargs, __clinic_return_value);
 
 exit:
@@ -4870,7 +4907,7 @@ exit:
 static PyObject *
 mangle2_impl(PyObject *module, PyObject *args, PyObject *kwargs,
              PyObject *return_value)
-/*[clinic end generated code: output=bbbe696e52e0267f input=391766fee51bad7a]*/
+/*[clinic end generated code: output=bbc8b08430248ba8 input=391766fee51bad7a]*/
 
 
 /*[clinic input]
@@ -4922,17 +4959,25 @@ Test_cls_with_param(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int a;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        a = PyLong_AsInt(args[0]);
+        if (a == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    a = PyLong_AsInt(args[0]);
-    if (a == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        a = PyLong_AsInt(args[0]);
+        if (a == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = Test_cls_with_param_impl((TestObj *)self, cls, a);
 
@@ -4942,7 +4987,7 @@ exit:
 
 static PyObject *
 Test_cls_with_param_impl(TestObj *self, PyTypeObject *cls, int a)
-/*[clinic end generated code: output=bd3883003f57d02b input=af158077bd237ef9]*/
+/*[clinic end generated code: output=216c768cef5f7af9 input=af158077bd237ef9]*/
 
 
 /*[clinic input]
@@ -5614,17 +5659,25 @@ mangled_c_keyword_identifier(PyObject *module, PyObject *const *args, Py_ssize_t
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int int_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        int_value = PyLong_AsInt(args[0]);
+        if (int_value == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    int_value = PyLong_AsInt(args[0]);
-    if (int_value == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        int_value = PyLong_AsInt(args[0]);
+        if (int_value == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = mangled_c_keyword_identifier_impl(module, int_value);
 
@@ -5634,7 +5687,7 @@ exit:
 
 static PyObject *
 mangled_c_keyword_identifier_impl(PyObject *module, int int_value)
-/*[clinic end generated code: output=49365b3b96b23980 input=060876448ab567a2]*/
+/*[clinic end generated code: output=19b64f8bd4b46a63 input=060876448ab567a2]*/
 
 
 /*[clinic input]
@@ -5967,16 +6020,23 @@ docstr_fallback_to_converter_default(PyObject *module, PyObject *const *args, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     str a;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!c_converter_func(args[0], &a)) {
+            goto exit;
+        }
     }
-    if (!c_converter_func(args[0], &a)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!c_converter_func(args[0], &a)) {
+            goto exit;
+        }
     }
     return_value = docstr_fallback_to_converter_default_impl(module, a);
 
@@ -5986,7 +6046,7 @@ exit:
 
 static PyObject *
 docstr_fallback_to_converter_default_impl(PyObject *module, str a)
-/*[clinic end generated code: output=4405b7050a5f6fb9 input=0cbe6a4d24bc2274]*/
+/*[clinic end generated code: output=8c7c811db4e2f1e0 input=0cbe6a4d24bc2274]*/
 
 
 /*[clinic input]

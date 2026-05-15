@@ -1,0 +1,6 @@
+Argument Clinic now generates a faster argument-parsing fast path for
+functions whose parameters are all required and accepted as
+positional-or-keyword.  When such a function is called with positional
+arguments only, the arguments are read straight from the vectorcall
+array, skipping :c:func:`!_PyArg_UnpackKeywords` and keeping the
+``argsbuf`` scratch array off the hot path's stack frame.

@@ -704,19 +704,28 @@ _thread_set_name(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *name_obj;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("set_name", "argument 'name'", "str", args[0]);
+            goto exit;
+        }
+        name_obj = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("set_name", "argument 'name'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("set_name", "argument 'name'", "str", args[0]);
+            goto exit;
+        }
+        name_obj = args[0];
     }
-    name_obj = args[0];
     return_value = _thread_set_name_impl(module, name_obj);
 
 exit:
@@ -740,4 +749,4 @@ exit:
 #ifndef _THREAD_SET_NAME_METHODDEF
     #define _THREAD_SET_NAME_METHODDEF
 #endif /* !defined(_THREAD_SET_NAME_METHODDEF) */
-/*[clinic end generated code: output=1255a1520f43f97a input=a9049054013a1b77]*/
+/*[clinic end generated code: output=46d450e613ad5eb7 input=a9049054013a1b77]*/

@@ -798,21 +798,33 @@ _winapi_GetLongPathName(PyObject *module, PyObject *const *args, Py_ssize_t narg
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     LPCWSTR path = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("GetLongPathName", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        path = PyUnicode_AsWideCharString(args[0], NULL);
+        if (path == NULL) {
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("GetLongPathName", "argument 'path'", "str", args[0]);
-        goto exit;
-    }
-    path = PyUnicode_AsWideCharString(args[0], NULL);
-    if (path == NULL) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("GetLongPathName", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        path = PyUnicode_AsWideCharString(args[0], NULL);
+        if (path == NULL) {
+            goto exit;
+        }
     }
     return_value = _winapi_GetLongPathName_impl(module, path);
 
@@ -907,21 +919,33 @@ _winapi_GetShortPathName(PyObject *module, PyObject *const *args, Py_ssize_t nar
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     LPCWSTR path = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("GetShortPathName", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        path = PyUnicode_AsWideCharString(args[0], NULL);
+        if (path == NULL) {
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("GetShortPathName", "argument 'path'", "str", args[0]);
-        goto exit;
-    }
-    path = PyUnicode_AsWideCharString(args[0], NULL);
-    if (path == NULL) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("GetShortPathName", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        path = PyUnicode_AsWideCharString(args[0], NULL);
+        if (path == NULL) {
+            goto exit;
+        }
     }
     return_value = _winapi_GetShortPathName_impl(module, path);
 
@@ -2057,15 +2081,20 @@ _winapi__mimetypes_read_windows_registry(PyObject *module, PyObject *const *args
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *on_type_read;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        on_type_read = args[0];
     }
-    on_type_read = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        on_type_read = args[0];
+    }
     return_value = _winapi__mimetypes_read_windows_registry_impl(module, on_type_read);
 
 exit:
@@ -2334,4 +2363,4 @@ exit:
 #ifndef _WINAPI_GETSHORTPATHNAME_METHODDEF
     #define _WINAPI_GETSHORTPATHNAME_METHODDEF
 #endif /* !defined(_WINAPI_GETSHORTPATHNAME_METHODDEF) */
-/*[clinic end generated code: output=4ab94eaee93a0a90 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=9b77c832c54b8863 input=a9049054013a1b77]*/

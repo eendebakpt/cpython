@@ -1099,7 +1099,6 @@ _sre_compile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[6];
     PyObject *pattern;
     int flags;
     PyObject *code;
@@ -1107,43 +1106,80 @@ _sre_compile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     PyObject *groupindex;
     PyObject *indexgroup;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 6, /*maxpos*/ 6, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
-    }
-    pattern = args[0];
-    flags = PyLong_AsInt(args[1]);
-    if (flags == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    if (!PyList_Check(args[2])) {
-        _PyArg_BadArgument("compile", "argument 'code'", "list", args[2]);
-        goto exit;
-    }
-    code = args[2];
-    {
-        Py_ssize_t ival = -1;
-        PyObject *iobj = _PyNumber_Index(args[3]);
-        if (iobj != NULL) {
-            ival = PyLong_AsSsize_t(iobj);
-            Py_DECREF(iobj);
-        }
-        if (ival == -1 && PyErr_Occurred()) {
+    if (kwnames == NULL && nargs == 6) {
+        pattern = args[0];
+        flags = PyLong_AsInt(args[1]);
+        if (flags == -1 && PyErr_Occurred()) {
             goto exit;
         }
-        groups = ival;
+        if (!PyList_Check(args[2])) {
+            _PyArg_BadArgument("compile", "argument 'code'", "list", args[2]);
+            goto exit;
+        }
+        code = args[2];
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[3]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            groups = ival;
+        }
+        if (!PyDict_Check(args[4])) {
+            _PyArg_BadArgument("compile", "argument 'groupindex'", "dict", args[4]);
+            goto exit;
+        }
+        groupindex = args[4];
+        if (!PyTuple_Check(args[5])) {
+            _PyArg_BadArgument("compile", "argument 'indexgroup'", "tuple", args[5]);
+            goto exit;
+        }
+        indexgroup = args[5];
     }
-    if (!PyDict_Check(args[4])) {
-        _PyArg_BadArgument("compile", "argument 'groupindex'", "dict", args[4]);
-        goto exit;
+    else {
+        PyObject *argsbuf[6];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 6, /*maxpos*/ 6, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        pattern = args[0];
+        flags = PyLong_AsInt(args[1]);
+        if (flags == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        if (!PyList_Check(args[2])) {
+            _PyArg_BadArgument("compile", "argument 'code'", "list", args[2]);
+            goto exit;
+        }
+        code = args[2];
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[3]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            groups = ival;
+        }
+        if (!PyDict_Check(args[4])) {
+            _PyArg_BadArgument("compile", "argument 'groupindex'", "dict", args[4]);
+            goto exit;
+        }
+        groupindex = args[4];
+        if (!PyTuple_Check(args[5])) {
+            _PyArg_BadArgument("compile", "argument 'indexgroup'", "tuple", args[5]);
+            goto exit;
+        }
+        indexgroup = args[5];
     }
-    groupindex = args[4];
-    if (!PyTuple_Check(args[5])) {
-        _PyArg_BadArgument("compile", "argument 'indexgroup'", "tuple", args[5]);
-        goto exit;
-    }
-    indexgroup = args[5];
     return_value = _sre_compile_impl(module, pattern, flags, code, groups, groupindex, indexgroup);
 
 exit:
@@ -1232,15 +1268,20 @@ _sre_SRE_Match_expand(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *template;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        template = args[0];
     }
-    template = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        template = args[0];
+    }
     return_value = _sre_SRE_Match_expand_impl((MatchObject *)self, template);
 
 exit:
@@ -1568,4 +1609,4 @@ _sre_SRE_Scanner_search(PyObject *self, PyTypeObject *cls, PyObject *const *args
 #ifndef _SRE_SRE_PATTERN__FAIL_AFTER_METHODDEF
     #define _SRE_SRE_PATTERN__FAIL_AFTER_METHODDEF
 #endif /* !defined(_SRE_SRE_PATTERN__FAIL_AFTER_METHODDEF) */
-/*[clinic end generated code: output=0c867efb64e020aa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=bb7fa24d42fc59da input=a9049054013a1b77]*/

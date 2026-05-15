@@ -148,16 +148,23 @@ _interpqueues_destroy(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_destroy_impl(module, qid);
 
@@ -313,16 +320,23 @@ _interpqueues_get(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_get_impl(module, qid);
 
@@ -375,16 +389,23 @@ _interpqueues_bind(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_bind_impl(module, qid);
 
@@ -437,16 +458,23 @@ _interpqueues_release(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_release_impl(module, qid);
 
@@ -497,16 +525,23 @@ _interpqueues_get_maxsize(PyObject *module, PyObject *const *args, Py_ssize_t na
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_get_maxsize_impl(module, qid);
 
@@ -557,16 +592,23 @@ _interpqueues_get_queue_defaults(PyObject *module, PyObject *const *args, Py_ssi
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_get_queue_defaults_impl(module, qid);
 
@@ -617,16 +659,23 @@ _interpqueues_is_full(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_is_full_impl(module, qid);
 
@@ -677,16 +726,23 @@ _interpqueues_get_count(PyObject *module, PyObject *const *args, Py_ssize_t narg
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int64_t qid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
-    if (!qidarg_converter(args[0], &qid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!qidarg_converter(args[0], &qid)) {
+            goto exit;
+        }
     }
     return_value = _interpqueues_get_count_impl(module, qid);
 
@@ -740,26 +796,37 @@ _interpqueues__register_heap_types(PyObject *module, PyObject *const *args, Py_s
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     PyTypeObject *queuetype;
     PyObject *emptyerror;
     PyObject *fullerror;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        if (!PyObject_TypeCheck(args[0], &PyType_Type)) {
+            _PyArg_BadArgument("_register_heap_types", "argument 'queuetype'", (&PyType_Type)->tp_name, args[0]);
+            goto exit;
+        }
+        queuetype = (PyTypeObject *)args[0];
+        emptyerror = args[1];
+        fullerror = args[2];
     }
-    if (!PyObject_TypeCheck(args[0], &PyType_Type)) {
-        _PyArg_BadArgument("_register_heap_types", "argument 'queuetype'", (&PyType_Type)->tp_name, args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyObject_TypeCheck(args[0], &PyType_Type)) {
+            _PyArg_BadArgument("_register_heap_types", "argument 'queuetype'", (&PyType_Type)->tp_name, args[0]);
+            goto exit;
+        }
+        queuetype = (PyTypeObject *)args[0];
+        emptyerror = args[1];
+        fullerror = args[2];
     }
-    queuetype = (PyTypeObject *)args[0];
-    emptyerror = args[1];
-    fullerror = args[2];
     return_value = _interpqueues__register_heap_types_impl(module, queuetype, emptyerror, fullerror);
 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=64cea8e1063429b6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e361d9f8d7c221bd input=a9049054013a1b77]*/

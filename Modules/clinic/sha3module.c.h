@@ -216,29 +216,50 @@ _sha3_shake_128_digest(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_ssize_t length;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
+        }
     }
-    {
-        Py_ssize_t ival = -1;
-        PyObject *iobj = _PyNumber_Index(args[0]);
-        if (iobj != NULL) {
-            ival = PyLong_AsSsize_t(iobj);
-            Py_DECREF(iobj);
-        }
-        if (ival == -1 && PyErr_Occurred()) {
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
         }
-        length = ival;
-        if (length < 0) {
-            PyErr_SetString(PyExc_ValueError,
-                            "length cannot be negative");
-            goto exit;
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
         }
     }
     return_value = _sha3_shake_128_digest_impl((SHA3object *)self, length);
@@ -290,29 +311,50 @@ _sha3_shake_128_hexdigest(PyObject *self, PyObject *const *args, Py_ssize_t narg
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_ssize_t length;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
+        }
     }
-    {
-        Py_ssize_t ival = -1;
-        PyObject *iobj = _PyNumber_Index(args[0]);
-        if (iobj != NULL) {
-            ival = PyLong_AsSsize_t(iobj);
-            Py_DECREF(iobj);
-        }
-        if (ival == -1 && PyErr_Occurred()) {
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
         }
-        length = ival;
-        if (length < 0) {
-            PyErr_SetString(PyExc_ValueError,
-                            "length cannot be negative");
-            goto exit;
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
         }
     }
     return_value = _sha3_shake_128_hexdigest_impl((SHA3object *)self, length);
@@ -320,4 +362,4 @@ _sha3_shake_128_hexdigest(PyObject *self, PyObject *const *args, Py_ssize_t narg
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=78284adde71d590c input=a9049054013a1b77]*/
+/*[clinic end generated code: output=d9014e3a030997d5 input=a9049054013a1b77]*/

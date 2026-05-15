@@ -859,32 +859,56 @@ select_epoll_modify(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyO
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     int fd;
     unsigned int eventmask;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
-    }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
-    }
-    {
-        Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &eventmask, sizeof(unsigned int),
-                Py_ASNATIVEBYTES_NATIVE_ENDIAN |
-                Py_ASNATIVEBYTES_ALLOW_INDEX |
-                Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
-        if (_bytes < 0) {
+    if (kwnames == NULL && nargs == 2) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
             goto exit;
         }
-        if ((size_t)_bytes > sizeof(unsigned int)) {
-            if (PyErr_WarnEx(PyExc_DeprecationWarning,
-                "integer value out of range", 1) < 0)
-            {
+        {
+            Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &eventmask, sizeof(unsigned int),
+                    Py_ASNATIVEBYTES_NATIVE_ENDIAN |
+                    Py_ASNATIVEBYTES_ALLOW_INDEX |
+                    Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+            if (_bytes < 0) {
                 goto exit;
+            }
+            if ((size_t)_bytes > sizeof(unsigned int)) {
+                if (PyErr_WarnEx(PyExc_DeprecationWarning,
+                    "integer value out of range", 1) < 0)
+                {
+                    goto exit;
+                }
+            }
+        }
+    }
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
+        {
+            Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &eventmask, sizeof(unsigned int),
+                    Py_ASNATIVEBYTES_NATIVE_ENDIAN |
+                    Py_ASNATIVEBYTES_ALLOW_INDEX |
+                    Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+            if (_bytes < 0) {
+                goto exit;
+            }
+            if ((size_t)_bytes > sizeof(unsigned int)) {
+                if (PyErr_WarnEx(PyExc_DeprecationWarning,
+                    "integer value out of range", 1) < 0)
+                {
+                    goto exit;
+                }
             }
         }
     }
@@ -944,17 +968,25 @@ select_epoll_unregister(PyObject *self, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
     return_value = select_epoll_unregister_impl((pyEpoll_Object *)self, fd);
 
@@ -1399,4 +1431,4 @@ exit:
 #ifndef SELECT_KQUEUE_CONTROL_METHODDEF
     #define SELECT_KQUEUE_CONTROL_METHODDEF
 #endif /* !defined(SELECT_KQUEUE_CONTROL_METHODDEF) */
-/*[clinic end generated code: output=52e3be5cc66cf1b6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b34f4211ba77a907 input=a9049054013a1b77]*/

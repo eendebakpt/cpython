@@ -392,22 +392,31 @@ _io_open_code(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *path;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("open_code", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        path = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("open_code", "argument 'path'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("open_code", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        path = args[0];
     }
-    path = args[0];
     return_value = _io_open_code_impl(module, path);
 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=7a8e032c0424bce2 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=00f69114cfdd8bbb input=a9049054013a1b77]*/

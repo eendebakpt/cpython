@@ -241,17 +241,25 @@ _io_FileIO_readinto(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_buffer buffer = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (PyObject_GetBuffer(args[0], &buffer, PyBUF_WRITABLE) < 0) {
+            _PyArg_BadArgument("readinto", "argument 1", "read-write bytes-like object", args[0]);
+            goto exit;
+        }
     }
-    if (PyObject_GetBuffer(args[0], &buffer, PyBUF_WRITABLE) < 0) {
-        _PyArg_BadArgument("readinto", "argument 1", "read-write bytes-like object", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[0], &buffer, PyBUF_WRITABLE) < 0) {
+            _PyArg_BadArgument("readinto", "argument 1", "read-write bytes-like object", args[0]);
+            goto exit;
+        }
     }
     return_value = _io_FileIO_readinto_impl((fileio *)self, cls, &buffer);
 
@@ -384,16 +392,23 @@ _io_FileIO_write(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_ss
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_buffer b = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (PyObject_GetBuffer(args[0], &b, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
     }
-    if (PyObject_GetBuffer(args[0], &b, PyBUF_SIMPLE) != 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[0], &b, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
     }
     return_value = _io_FileIO_write_impl((fileio *)self, cls, &b);
 
@@ -547,4 +562,4 @@ _io_FileIO_isatty(PyObject *self, PyObject *Py_UNUSED(ignored))
 #ifndef _IO_FILEIO_TRUNCATE_METHODDEF
     #define _IO_FILEIO_TRUNCATE_METHODDEF
 #endif /* !defined(_IO_FILEIO_TRUNCATE_METHODDEF) */
-/*[clinic end generated code: output=2e48f3df2f189170 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=808e7d726fa94ba6 input=a9049054013a1b77]*/

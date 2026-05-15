@@ -142,15 +142,20 @@ pyexpat_xmlparser_ParseFile(PyObject *self, PyTypeObject *cls, PyObject *const *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *file;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        file = args[0];
     }
-    file = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        file = args[0];
+    }
     return_value = pyexpat_xmlparser_ParseFile_impl((xmlparseobject *)self, cls, file);
 
 exit:
@@ -451,16 +456,23 @@ pyexpat_xmlparser_SetBillionLaughsAttackProtectionActivationThreshold(PyObject *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     unsigned long long threshold;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!_PyLong_UnsignedLongLong_Converter(args[0], &threshold)) {
+            goto exit;
+        }
     }
-    if (!_PyLong_UnsignedLongLong_Converter(args[0], &threshold)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!_PyLong_UnsignedLongLong_Converter(args[0], &threshold)) {
+            goto exit;
+        }
     }
     return_value = pyexpat_xmlparser_SetBillionLaughsAttackProtectionActivationThreshold_impl((xmlparseobject *)self, cls, threshold);
 
@@ -517,22 +529,36 @@ pyexpat_xmlparser_SetBillionLaughsAttackProtectionMaximumAmplification(PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     float max_factor;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (PyFloat_CheckExact(args[0])) {
+            max_factor = (float) (PyFloat_AS_DOUBLE(args[0]));
+        }
+        else
+        {
+            max_factor = (float) PyFloat_AsDouble(args[0]);
+            if (max_factor == -1.0 && PyErr_Occurred()) {
+                goto exit;
+            }
+        }
     }
-    if (PyFloat_CheckExact(args[0])) {
-        max_factor = (float) (PyFloat_AS_DOUBLE(args[0]));
-    }
-    else
-    {
-        max_factor = (float) PyFloat_AsDouble(args[0]);
-        if (max_factor == -1.0 && PyErr_Occurred()) {
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
+        }
+        if (PyFloat_CheckExact(args[0])) {
+            max_factor = (float) (PyFloat_AS_DOUBLE(args[0]));
+        }
+        else
+        {
+            max_factor = (float) PyFloat_AsDouble(args[0]);
+            if (max_factor == -1.0 && PyErr_Occurred()) {
+                goto exit;
+            }
         }
     }
     return_value = pyexpat_xmlparser_SetBillionLaughsAttackProtectionMaximumAmplification_impl((xmlparseobject *)self, cls, max_factor);
@@ -579,16 +605,23 @@ pyexpat_xmlparser_SetAllocTrackerActivationThreshold(PyObject *self, PyTypeObjec
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     unsigned long long threshold;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!_PyLong_UnsignedLongLong_Converter(args[0], &threshold)) {
+            goto exit;
+        }
     }
-    if (!_PyLong_UnsignedLongLong_Converter(args[0], &threshold)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!_PyLong_UnsignedLongLong_Converter(args[0], &threshold)) {
+            goto exit;
+        }
     }
     return_value = pyexpat_xmlparser_SetAllocTrackerActivationThreshold_impl((xmlparseobject *)self, cls, threshold);
 
@@ -644,22 +677,36 @@ pyexpat_xmlparser_SetAllocTrackerMaximumAmplification(PyObject *self, PyTypeObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     float max_factor;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (PyFloat_CheckExact(args[0])) {
+            max_factor = (float) (PyFloat_AS_DOUBLE(args[0]));
+        }
+        else
+        {
+            max_factor = (float) PyFloat_AsDouble(args[0]);
+            if (max_factor == -1.0 && PyErr_Occurred()) {
+                goto exit;
+            }
+        }
     }
-    if (PyFloat_CheckExact(args[0])) {
-        max_factor = (float) (PyFloat_AS_DOUBLE(args[0]));
-    }
-    else
-    {
-        max_factor = (float) PyFloat_AsDouble(args[0]);
-        if (max_factor == -1.0 && PyErr_Occurred()) {
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
+        }
+        if (PyFloat_CheckExact(args[0])) {
+            max_factor = (float) (PyFloat_AS_DOUBLE(args[0]));
+        }
+        else
+        {
+            max_factor = (float) PyFloat_AsDouble(args[0]);
+            if (max_factor == -1.0 && PyErr_Occurred()) {
+                goto exit;
+            }
         }
     }
     return_value = pyexpat_xmlparser_SetAllocTrackerMaximumAmplification_impl((xmlparseobject *)self, cls, max_factor);
@@ -830,4 +877,4 @@ exit:
 #ifndef PYEXPAT_XMLPARSER_SETALLOCTRACKERMAXIMUMAMPLIFICATION_METHODDEF
     #define PYEXPAT_XMLPARSER_SETALLOCTRACKERMAXIMUMAMPLIFICATION_METHODDEF
 #endif /* !defined(PYEXPAT_XMLPARSER_SETALLOCTRACKERMAXIMUMAMPLIFICATION_METHODDEF) */
-/*[clinic end generated code: output=81101a16a409daf6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e876f418daf25ab9 input=a9049054013a1b77]*/

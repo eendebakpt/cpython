@@ -453,21 +453,29 @@ code__varname_from_oparg(PyObject *self, PyObject *const *args, Py_ssize_t nargs
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int oparg;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        oparg = PyLong_AsInt(args[0]);
+        if (oparg == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    oparg = PyLong_AsInt(args[0]);
-    if (oparg == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        oparg = PyLong_AsInt(args[0]);
+        if (oparg == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = code__varname_from_oparg_impl((PyCodeObject *)self, oparg);
 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c5c6e40fc357defe input=a9049054013a1b77]*/
+/*[clinic end generated code: output=a080a3a67775c587 input=a9049054013a1b77]*/

@@ -51,19 +51,28 @@ _testinternalcapi_compiler_cleandoc(PyObject *module, PyObject *const *args, Py_
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *doc;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("compiler_cleandoc", "argument 'doc'", "str", args[0]);
+            goto exit;
+        }
+        doc = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("compiler_cleandoc", "argument 'doc'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("compiler_cleandoc", "argument 'doc'", "str", args[0]);
+            goto exit;
+        }
+        doc = args[0];
     }
-    doc = args[0];
     return_value = _testinternalcapi_compiler_cleandoc_impl(module, doc);
 
 exit:
@@ -216,21 +225,31 @@ _testinternalcapi_optimize_cfg(PyObject *module, PyObject *const *args, Py_ssize
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     PyObject *instructions;
     PyObject *consts;
     int nlocals;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        instructions = args[0];
+        consts = args[1];
+        nlocals = PyLong_AsInt(args[2]);
+        if (nlocals == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    instructions = args[0];
-    consts = args[1];
-    nlocals = PyLong_AsInt(args[2]);
-    if (nlocals == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        instructions = args[0];
+        consts = args[1];
+        nlocals = PyLong_AsInt(args[2]);
+        if (nlocals == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = _testinternalcapi_optimize_cfg_impl(module, instructions, consts, nlocals);
 
@@ -284,19 +303,26 @@ _testinternalcapi_assemble_code_object(PyObject *module, PyObject *const *args, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     PyObject *filename;
     PyObject *instructions;
     PyObject *metadata;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        filename = args[0];
+        instructions = args[1];
+        metadata = args[2];
     }
-    filename = args[0];
-    instructions = args[1];
-    metadata = args[2];
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        filename = args[0];
+        instructions = args[1];
+        metadata = args[2];
+    }
     return_value = _testinternalcapi_assemble_code_object_impl(module, filename, instructions, metadata);
 
 exit:
@@ -399,4 +425,4 @@ get_next_dict_keys_version(PyObject *module, PyObject *Py_UNUSED(ignored))
 {
     return get_next_dict_keys_version_impl(module);
 }
-/*[clinic end generated code: output=ecb5d7ac85b153fa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=618744c689cf9faf input=a9049054013a1b77]*/

@@ -54,22 +54,31 @@ _wmi_exec_query(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *query;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("exec_query", "argument 'query'", "str", args[0]);
+            goto exit;
+        }
+        query = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("exec_query", "argument 'query'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("exec_query", "argument 'query'", "str", args[0]);
+            goto exit;
+        }
+        query = args[0];
     }
-    query = args[0];
     return_value = _wmi_exec_query_impl(module, query);
 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=802bcbcba69e8d0e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=8674a1d9092735f3 input=a9049054013a1b77]*/

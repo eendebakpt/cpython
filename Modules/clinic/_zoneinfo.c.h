@@ -178,15 +178,20 @@ zoneinfo_ZoneInfo_no_cache(PyObject *type, PyTypeObject *cls, PyObject *const *a
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *key;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        key = args[0];
     }
-    key = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        key = args[0];
+    }
     return_value = zoneinfo_ZoneInfo_no_cache_impl((PyTypeObject *)type, cls, key);
 
 exit:
@@ -289,15 +294,20 @@ zoneinfo_ZoneInfo_utcoffset(PyObject *self, PyTypeObject *cls, PyObject *const *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *dt;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        dt = args[0];
     }
-    dt = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        dt = args[0];
+    }
     return_value = zoneinfo_ZoneInfo_utcoffset_impl(self, cls, dt);
 
 exit:
@@ -333,15 +343,20 @@ zoneinfo_ZoneInfo_dst(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *dt;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        dt = args[0];
     }
-    dt = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        dt = args[0];
+    }
     return_value = zoneinfo_ZoneInfo_dst_impl(self, cls, dt);
 
 exit:
@@ -378,15 +393,20 @@ zoneinfo_ZoneInfo_tzname(PyObject *self, PyTypeObject *cls, PyObject *const *arg
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *dt;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        dt = args[0];
     }
-    dt = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        dt = args[0];
+    }
     return_value = zoneinfo_ZoneInfo_tzname_impl(self, cls, dt);
 
 exit:
@@ -423,29 +443,50 @@ zoneinfo_ZoneInfo__unpickle(PyObject *type, PyTypeObject *cls, PyObject *const *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *key;
     unsigned char from_cache;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        key = args[0];
+        {
+            Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &from_cache, sizeof(unsigned char),
+                    Py_ASNATIVEBYTES_NATIVE_ENDIAN |
+                    Py_ASNATIVEBYTES_ALLOW_INDEX |
+                    Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+            if (_bytes < 0) {
+                goto exit;
+            }
+            if ((size_t)_bytes > sizeof(unsigned char)) {
+                if (PyErr_WarnEx(PyExc_DeprecationWarning,
+                    "integer value out of range", 1) < 0)
+                {
+                    goto exit;
+                }
+            }
+        }
     }
-    key = args[0];
-    {
-        Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &from_cache, sizeof(unsigned char),
-                Py_ASNATIVEBYTES_NATIVE_ENDIAN |
-                Py_ASNATIVEBYTES_ALLOW_INDEX |
-                Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
-        if (_bytes < 0) {
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
         }
-        if ((size_t)_bytes > sizeof(unsigned char)) {
-            if (PyErr_WarnEx(PyExc_DeprecationWarning,
-                "integer value out of range", 1) < 0)
-            {
+        key = args[0];
+        {
+            Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &from_cache, sizeof(unsigned char),
+                    Py_ASNATIVEBYTES_NATIVE_ENDIAN |
+                    Py_ASNATIVEBYTES_ALLOW_INDEX |
+                    Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+            if (_bytes < 0) {
                 goto exit;
+            }
+            if ((size_t)_bytes > sizeof(unsigned char)) {
+                if (PyErr_WarnEx(PyExc_DeprecationWarning,
+                    "integer value out of range", 1) < 0)
+                {
+                    goto exit;
+                }
             }
         }
     }
@@ -454,4 +495,4 @@ zoneinfo_ZoneInfo__unpickle(PyObject *type, PyTypeObject *cls, PyObject *const *
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c6df04d7b400bd7f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1cec82be76fb6c2b input=a9049054013a1b77]*/

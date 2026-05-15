@@ -38,19 +38,28 @@ _elementtree_Element_append(PyObject *self, PyTypeObject *cls, PyObject *const *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *subelement;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyObject_TypeCheck(args[0], clinic_state()->Element_Type)) {
+            _PyArg_BadArgument("append", "argument 1", (clinic_state()->Element_Type)->tp_name, args[0]);
+            goto exit;
+        }
+        subelement = args[0];
     }
-    if (!PyObject_TypeCheck(args[0], clinic_state()->Element_Type)) {
-        _PyArg_BadArgument("append", "argument 1", (clinic_state()->Element_Type)->tp_name, args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyObject_TypeCheck(args[0], clinic_state()->Element_Type)) {
+            _PyArg_BadArgument("append", "argument 1", (clinic_state()->Element_Type)->tp_name, args[0]);
+            goto exit;
+        }
+        subelement = args[0];
     }
-    subelement = args[0];
     return_value = _elementtree_Element_append_impl((ElementObject *)self, cls, subelement);
 
 exit:
@@ -196,15 +205,20 @@ _elementtree_Element___setstate__(PyObject *self, PyTypeObject *cls, PyObject *c
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *state;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        state = args[0];
     }
-    state = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        state = args[0];
+    }
     return_value = _elementtree_Element___setstate___impl((ElementObject *)self, cls, state);
 
 exit:
@@ -240,15 +254,20 @@ _elementtree_Element_extend(PyObject *self, PyTypeObject *cls, PyObject *const *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *elements;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        elements = args[0];
     }
-    elements = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        elements = args[0];
+    }
     return_value = _elementtree_Element_extend_impl((ElementObject *)self, cls, elements);
 
 exit:
@@ -780,21 +799,31 @@ _elementtree_Element_makeelement(PyObject *self, PyTypeObject *cls, PyObject *co
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *tag;
     PyObject *attrib;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        tag = args[0];
+        if (!PyDict_Check(args[1])) {
+            _PyArg_BadArgument("makeelement", "argument 2", "dict", args[1]);
+            goto exit;
+        }
+        attrib = args[1];
     }
-    tag = args[0];
-    if (!PyDict_Check(args[1])) {
-        _PyArg_BadArgument("makeelement", "argument 2", "dict", args[1]);
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        tag = args[0];
+        if (!PyDict_Check(args[1])) {
+            _PyArg_BadArgument("makeelement", "argument 2", "dict", args[1]);
+            goto exit;
+        }
+        attrib = args[1];
     }
-    attrib = args[1];
     return_value = _elementtree_Element_makeelement_impl((ElementObject *)self, cls, tag, attrib);
 
 exit:
@@ -1331,4 +1360,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c863ce16d8566291 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f00baacbad927923 input=a9049054013a1b77]*/

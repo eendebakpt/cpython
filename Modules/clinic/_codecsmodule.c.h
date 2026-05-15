@@ -2824,19 +2824,28 @@ _codecs__normalize_encoding(PyObject *module, PyObject *const *args, Py_ssize_t 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *encoding;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("_normalize_encoding", "argument 'encoding'", "str", args[0]);
+            goto exit;
+        }
+        encoding = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("_normalize_encoding", "argument 'encoding'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("_normalize_encoding", "argument 'encoding'", "str", args[0]);
+            goto exit;
+        }
+        encoding = args[0];
     }
-    encoding = args[0];
     return_value = _codecs__normalize_encoding_impl(module, encoding);
 
 exit:
@@ -2866,4 +2875,4 @@ exit:
 #ifndef _CODECS_CODE_PAGE_ENCODE_METHODDEF
     #define _CODECS_CODE_PAGE_ENCODE_METHODDEF
 #endif /* !defined(_CODECS_CODE_PAGE_ENCODE_METHODDEF) */
-/*[clinic end generated code: output=a968c493bb28be3e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=4e886239afbbbabc input=a9049054013a1b77]*/

@@ -131,29 +131,50 @@ _hashlib_HASHXOF_digest(PyObject *self, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_ssize_t length;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
+        }
     }
-    {
-        Py_ssize_t ival = -1;
-        PyObject *iobj = _PyNumber_Index(args[0]);
-        if (iobj != NULL) {
-            ival = PyLong_AsSsize_t(iobj);
-            Py_DECREF(iobj);
-        }
-        if (ival == -1 && PyErr_Occurred()) {
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
         }
-        length = ival;
-        if (length < 0) {
-            PyErr_SetString(PyExc_ValueError,
-                            "length cannot be negative");
-            goto exit;
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
         }
     }
     return_value = _hashlib_HASHXOF_digest_impl((HASHobject *)self, length);
@@ -209,29 +230,50 @@ _hashlib_HASHXOF_hexdigest(PyObject *self, PyObject *const *args, Py_ssize_t nar
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_ssize_t length;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
+        }
     }
-    {
-        Py_ssize_t ival = -1;
-        PyObject *iobj = _PyNumber_Index(args[0]);
-        if (iobj != NULL) {
-            ival = PyLong_AsSsize_t(iobj);
-            Py_DECREF(iobj);
-        }
-        if (ival == -1 && PyErr_Occurred()) {
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
             goto exit;
         }
-        length = ival;
-        if (length < 0) {
-            PyErr_SetString(PyExc_ValueError,
-                            "length cannot be negative");
-            goto exit;
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[0]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            length = ival;
+            if (length < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "length cannot be negative");
+                goto exit;
+            }
         }
     }
     return_value = _hashlib_HASHXOF_hexdigest_impl((HASHobject *)self, length);
@@ -1653,23 +1695,34 @@ _hashlib_hmac_singleshot(PyObject *module, PyObject *const *args, Py_ssize_t nar
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     Py_buffer key = {NULL, NULL};
     Py_buffer msg = {NULL, NULL};
     PyObject *digest;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        if (PyObject_GetBuffer(args[0], &key, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[1], &msg, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
+        digest = args[2];
     }
-    if (PyObject_GetBuffer(args[0], &key, PyBUF_SIMPLE) != 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[0], &key, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[1], &msg, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
+        digest = args[2];
     }
-    if (PyObject_GetBuffer(args[1], &msg, PyBUF_SIMPLE) != 0) {
-        goto exit;
-    }
-    digest = args[2];
     return_value = _hashlib_hmac_singleshot_impl(module, &key, &msg, digest);
 
 exit:
@@ -1826,15 +1879,20 @@ _hashlib_HMAC_update(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *msg;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        msg = args[0];
     }
-    msg = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        msg = args[0];
+    }
     return_value = _hashlib_HMAC_update_impl((HMACobject *)self, msg);
 
 exit:
@@ -1986,4 +2044,4 @@ exit:
 #ifndef _HASHLIB_OPENSSL_SHAKE_256_METHODDEF
     #define _HASHLIB_OPENSSL_SHAKE_256_METHODDEF
 #endif /* !defined(_HASHLIB_OPENSSL_SHAKE_256_METHODDEF) */
-/*[clinic end generated code: output=9ba35fcc33795b1e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c84110c547c0e783 input=a9049054013a1b77]*/

@@ -808,18 +808,26 @@ _remote_debugging_BinaryWriter_write_sample(PyObject *self, PyObject *const *arg
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *stack_frames;
     unsigned long long timestamp_us;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        stack_frames = args[0];
+        if (!_PyLong_UnsignedLongLong_Converter(args[1], &timestamp_us)) {
+            goto exit;
+        }
     }
-    stack_frames = args[0];
-    if (!_PyLong_UnsignedLongLong_Converter(args[1], &timestamp_us)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        stack_frames = args[0];
+        if (!_PyLong_UnsignedLongLong_Converter(args[1], &timestamp_us)) {
+            goto exit;
+        }
     }
     return_value = _remote_debugging_BinaryWriter_write_sample_impl((BinaryWriterObject *)self, stack_frames, timestamp_us);
 
@@ -1431,17 +1439,25 @@ _remote_debugging_is_python_process(PyObject *module, PyObject *const *args, Py_
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int pid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        pid = PyLong_AsInt(args[0]);
+        if (pid == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    pid = PyLong_AsInt(args[0]);
-    if (pid == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        pid = PyLong_AsInt(args[0]);
+        if (pid == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = _remote_debugging_is_python_process_impl(module, pid);
 
@@ -1540,4 +1556,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=5e2a29746a0c5d65 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b0eb25ba1e5651c1 input=a9049054013a1b77]*/

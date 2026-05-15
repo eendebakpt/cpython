@@ -239,17 +239,25 @@ _io__WindowsConsoleIO_readinto(PyObject *self, PyTypeObject *cls, PyObject *cons
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_buffer buffer = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (PyObject_GetBuffer(args[0], &buffer, PyBUF_WRITABLE) < 0) {
+            _PyArg_BadArgument("readinto", "argument 1", "read-write bytes-like object", args[0]);
+            goto exit;
+        }
     }
-    if (PyObject_GetBuffer(args[0], &buffer, PyBUF_WRITABLE) < 0) {
-        _PyArg_BadArgument("readinto", "argument 1", "read-write bytes-like object", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[0], &buffer, PyBUF_WRITABLE) < 0) {
+            _PyArg_BadArgument("readinto", "argument 1", "read-write bytes-like object", args[0]);
+            goto exit;
+        }
     }
     return_value = _io__WindowsConsoleIO_readinto_impl((winconsoleio *)self, cls, &buffer);
 
@@ -382,16 +390,23 @@ _io__WindowsConsoleIO_write(PyObject *self, PyTypeObject *cls, PyObject *const *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     Py_buffer b = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (PyObject_GetBuffer(args[0], &b, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
     }
-    if (PyObject_GetBuffer(args[0], &b, PyBUF_SIMPLE) != 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[0], &b, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
     }
     return_value = _io__WindowsConsoleIO_write_impl((winconsoleio *)self, cls, &b);
 
@@ -463,4 +478,4 @@ _io__WindowsConsoleIO_isatty(PyObject *self, PyObject *Py_UNUSED(ignored))
 #ifndef _IO__WINDOWSCONSOLEIO_ISATTY_METHODDEF
     #define _IO__WINDOWSCONSOLEIO_ISATTY_METHODDEF
 #endif /* !defined(_IO__WINDOWSCONSOLEIO_ISATTY_METHODDEF) */
-/*[clinic end generated code: output=ce50bcd905f1f213 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=66656441c8baabc4 input=a9049054013a1b77]*/

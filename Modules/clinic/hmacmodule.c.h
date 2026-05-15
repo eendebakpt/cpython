@@ -146,15 +146,20 @@ _hmac_HMAC_update(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *msgobj;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        msgobj = args[0];
     }
-    msgobj = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        msgobj = args[0];
+    }
     return_value = _hmac_HMAC_update_impl((HMACObject *)self, msgobj);
 
 exit:
@@ -304,19 +309,26 @@ _hmac_compute_digest(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     PyObject *key;
     PyObject *msg;
     PyObject *digest;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        key = args[0];
+        msg = args[1];
+        digest = args[2];
     }
-    key = args[0];
-    msg = args[1];
-    digest = args[2];
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        key = args[0];
+        msg = args[1];
+        digest = args[2];
+    }
     return_value = _hmac_compute_digest_impl(module, key, msg, digest);
 
 exit:
@@ -670,4 +682,4 @@ _hmac_compute_blake2b_32(PyObject *module, PyObject *const *args, Py_ssize_t nar
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=30c0614482d963f5 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=eb38f67bf7046ea3 input=a9049054013a1b77]*/

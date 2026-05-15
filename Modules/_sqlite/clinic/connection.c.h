@@ -529,34 +529,56 @@ create_window_function(PyObject *self, PyTypeObject *cls, PyObject *const *args,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     const char *name;
     int num_params;
     PyObject *aggregate_class;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("create_window_function", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t name_length;
+        name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
+        if (name == NULL) {
+            goto exit;
+        }
+        if (strlen(name) != (size_t)name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
+        num_params = PyLong_AsInt(args[1]);
+        if (num_params == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        aggregate_class = args[2];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("create_window_function", "argument 1", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("create_window_function", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t name_length;
+        name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
+        if (name == NULL) {
+            goto exit;
+        }
+        if (strlen(name) != (size_t)name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
+        num_params = PyLong_AsInt(args[1]);
+        if (num_params == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        aggregate_class = args[2];
     }
-    Py_ssize_t name_length;
-    name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
-    if (name == NULL) {
-        goto exit;
-    }
-    if (strlen(name) != (size_t)name_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
-    }
-    num_params = PyLong_AsInt(args[1]);
-    if (num_params == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    aggregate_class = args[2];
     return_value = create_window_function_impl((pysqlite_Connection *)self, cls, name, num_params, aggregate_class);
 
 exit:
@@ -597,34 +619,56 @@ pysqlite_connection_create_aggregate(PyObject *self, PyTypeObject *cls, PyObject
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     const char *name;
     int n_arg;
     PyObject *aggregate_class;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("create_aggregate", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t name_length;
+        name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
+        if (name == NULL) {
+            goto exit;
+        }
+        if (strlen(name) != (size_t)name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
+        n_arg = PyLong_AsInt(args[1]);
+        if (n_arg == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        aggregate_class = args[2];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("create_aggregate", "argument 1", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("create_aggregate", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t name_length;
+        name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
+        if (name == NULL) {
+            goto exit;
+        }
+        if (strlen(name) != (size_t)name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
+        n_arg = PyLong_AsInt(args[1]);
+        if (n_arg == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        aggregate_class = args[2];
     }
-    Py_ssize_t name_length;
-    name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
-    if (name == NULL) {
-        goto exit;
-    }
-    if (strlen(name) != (size_t)name_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
-    }
-    n_arg = PyLong_AsInt(args[1]);
-    if (n_arg == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    aggregate_class = args[2];
     return_value = pysqlite_connection_create_aggregate_impl((pysqlite_Connection *)self, cls, name, n_arg, aggregate_class);
 
 exit:
@@ -662,15 +706,20 @@ pysqlite_connection_set_authorizer(PyObject *self, PyTypeObject *cls, PyObject *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *callable;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        callable = args[0];
     }
-    callable = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        callable = args[0];
+    }
     return_value = pysqlite_connection_set_authorizer_impl((pysqlite_Connection *)self, cls, callable);
 
 exit:
@@ -732,19 +781,28 @@ pysqlite_connection_set_progress_handler(PyObject *self, PyTypeObject *cls, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *callable;
     int n;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        callable = args[0];
+        n = PyLong_AsInt(args[1]);
+        if (n == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    callable = args[0];
-    n = PyLong_AsInt(args[1]);
-    if (n == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        callable = args[0];
+        n = PyLong_AsInt(args[1]);
+        if (n == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = pysqlite_connection_set_progress_handler_impl((pysqlite_Connection *)self, cls, callable, n);
 
@@ -783,15 +841,20 @@ pysqlite_connection_set_trace_callback(PyObject *self, PyTypeObject *cls, PyObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *callable;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        callable = args[0];
     }
-    callable = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        callable = args[0];
+    }
     return_value = pysqlite_connection_set_trace_callback_impl((pysqlite_Connection *)self, cls, callable);
 
 exit:
@@ -1263,29 +1326,47 @@ pysqlite_connection_create_collation(PyObject *self, PyTypeObject *cls, PyObject
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     const char *name;
     PyObject *callable;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("create_collation", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t name_length;
+        name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
+        if (name == NULL) {
+            goto exit;
+        }
+        if (strlen(name) != (size_t)name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
+        callable = args[1];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("create_collation", "argument 1", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("create_collation", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t name_length;
+        name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
+        if (name == NULL) {
+            goto exit;
+        }
+        if (strlen(name) != (size_t)name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
+        callable = args[1];
     }
-    Py_ssize_t name_length;
-    name = PyUnicode_AsUTF8AndSize(args[0], &name_length);
-    if (name == NULL) {
-        goto exit;
-    }
-    if (strlen(name) != (size_t)name_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
-    }
-    callable = args[1];
     return_value = pysqlite_connection_create_collation_impl((pysqlite_Connection *)self, cls, name, callable);
 
 exit:
@@ -1722,4 +1803,4 @@ exit:
 #ifndef DESERIALIZE_METHODDEF
     #define DESERIALIZE_METHODDEF
 #endif /* !defined(DESERIALIZE_METHODDEF) */
-/*[clinic end generated code: output=16d44c1d8a45e622 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=8165b95a4b4a0dc1 input=a9049054013a1b77]*/

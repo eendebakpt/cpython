@@ -1654,17 +1654,23 @@ keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *a;
     PyObject *b;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        a = args[0];
+        b = args[1];
     }
-    a = args[0];
-    b = args[1];
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        a = args[0];
+        b = args[1];
+    }
     return_value = keywords_impl(module, a, b);
 
 exit:
@@ -1998,17 +2004,23 @@ posonly_keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *a;
     PyObject *b;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        a = args[0];
+        b = args[1];
     }
-    a = args[0];
-    b = args[1];
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        a = args[0];
+        b = args[1];
+    }
     return_value = posonly_keywords_impl(module, a, b);
 
 exit:
@@ -3827,26 +3839,43 @@ clone_f1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *path;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("clone_f1", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t path_length;
+        path = PyUnicode_AsUTF8AndSize(args[0], &path_length);
+        if (path == NULL) {
+            goto exit;
+        }
+        if (strlen(path) != (size_t)path_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("clone_f1", "argument 'path'", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t path_length;
-    path = PyUnicode_AsUTF8AndSize(args[0], &path_length);
-    if (path == NULL) {
-        goto exit;
-    }
-    if (strlen(path) != (size_t)path_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("clone_f1", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t path_length;
+        path = PyUnicode_AsUTF8AndSize(args[0], &path_length);
+        if (path == NULL) {
+            goto exit;
+        }
+        if (strlen(path) != (size_t)path_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     return_value = clone_f1_impl(module, path);
 
@@ -3896,26 +3925,43 @@ clone_f2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *path;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("clone_f2", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t path_length;
+        path = PyUnicode_AsUTF8AndSize(args[0], &path_length);
+        if (path == NULL) {
+            goto exit;
+        }
+        if (strlen(path) != (size_t)path_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("clone_f2", "argument 'path'", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t path_length;
-    path = PyUnicode_AsUTF8AndSize(args[0], &path_length);
-    if (path == NULL) {
-        goto exit;
-    }
-    if (strlen(path) != (size_t)path_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("clone_f2", "argument 'path'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t path_length;
+        path = PyUnicode_AsUTF8AndSize(args[0], &path_length);
+        if (path == NULL) {
+            goto exit;
+        }
+        if (strlen(path) != (size_t)path_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     return_value = clone_f2_impl(module, path);
 
@@ -4121,15 +4167,20 @@ _testclinic_TestClass_get_defining_class_arg(PyObject *self, PyTypeObject *cls, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *arg;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        arg = args[0];
     }
-    arg = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        arg = args[0];
+    }
     return_value = _testclinic_TestClass_get_defining_class_arg_impl(self, cls, arg);
 
 exit:
@@ -4600,4 +4651,4 @@ _testclinic_TestClass_posonly_poskw_varpos_array_no_fastcall(PyObject *type, PyO
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=9971dbbc5f62b8d2 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=fca5b512b7498eae input=a9049054013a1b77]*/

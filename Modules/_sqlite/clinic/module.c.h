@@ -51,26 +51,43 @@ pysqlite_complete_statement(PyObject *module, PyObject *const *args, Py_ssize_t 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *statement;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("complete_statement", "argument 'statement'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t statement_length;
+        statement = PyUnicode_AsUTF8AndSize(args[0], &statement_length);
+        if (statement == NULL) {
+            goto exit;
+        }
+        if (strlen(statement) != (size_t)statement_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("complete_statement", "argument 'statement'", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t statement_length;
-    statement = PyUnicode_AsUTF8AndSize(args[0], &statement_length);
-    if (statement == NULL) {
-        goto exit;
-    }
-    if (strlen(statement) != (size_t)statement_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("complete_statement", "argument 'statement'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t statement_length;
+        statement = PyUnicode_AsUTF8AndSize(args[0], &statement_length);
+        if (statement == NULL) {
+            goto exit;
+        }
+        if (strlen(statement) != (size_t)statement_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     return_value = pysqlite_complete_statement_impl(module, statement);
 
@@ -211,4 +228,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=17c4e031680a5168 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7ff3d0c37e917189 input=a9049054013a1b77]*/

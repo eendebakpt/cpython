@@ -553,16 +553,23 @@ os_chdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("chdir", "path", 0, 0, 0, PATH_HAVE_FCHDIR);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os_chdir_impl(module, &path);
 
@@ -621,17 +628,25 @@ os_fchdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
     return_value = os_fchdir_impl(module, fd);
 
@@ -808,22 +823,34 @@ os_fchmod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     int fd;
     int mode;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        mode = PyLong_AsInt(args[1]);
+        if (mode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    fd = PyLong_AsInt(args[0]);
-    if (fd == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    mode = PyLong_AsInt(args[1]);
-    if (mode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        mode = PyLong_AsInt(args[1]);
+        if (mode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_fchmod_impl(module, fd, mode);
 
@@ -881,21 +908,32 @@ os_lchmod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     path_t path = PATH_T_INITIALIZE_P("lchmod", "path", 0, 0, 0, 0);
     int mode;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        mode = PyLong_AsInt(args[1]);
+        if (mode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
-    }
-    mode = PyLong_AsInt(args[1]);
-    if (mode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        mode = PyLong_AsInt(args[1]);
+        if (mode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_lchmod_impl(module, &path, mode);
 
@@ -1061,35 +1099,62 @@ os_lchflags(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     path_t path = PATH_T_INITIALIZE_P("lchflags", "path", 0, 0, 0, 0);
     unsigned long flags;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
-    }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
-    }
-    if (!PyIndex_Check(args[1])) {
-        _PyArg_BadArgument("lchflags", "argument 'flags'", "int", args[1]);
-        goto exit;
-    }
-    {
-        Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &flags, sizeof(unsigned long),
-                Py_ASNATIVEBYTES_NATIVE_ENDIAN |
-                Py_ASNATIVEBYTES_ALLOW_INDEX |
-                Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
-        if (_bytes < 0) {
+    if (kwnames == NULL && nargs == 2) {
+        if (!path_converter(args[0], &path)) {
             goto exit;
         }
-        if ((size_t)_bytes > sizeof(unsigned long)) {
-            if (PyErr_WarnEx(PyExc_DeprecationWarning,
-                "integer value out of range", 1) < 0)
-            {
+        if (!PyIndex_Check(args[1])) {
+            _PyArg_BadArgument("lchflags", "argument 'flags'", "int", args[1]);
+            goto exit;
+        }
+        {
+            Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &flags, sizeof(unsigned long),
+                    Py_ASNATIVEBYTES_NATIVE_ENDIAN |
+                    Py_ASNATIVEBYTES_ALLOW_INDEX |
+                    Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+            if (_bytes < 0) {
                 goto exit;
+            }
+            if ((size_t)_bytes > sizeof(unsigned long)) {
+                if (PyErr_WarnEx(PyExc_DeprecationWarning,
+                    "integer value out of range", 1) < 0)
+                {
+                    goto exit;
+                }
+            }
+        }
+    }
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!PyIndex_Check(args[1])) {
+            _PyArg_BadArgument("lchflags", "argument 'flags'", "int", args[1]);
+            goto exit;
+        }
+        {
+            Py_ssize_t _bytes = PyLong_AsNativeBytes(args[1], &flags, sizeof(unsigned long),
+                    Py_ASNATIVEBYTES_NATIVE_ENDIAN |
+                    Py_ASNATIVEBYTES_ALLOW_INDEX |
+                    Py_ASNATIVEBYTES_UNSIGNED_BUFFER);
+            if (_bytes < 0) {
+                goto exit;
+            }
+            if ((size_t)_bytes > sizeof(unsigned long)) {
+                if (PyErr_WarnEx(PyExc_DeprecationWarning,
+                    "integer value out of range", 1) < 0)
+                {
+                    goto exit;
+                }
             }
         }
     }
@@ -1149,16 +1214,23 @@ os_chroot(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("chroot", "path", 0, 0, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os_chroot_impl(module, &path);
 
@@ -1216,17 +1288,25 @@ os_fsync(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
     return_value = os_fsync_impl(module, fd);
 
@@ -1303,17 +1383,25 @@ os_fdatasync(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
     return_value = os_fdatasync_impl(module, fd);
 
@@ -1489,25 +1577,39 @@ os_fchown(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     int fd;
     uid_t uid;
     gid_t gid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        if (!_Py_Uid_Converter(args[1], &uid)) {
+            goto exit;
+        }
+        if (!_Py_Gid_Converter(args[2], &gid)) {
+            goto exit;
+        }
     }
-    fd = PyLong_AsInt(args[0]);
-    if (fd == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    if (!_Py_Uid_Converter(args[1], &uid)) {
-        goto exit;
-    }
-    if (!_Py_Gid_Converter(args[2], &gid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        if (!_Py_Uid_Converter(args[1], &uid)) {
+            goto exit;
+        }
+        if (!_Py_Gid_Converter(args[2], &gid)) {
+            goto exit;
+        }
     }
     return_value = os_fchown_impl(module, fd, uid, gid);
 
@@ -1565,24 +1667,37 @@ os_lchown(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     path_t path = PATH_T_INITIALIZE_P("lchown", "path", 0, 0, 0, 0);
     uid_t uid;
     gid_t gid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!_Py_Uid_Converter(args[1], &uid)) {
+            goto exit;
+        }
+        if (!_Py_Gid_Converter(args[2], &gid)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
-    }
-    if (!_Py_Uid_Converter(args[1], &uid)) {
-        goto exit;
-    }
-    if (!_Py_Gid_Converter(args[2], &gid)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!_Py_Uid_Converter(args[1], &uid)) {
+            goto exit;
+        }
+        if (!_Py_Gid_Converter(args[2], &gid)) {
+            goto exit;
+        }
     }
     return_value = os_lchown_impl(module, &path, uid, gid);
 
@@ -1918,16 +2033,23 @@ os_listmounts(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t volume = PATH_T_INITIALIZE_P("listmounts", "volume", 0, 0, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &volume)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &volume)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &volume)) {
+            goto exit;
+        }
     }
     return_value = os_listmounts_impl(module, &volume);
 
@@ -1985,16 +2107,23 @@ os__path_isdevdrive(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_path_isdevdrive", "path", 0, 0, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os__path_isdevdrive_impl(module, &path);
 
@@ -2153,16 +2282,23 @@ os__getvolumepathname(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_getvolumepathname", "path", 0, 0, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os__getvolumepathname_impl(module, &path);
 
@@ -2254,17 +2390,24 @@ os__path_exists(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_path_exists", "path", 0, 0, 1, 1);
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     _return_value = os__path_exists_impl(module, &path);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -2326,17 +2469,24 @@ os__path_lexists(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_path_lexists", "path", 0, 0, 1, 1);
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     _return_value = os__path_lexists_impl(module, &path);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -2437,17 +2587,24 @@ os__path_isfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_path_isfile", "path", 0, 0, 1, 1);
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     _return_value = os__path_isfile_impl(module, &path);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -2509,17 +2666,24 @@ os__path_islink(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_path_islink", "path", 0, 0, 1, 1);
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     _return_value = os__path_islink_impl(module, &path);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -2581,17 +2745,24 @@ os__path_isjunction(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_path_isjunction", "path", 0, 0, 1, 1);
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     _return_value = os__path_isjunction_impl(module, &path);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -2683,16 +2854,23 @@ os__path_normpath(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE("_path_normpath", "path", 0, 1, 1, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os__path_normpath_impl(module, &path);
 
@@ -2874,22 +3052,34 @@ os_getpriority(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     int which;
     int who;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        which = PyLong_AsInt(args[0]);
+        if (which == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        who = PyLong_AsInt(args[1]);
+        if (who == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    which = PyLong_AsInt(args[0]);
-    if (which == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    who = PyLong_AsInt(args[1]);
-    if (who == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        which = PyLong_AsInt(args[0]);
+        if (which == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        who = PyLong_AsInt(args[1]);
+        if (who == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_getpriority_impl(module, which, who);
 
@@ -2944,27 +3134,43 @@ os_setpriority(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     int which;
     int who;
     int priority;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        which = PyLong_AsInt(args[0]);
+        if (which == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        who = PyLong_AsInt(args[1]);
+        if (who == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        priority = PyLong_AsInt(args[2]);
+        if (priority == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    which = PyLong_AsInt(args[0]);
-    if (which == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    who = PyLong_AsInt(args[1]);
-    if (who == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    priority = PyLong_AsInt(args[2]);
-    if (priority == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        which = PyLong_AsInt(args[0]);
+        if (which == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        who = PyLong_AsInt(args[1]);
+        if (who == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        priority = PyLong_AsInt(args[2]);
+        if (priority == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_setpriority_impl(module, which, who, priority);
 
@@ -3284,22 +3490,34 @@ os_system(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const wchar_t *command = NULL;
     long _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("system", "argument 'command'", "str", args[0]);
+            goto exit;
+        }
+        command = PyUnicode_AsWideCharString(args[0], NULL);
+        if (command == NULL) {
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("system", "argument 'command'", "str", args[0]);
-        goto exit;
-    }
-    command = PyUnicode_AsWideCharString(args[0], NULL);
-    if (command == NULL) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("system", "argument 'command'", "str", args[0]);
+            goto exit;
+        }
+        command = PyUnicode_AsWideCharString(args[0], NULL);
+        if (command == NULL) {
+            goto exit;
+        }
     }
     _return_value = os_system_impl(module, command);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -3361,17 +3579,24 @@ os_system(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *command = NULL;
     long _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_FSConverter(args[0], &command)) {
+            goto exit;
+        }
     }
-    if (!PyUnicode_FSConverter(args[0], &command)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_FSConverter(args[0], &command)) {
+            goto exit;
+        }
     }
     _return_value = os_system_impl(module, command);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -3766,17 +3991,25 @@ os__exit(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os__exit_impl(module, status);
 
@@ -3880,21 +4113,30 @@ os_execve(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     path_t path = PATH_T_INITIALIZE_P("execve", "path", 0, 0, 0, PATH_HAVE_FEXECVE);
     PyObject *argv;
     PyObject *env;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        argv = args[1];
+        env = args[2];
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        argv = args[1];
+        env = args[2];
     }
-    argv = args[1];
-    env = args[2];
     return_value = os_execve_impl(module, &path, argv, env);
 
 exit:
@@ -4506,17 +4748,25 @@ os_sched_get_priority_max(PyObject *module, PyObject *const *args, Py_ssize_t na
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int policy;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        policy = PyLong_AsInt(args[0]);
+        if (policy == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    policy = PyLong_AsInt(args[0]);
-    if (policy == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        policy = PyLong_AsInt(args[0]);
+        if (policy == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_sched_get_priority_max_impl(module, policy);
 
@@ -4571,17 +4821,25 @@ os_sched_get_priority_min(PyObject *module, PyObject *const *args, Py_ssize_t na
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int policy;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        policy = PyLong_AsInt(args[0]);
+        if (policy == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    policy = PyLong_AsInt(args[0]);
-    if (policy == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        policy = PyLong_AsInt(args[0]);
+        if (policy == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_sched_get_priority_min_impl(module, policy);
 
@@ -5539,17 +5797,25 @@ os_getpgid(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     pid_t pid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        pid = PyLong_AsPid(args[0]);
+        if (pid == (pid_t)(-1) && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    pid = PyLong_AsPid(args[0]);
-    if (pid == (pid_t)(-1) && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        pid = PyLong_AsPid(args[0]);
+        if (pid == (pid_t)(-1) && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_getpgid_impl(module, pid);
 
@@ -6053,17 +6319,25 @@ os_wait3(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int options;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        options = PyLong_AsInt(args[0]);
+        if (options == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    options = PyLong_AsInt(args[0]);
-    if (options == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        options = PyLong_AsInt(args[0]);
+        if (options == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_wait3_impl(module, options);
 
@@ -6121,22 +6395,34 @@ os_wait4(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     pid_t pid;
     int options;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        pid = PyLong_AsPid(args[0]);
+        if (pid == (pid_t)(-1) && PyErr_Occurred()) {
+            goto exit;
+        }
+        options = PyLong_AsInt(args[1]);
+        if (options == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    pid = PyLong_AsPid(args[0]);
-    if (pid == (pid_t)(-1) && PyErr_Occurred()) {
-        goto exit;
-    }
-    options = PyLong_AsInt(args[1]);
-    if (options == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        pid = PyLong_AsPid(args[0]);
+        if (pid == (pid_t)(-1) && PyErr_Occurred()) {
+            goto exit;
+        }
+        options = PyLong_AsInt(args[1]);
+        if (options == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_wait4_impl(module, pid, options);
 
@@ -6521,17 +6807,25 @@ os_unshare(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int flags;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        flags = PyLong_AsInt(args[0]);
+        if (flags == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    flags = PyLong_AsInt(args[0]);
-    if (flags == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        flags = PyLong_AsInt(args[0]);
+        if (flags == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_unshare_impl(module, flags);
 
@@ -7445,17 +7739,25 @@ os_close(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    fd = PyLong_AsInt(args[0]);
-    if (fd == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_close_impl(module, fd);
 
@@ -8316,41 +8618,71 @@ os_sendfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[4];
     int out_fd;
     int in_fd;
     PyObject *offobj;
     Py_ssize_t count;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 4, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
-    }
-    out_fd = PyLong_AsInt(args[0]);
-    if (out_fd == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    in_fd = PyLong_AsInt(args[1]);
-    if (in_fd == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    offobj = args[2];
-    {
-        Py_ssize_t ival = -1;
-        PyObject *iobj = _PyNumber_Index(args[3]);
-        if (iobj != NULL) {
-            ival = PyLong_AsSsize_t(iobj);
-            Py_DECREF(iobj);
-        }
-        if (ival == -1 && PyErr_Occurred()) {
+    if (kwnames == NULL && nargs == 4) {
+        out_fd = PyLong_AsInt(args[0]);
+        if (out_fd == -1 && PyErr_Occurred()) {
             goto exit;
         }
-        count = ival;
-        if (count < 0) {
-            PyErr_SetString(PyExc_ValueError,
-                            "count cannot be negative");
+        in_fd = PyLong_AsInt(args[1]);
+        if (in_fd == -1 && PyErr_Occurred()) {
             goto exit;
+        }
+        offobj = args[2];
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[3]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            count = ival;
+            if (count < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "count cannot be negative");
+                goto exit;
+            }
+        }
+    }
+    else {
+        PyObject *argsbuf[4];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 4, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        out_fd = PyLong_AsInt(args[0]);
+        if (out_fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        in_fd = PyLong_AsInt(args[1]);
+        if (in_fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        offobj = args[2];
+        {
+            Py_ssize_t ival = -1;
+            PyObject *iobj = _PyNumber_Index(args[3]);
+            if (iobj != NULL) {
+                ival = PyLong_AsSsize_t(iobj);
+                Py_DECREF(iobj);
+            }
+            if (ival == -1 && PyErr_Occurred()) {
+                goto exit;
+            }
+            count = ival;
+            if (count < 0) {
+                PyErr_SetString(PyExc_ValueError,
+                                "count cannot be negative");
+                goto exit;
+            }
         }
     }
     return_value = os_sendfile_impl(module, out_fd, in_fd, offobj, count);
@@ -8452,17 +8784,25 @@ os_fstat(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    fd = PyLong_AsInt(args[0]);
-    if (fd == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_fstat_impl(module, fd);
 
@@ -9392,20 +9732,30 @@ os_truncate(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     path_t path = PATH_T_INITIALIZE_P("truncate", "path", 0, 0, 0, PATH_HAVE_FTRUNCATE);
     Py_off_t length;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!Py_off_t_converter(args[1], &length)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
-    }
-    if (!Py_off_t_converter(args[1], &length)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!Py_off_t_converter(args[1], &length)) {
+            goto exit;
+        }
     }
     return_value = os_truncate_impl(module, &path, length);
 
@@ -9808,18 +10158,26 @@ os_WIFCONTINUED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WIFCONTINUED_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -9878,18 +10236,26 @@ os_WIFSTOPPED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WIFSTOPPED_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -9948,18 +10314,26 @@ os_WIFSIGNALED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WIFSIGNALED_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -10018,18 +10392,26 @@ os_WIFEXITED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WIFEXITED_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -10088,18 +10470,26 @@ os_WEXITSTATUS(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WEXITSTATUS_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -10158,18 +10548,26 @@ os_WTERMSIG(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WTERMSIG_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -10228,18 +10626,26 @@ os_WSTOPSIG(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int status;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    status = PyLong_AsInt(args[0]);
-    if (status == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status = PyLong_AsInt(args[0]);
+        if (status == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = os_WSTOPSIG_impl(module, status);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -10336,16 +10742,23 @@ os_statvfs(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("statvfs", "path", 0, 0, 0, PATH_HAVE_FSTATVFS);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os_statvfs_impl(module, &path);
 
@@ -10403,16 +10816,23 @@ os__getdiskusage(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_getdiskusage", "path", 0, 0, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os__getdiskusage_impl(module, &path);
 
@@ -10520,21 +10940,31 @@ os_pathconf(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     path_t path = PATH_T_INITIALIZE_P("pathconf", "path", 0, 0, 0, PATH_HAVE_FPATHCONF);
     int name;
     long _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!conv_confname(module, args[1], &name, "pathconf_names")) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
-    }
-    if (!conv_confname(module, args[1], &name, "pathconf_names")) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
+        if (!conv_confname(module, args[1], &name, "pathconf_names")) {
+            goto exit;
+        }
     }
     _return_value = os_pathconf_impl(module, &path, name);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -10859,17 +11289,25 @@ os_device_encoding(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    fd = PyLong_AsInt(args[0]);
-    if (fd == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyLong_AsInt(args[0]);
+        if (fd == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = os_device_encoding_impl(module, fd);
 
@@ -11635,17 +12073,25 @@ os_eventfd_read(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int fd;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
     }
     return_value = os_eventfd_read_impl(module, fd);
 
@@ -11700,21 +12146,32 @@ os_eventfd_write(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     int fd;
     unsigned long long value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
+        if (!_PyLong_UnsignedLongLong_Converter(args[1], &value)) {
+            goto exit;
+        }
     }
-    fd = PyObject_AsFileDescriptor(args[0]);
-    if (fd < 0) {
-        goto exit;
-    }
-    if (!_PyLong_UnsignedLongLong_Converter(args[1], &value)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        fd = PyObject_AsFileDescriptor(args[0]);
+        if (fd < 0) {
+            goto exit;
+        }
+        if (!_PyLong_UnsignedLongLong_Converter(args[1], &value)) {
+            goto exit;
+        }
     }
     return_value = os_eventfd_write_impl(module, fd, value);
 
@@ -12444,15 +12901,20 @@ os_fspath(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *path;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        path = args[0];
     }
-    path = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        path = args[0];
+    }
     return_value = os_fspath_impl(module, path);
 
 exit:
@@ -12594,16 +13056,23 @@ os__add_dll_directory(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     path_t path = PATH_T_INITIALIZE_P("_add_dll_directory", "path", 0, 0, 0, 0);
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
-    if (!path_converter(args[0], &path)) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!path_converter(args[0], &path)) {
+            goto exit;
+        }
     }
     return_value = os__add_dll_directory_impl(module, &path);
 
@@ -12665,15 +13134,20 @@ os__remove_dll_directory(PyObject *module, PyObject *const *args, Py_ssize_t nar
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *cookie;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        cookie = args[0];
     }
-    cookie = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        cookie = args[0];
+    }
     return_value = os__remove_dll_directory_impl(module, cookie);
 
 exit:
@@ -12739,15 +13213,20 @@ os_waitstatus_to_exitcode(PyObject *module, PyObject *const *args, Py_ssize_t na
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *status_obj;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        status_obj = args[0];
     }
-    status_obj = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        status_obj = args[0];
+    }
     return_value = os_waitstatus_to_exitcode_impl(module, status_obj);
 
 exit:
@@ -12899,26 +13378,43 @@ os__emscripten_log(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *arg;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("_emscripten_log", "argument 'arg'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t arg_length;
+        arg = PyUnicode_AsUTF8AndSize(args[0], &arg_length);
+        if (arg == NULL) {
+            goto exit;
+        }
+        if (strlen(arg) != (size_t)arg_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("_emscripten_log", "argument 'arg'", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t arg_length;
-    arg = PyUnicode_AsUTF8AndSize(args[0], &arg_length);
-    if (arg == NULL) {
-        goto exit;
-    }
-    if (strlen(arg) != (size_t)arg_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("_emscripten_log", "argument 'arg'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t arg_length;
+        arg = PyUnicode_AsUTF8AndSize(args[0], &arg_length);
+        if (arg == NULL) {
+            goto exit;
+        }
+        if (strlen(arg) != (size_t)arg_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     return_value = os__emscripten_log_impl(module, arg);
 
@@ -13611,4 +14107,4 @@ exit:
 #ifndef OS__EMSCRIPTEN_LOG_METHODDEF
     #define OS__EMSCRIPTEN_LOG_METHODDEF
 #endif /* !defined(OS__EMSCRIPTEN_LOG_METHODDEF) */
-/*[clinic end generated code: output=e709b8b783fbc261 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b5f1ebb724f2bfbf input=a9049054013a1b77]*/

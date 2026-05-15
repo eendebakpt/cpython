@@ -595,21 +595,32 @@ _imp_source_hash(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     long key;
     Py_buffer source = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        key = PyLong_AsLong(args[0]);
+        if (key == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[1], &source, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
     }
-    key = PyLong_AsLong(args[0]);
-    if (key == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    if (PyObject_GetBuffer(args[1], &source, PyBUF_SIMPLE) != 0) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        key = PyLong_AsLong(args[0]);
+        if (key == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        if (PyObject_GetBuffer(args[1], &source, PyBUF_SIMPLE) != 0) {
+            goto exit;
+        }
     }
     return_value = _imp_source_hash_impl(module, key, &source);
 
@@ -664,4 +675,4 @@ exit:
 #ifndef _IMP_EXEC_DYNAMIC_METHODDEF
     #define _IMP_EXEC_DYNAMIC_METHODDEF
 #endif /* !defined(_IMP_EXEC_DYNAMIC_METHODDEF) */
-/*[clinic end generated code: output=5fa42f580441b3fa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e2b55685139ac6c4 input=a9049054013a1b77]*/

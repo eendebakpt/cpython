@@ -81,17 +81,25 @@ InstructionSequenceType_use_label(PyObject *self, PyObject *const *args, Py_ssiz
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int label;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        label = PyLong_AsInt(args[0]);
+        if (label == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    label = PyLong_AsInt(args[0]);
-    if (label == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        label = PyLong_AsInt(args[0]);
+        if (label == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = InstructionSequenceType_use_label_impl((_PyInstructionSequence *)self, label);
 
@@ -145,7 +153,6 @@ InstructionSequenceType_addop(PyObject *self, PyObject *const *args, Py_ssize_t 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[6];
     int opcode;
     int oparg;
     int lineno;
@@ -153,34 +160,63 @@ InstructionSequenceType_addop(PyObject *self, PyObject *const *args, Py_ssize_t 
     int end_lineno;
     int end_col_offset;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 6, /*maxpos*/ 6, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 6) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        oparg = PyLong_AsInt(args[1]);
+        if (oparg == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        lineno = PyLong_AsInt(args[2]);
+        if (lineno == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        col_offset = PyLong_AsInt(args[3]);
+        if (col_offset == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        end_lineno = PyLong_AsInt(args[4]);
+        if (end_lineno == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        end_col_offset = PyLong_AsInt(args[5]);
+        if (end_col_offset == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    oparg = PyLong_AsInt(args[1]);
-    if (oparg == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    lineno = PyLong_AsInt(args[2]);
-    if (lineno == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    col_offset = PyLong_AsInt(args[3]);
-    if (col_offset == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    end_lineno = PyLong_AsInt(args[4]);
-    if (end_lineno == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    end_col_offset = PyLong_AsInt(args[5]);
-    if (end_col_offset == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[6];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 6, /*maxpos*/ 6, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        oparg = PyLong_AsInt(args[1]);
+        if (oparg == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        lineno = PyLong_AsInt(args[2]);
+        if (lineno == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        col_offset = PyLong_AsInt(args[3]);
+        if (col_offset == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        end_lineno = PyLong_AsInt(args[4]);
+        if (end_lineno == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        end_col_offset = PyLong_AsInt(args[5]);
+        if (end_col_offset == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = InstructionSequenceType_addop_impl((_PyInstructionSequence *)self, opcode, oparg, lineno, col_offset, end_lineno, end_col_offset);
 
@@ -260,15 +296,20 @@ InstructionSequenceType_add_nested(PyObject *self, PyObject *const *args, Py_ssi
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *nested;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        nested = args[0];
     }
-    nested = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        nested = args[0];
+    }
     return_value = InstructionSequenceType_add_nested_impl((_PyInstructionSequence *)self, nested);
 
 exit:
@@ -310,4 +351,4 @@ InstructionSequenceType_get_instructions(PyObject *self, PyObject *Py_UNUSED(ign
 {
     return InstructionSequenceType_get_instructions_impl((_PyInstructionSequence *)self);
 }
-/*[clinic end generated code: output=c80501a59a1a1103 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=ceecddcaaa63ee3a input=a9049054013a1b77]*/

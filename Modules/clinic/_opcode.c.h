@@ -132,18 +132,26 @@ _opcode_is_valid(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_is_valid_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -198,18 +206,26 @@ _opcode_has_arg(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_arg_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -264,18 +280,26 @@ _opcode_has_const(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_const_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -330,18 +354,26 @@ _opcode_has_name(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_name_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -396,18 +428,26 @@ _opcode_has_jump(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_jump_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -467,18 +507,26 @@ _opcode_has_free(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_free_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -533,18 +581,26 @@ _opcode_has_local(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_local_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -599,18 +655,26 @@ _opcode_has_exc(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     int opcode;
     int _return_value;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    opcode = PyLong_AsInt(args[0]);
-    if (opcode == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        opcode = PyLong_AsInt(args[0]);
+        if (opcode == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     _return_value = _opcode_has_exc_impl(module, opcode);
     if ((_return_value == -1) && PyErr_Occurred()) {
@@ -757,23 +821,32 @@ _opcode_get_executor(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[2];
     PyObject *code;
     int offset;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 2) {
+        code = args[0];
+        offset = PyLong_AsInt(args[1]);
+        if (offset == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    code = args[0];
-    offset = PyLong_AsInt(args[1]);
-    if (offset == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[2];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        code = args[0];
+        offset = PyLong_AsInt(args[1]);
+        if (offset == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = _opcode_get_executor_impl(module, code, offset);
 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=a11f02989c3175d7 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=3f927e76b51e5246 input=a9049054013a1b77]*/

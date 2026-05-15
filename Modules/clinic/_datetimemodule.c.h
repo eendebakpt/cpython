@@ -339,27 +339,43 @@ datetime_date_fromisocalendar(PyObject *type, PyObject *const *args, Py_ssize_t 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[3];
     int year;
     int week;
     int day;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 3) {
+        year = PyLong_AsInt(args[0]);
+        if (year == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        week = PyLong_AsInt(args[1]);
+        if (week == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        day = PyLong_AsInt(args[2]);
+        if (day == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
-    year = PyLong_AsInt(args[0]);
-    if (year == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    week = PyLong_AsInt(args[1]);
-    if (week == -1 && PyErr_Occurred()) {
-        goto exit;
-    }
-    day = PyLong_AsInt(args[2]);
-    if (day == -1 && PyErr_Occurred()) {
-        goto exit;
+    else {
+        PyObject *argsbuf[3];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        year = PyLong_AsInt(args[0]);
+        if (year == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        week = PyLong_AsInt(args[1]);
+        if (week == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
+        day = PyLong_AsInt(args[2]);
+        if (day == -1 && PyErr_Occurred()) {
+            goto exit;
+        }
     }
     return_value = datetime_date_fromisocalendar_impl((PyTypeObject *)type, year, week, day);
 
@@ -457,19 +473,28 @@ datetime_date_strftime(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *format;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("strftime", "argument 'format'", "str", args[0]);
+            goto exit;
+        }
+        format = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("strftime", "argument 'format'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("strftime", "argument 'format'", "str", args[0]);
+            goto exit;
+        }
+        format = args[0];
     }
-    format = args[0];
     return_value = datetime_date_strftime_impl(self, format);
 
 exit:
@@ -1021,19 +1046,28 @@ datetime_time_strftime(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *format;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("strftime", "argument 'format'", "str", args[0]);
+            goto exit;
+        }
+        format = args[0];
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("strftime", "argument 'format'", "str", args[0]);
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("strftime", "argument 'format'", "str", args[0]);
+            goto exit;
+        }
+        format = args[0];
     }
-    format = args[0];
     return_value = datetime_time_strftime_impl((PyDateTime_Time *)self, format);
 
 exit:
@@ -2090,4 +2124,4 @@ datetime_datetime___reduce__(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return datetime_datetime___reduce___impl((PyDateTime_DateTime *)self);
 }
-/*[clinic end generated code: output=69658acff6a43ac4 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=befb6ea4822d2e2c input=a9049054013a1b77]*/

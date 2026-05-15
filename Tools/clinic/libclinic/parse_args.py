@@ -487,6 +487,35 @@ class ParseArgsCodeGen:
         assert isinstance(c, libclinic.converters.VarKeywordCConverter)
         return c.parse_var_keyword()
 
+    def _fast_positional_path(self, parser_code: list[str]) -> list[str]:
+        """Rewrite the keyword-unpacking body for a "simple_fast" function.
+
+        ``parser_code`` is ``[unpack_call, convert_0, ..., convert_n-1]``.
+        For a function whose parameters are all required and accepted as
+        positional-or-keyword, a call with positional arguments only can
+        skip _PyArg_UnpackKeywords() and read the arguments straight from
+        the vectorcall array.  The argsbuf scratch array and the unpacking
+        call are confined to the cold ``else`` branch, which keeps them off
+        the hot path's stack frame.
+        """
+        nargs = len(self.converters)
+        unpack = libclinic.normalize_snippet(parser_code[0], indent=8)
+        convert = "\n".join(
+            libclinic.normalize_snippet(snippet, indent=8)
+            for snippet in parser_code[1:]
+        )
+        code = "\n".join([
+            "    if (kwnames == NULL && nargs == %d) {{" % nargs,
+            convert,
+            "    }}",
+            "    else {{",
+            "        PyObject *argsbuf[%d];" % nargs,
+            unpack,
+            convert,
+            "    }}",
+        ])
+        return [code]
+
     def parse_pos_only(self) -> None:
         if self.fastcall:
             # positional-only, but no option groups
@@ -664,6 +693,21 @@ class ParseArgsCodeGen:
             < len(self.converters)
         )
 
+        # A function whose parameters are all required and accepted as
+        # positional-or-keyword can read its arguments straight from the
+        # vectorcall array on the common (positional) path.  See
+        # _fast_positional_path() for the generated code.
+        simple_fast = (
+            self.fastcall
+            and not self.limited_capi
+            and self.varpos is None
+            and not deprecated_positionals
+            and not deprecated_keywords
+            and self.min_kw_only == 0
+            and len(self.converters) >= 1
+            and self.min_pos == self.max_pos == len(self.converters)
+        )
+
         use_parser_code = True
         if self.limited_capi:
             parser_code = []
@@ -681,7 +725,10 @@ class ParseArgsCodeGen:
                 self.flags = "METH_FASTCALL|METH_KEYWORDS"
                 self.parser_prototype = PARSER_PROTOTYPE_FASTCALL_KEYWORDS
                 self.declarations = declare_parser(self.func, codegen=self.codegen)
-                self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
+                if not simple_fast:
+                    # For simple_fast functions argsbuf is declared inside the
+                    # cold branch by _fast_positional_path() instead.
+                    self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 if self.varpos:
                     self.declarations += "\nPyObject * const *fastargs;"
                     argsname = 'fastargs'
@@ -787,6 +834,8 @@ class ParseArgsCodeGen:
                 parser_code.append("%s:" % add_label)
             if self.varpos:
                 parser_code.append(libclinic.normalize_snippet(self._parse_vararg(), indent=4))
+            if simple_fast:
+                parser_code = self._fast_positional_path(parser_code)
         else:
             for parameter in self.parameters:
                 parameter.converter.use_converter()

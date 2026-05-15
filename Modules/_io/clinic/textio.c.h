@@ -177,26 +177,43 @@ _io__TextIOBase_write(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *s;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("write", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t s_length;
+        s = PyUnicode_AsUTF8AndSize(args[0], &s_length);
+        if (s == NULL) {
+            goto exit;
+        }
+        if (strlen(s) != (size_t)s_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("write", "argument 1", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t s_length;
-    s = PyUnicode_AsUTF8AndSize(args[0], &s_length);
-    if (s == NULL) {
-        goto exit;
-    }
-    if (strlen(s) != (size_t)s_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("write", "argument 1", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t s_length;
+        s = PyUnicode_AsUTF8AndSize(args[0], &s_length);
+        if (s == NULL) {
+            goto exit;
+        }
+        if (strlen(s) != (size_t)s_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     return_value = _io__TextIOBase_write_impl(self, cls, s);
 
@@ -1328,4 +1345,4 @@ _io_TextIOWrapper__CHUNK_SIZE_set(PyObject *self, PyObject *value, void *Py_UNUS
 
     return return_value;
 }
-/*[clinic end generated code: output=c38e6cd5ff4b7eea input=a9049054013a1b77]*/
+/*[clinic end generated code: output=952dee90f89f5587 input=a9049054013a1b77]*/

@@ -2416,15 +2416,20 @@ _ssl__SSLContext_set_psk_client_callback(PyObject *self, PyObject *const *args, 
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     PyObject *callback;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        callback = args[0];
     }
-    callback = args[0];
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        callback = args[0];
+    }
     Py_BEGIN_CRITICAL_SECTION(self);
     return_value = _ssl__SSLContext_set_psk_client_callback_impl((PySSLContext *)self, callback);
     Py_END_CRITICAL_SECTION();
@@ -3200,26 +3205,43 @@ _ssl_enum_certificates(PyObject *module, PyObject *const *args, Py_ssize_t nargs
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *store_name;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("enum_certificates", "argument 'store_name'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t store_name_length;
+        store_name = PyUnicode_AsUTF8AndSize(args[0], &store_name_length);
+        if (store_name == NULL) {
+            goto exit;
+        }
+        if (strlen(store_name) != (size_t)store_name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("enum_certificates", "argument 'store_name'", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t store_name_length;
-    store_name = PyUnicode_AsUTF8AndSize(args[0], &store_name_length);
-    if (store_name == NULL) {
-        goto exit;
-    }
-    if (strlen(store_name) != (size_t)store_name_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("enum_certificates", "argument 'store_name'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t store_name_length;
+        store_name = PyUnicode_AsUTF8AndSize(args[0], &store_name_length);
+        if (store_name == NULL) {
+            goto exit;
+        }
+        if (strlen(store_name) != (size_t)store_name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     Py_BEGIN_CRITICAL_SECTION(module);
     return_value = _ssl_enum_certificates_impl(module, store_name);
@@ -3281,26 +3303,43 @@ _ssl_enum_crls(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
-    PyObject *argsbuf[1];
     const char *store_name;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
-    if (!args) {
-        goto exit;
+    if (kwnames == NULL && nargs == 1) {
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("enum_crls", "argument 'store_name'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t store_name_length;
+        store_name = PyUnicode_AsUTF8AndSize(args[0], &store_name_length);
+        if (store_name == NULL) {
+            goto exit;
+        }
+        if (strlen(store_name) != (size_t)store_name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
-    if (!PyUnicode_Check(args[0])) {
-        _PyArg_BadArgument("enum_crls", "argument 'store_name'", "str", args[0]);
-        goto exit;
-    }
-    Py_ssize_t store_name_length;
-    store_name = PyUnicode_AsUTF8AndSize(args[0], &store_name_length);
-    if (store_name == NULL) {
-        goto exit;
-    }
-    if (strlen(store_name) != (size_t)store_name_length) {
-        PyErr_SetString(PyExc_ValueError, "embedded null character");
-        goto exit;
+    else {
+        PyObject *argsbuf[1];
+        args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+                /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+        if (!args) {
+            goto exit;
+        }
+        if (!PyUnicode_Check(args[0])) {
+            _PyArg_BadArgument("enum_crls", "argument 'store_name'", "str", args[0]);
+            goto exit;
+        }
+        Py_ssize_t store_name_length;
+        store_name = PyUnicode_AsUTF8AndSize(args[0], &store_name_length);
+        if (store_name == NULL) {
+            goto exit;
+        }
+        if (strlen(store_name) != (size_t)store_name_length) {
+            PyErr_SetString(PyExc_ValueError, "embedded null character");
+            goto exit;
+        }
     }
     Py_BEGIN_CRITICAL_SECTION(module);
     return_value = _ssl_enum_crls_impl(module, store_name);
@@ -3323,4 +3362,4 @@ exit:
 #ifndef _SSL_ENUM_CRLS_METHODDEF
     #define _SSL_ENUM_CRLS_METHODDEF
 #endif /* !defined(_SSL_ENUM_CRLS_METHODDEF) */
-/*[clinic end generated code: output=e29d5ada294f97bb input=a9049054013a1b77]*/
+/*[clinic end generated code: output=0f6b9d980bb5a531 input=a9049054013a1b77]*/
