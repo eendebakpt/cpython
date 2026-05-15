@@ -345,14 +345,25 @@ _PyDictValues_AddToInsertionOrder(PyDictValues *values, Py_ssize_t ix)
 }
 
 /* Variant used by _STORE_ATTR_INSTANCE_VALUE where the caller has
-   already computed the delta (ix - values->size). */
+   already computed the delta (ix - values->size).
+
+   The slots of the insertion order array beyond values->size are kept
+   zero (zeroed when the inline values are allocated, and zeroed again
+   in delete_index_from_values when an entry is removed).  Sequential
+   stores -- the common case in __init__ -- have delta 0, so the write
+   can be skipped: the slot already holds 0. */
 static inline void
 _PyDictValues_AddToInsertionOrderDelta(PyDictValues *values, uint8_t delta)
 {
     int size = values->size;
-    uint8_t *array = get_insertion_order_array(values);
     assert(size < values->capacity);
-    array[size] = delta;
+    if (delta != 0) {
+        uint8_t *array = get_insertion_order_array(values);
+        array[size] = delta;
+    }
+    else {
+        assert(get_insertion_order_array(values)[size] == 0);
+    }
     values->size = size+1;
 }
 
