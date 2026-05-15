@@ -1,0 +1,4 @@
+The inline fast path of the internal :c:func:`!_PyArg_UnpackKeywords`
+macro now compiles to a single positional-count comparison for Argument
+Clinic functions whose parameters are all required, slightly speeding up
+such calls.

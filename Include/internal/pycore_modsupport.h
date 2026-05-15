@@ -84,9 +84,39 @@ PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywords(
     int minkw,
     int varpos,
     PyObject **buf);
+// Inline fast path for _PyArg_UnpackKeywords().  minpos, maxpos, minkw
+// and varpos are integer literals in Argument Clinic generated code, so
+// the predicate folds at compile time.  Read the macro below as:
+//
+//     if (minkw != 0 || kwargs != NULL || kwnames != NULL)
+//         goto slow;
+//     if (varpos) {
+//         if (nargs < minpos) goto slow;
+//     }
+//     else if (minpos == maxpos) {           // all-required: a single
+//         if (nargs != maxpos) goto slow;    // 'nargs == maxpos' test
+//     }
+//     else if (nargs < minpos || nargs > maxpos) {
+//         goto slow;
+//     }
+//     if (minpos < 1 && args == NULL) goto slow;
+//     return args;                /* fast path */
+//   slow:
+//     return _PyArg_UnpackKeywords(args, nargs, ...);   /* the function */
+//
+// The 'minpos == maxpos' branch lets an all-required function reduce to
+// a single 'nargs == maxpos' test instead of the pair
+// 'minpos <= nargs && nargs <= maxpos' (which the compiler does not
+// always fold by itself -- notably under -flto).  The 'args != NULL'
+// guard is dropped when a positional argument is mandatory: on the fast
+// path nargs is then >= 1, and a non-empty vectorcall argument array is
+// never NULL.
 #define _PyArg_UnpackKeywords(args, nargs, kwargs, kwnames, parser, minpos, maxpos, minkw, varpos, buf) \
-    (((minkw) == 0 && (kwargs) == NULL && (kwnames) == NULL && \
-      (minpos) <= (nargs) && ((varpos) || (nargs) <= (maxpos)) && (args) != NULL) ? \
+    (((minkw) == 0 && (kwargs) == NULL && (kwnames) == NULL \
+      && ((varpos) ? (minpos) <= (nargs) \
+          : (minpos) == (maxpos) ? (nargs) == (maxpos) \
+          : ((minpos) <= (nargs) && (nargs) <= (maxpos))) \
+      && ((minpos) >= 1 || (args) != NULL)) ? \
       (args) : \
      _PyArg_UnpackKeywords((args), (nargs), (kwargs), (kwnames), (parser), \
                            (minpos), (maxpos), (minkw), (varpos), (buf)))
