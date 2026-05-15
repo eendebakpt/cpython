@@ -6,7 +6,7 @@ preserve
 #  include "pycore_gc.h"          // PyGC_Head
 #  include "pycore_runtime.h"     // _Py_ID()
 #endif
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
+#include "pycore_modsupport.h"    // _PyArg_UnpackKeywordsLight()
 
 PyDoc_STRVAR(_thread_lock_acquire__doc__,
 "acquire($self, /, blocking=True, timeout=-1)\n"
@@ -53,9 +53,10 @@ _thread_lock_acquire(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"blocking", "timeout", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "acquire",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -64,7 +65,7 @@ _thread_lock_acquire(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     int blocking = 1;
     PyObject *timeoutobj = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -127,9 +128,10 @@ _thread_lock_acquire_lock(PyObject *self, PyObject *const *args, Py_ssize_t narg
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"blocking", "timeout", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "acquire_lock",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -138,7 +140,7 @@ _thread_lock_acquire_lock(PyObject *self, PyObject *const *args, Py_ssize_t narg
     int blocking = 1;
     PyObject *timeoutobj = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -385,9 +387,10 @@ _thread_RLock_acquire(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"blocking", "timeout", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "acquire",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -396,7 +399,7 @@ _thread_RLock_acquire(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     int blocking = 1;
     PyObject *timeoutobj = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -698,16 +701,17 @@ _thread_set_name(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"name", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "set_name",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
     PyObject *argsbuf[1];
     PyObject *name_obj;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -740,4 +744,4 @@ exit:
 #ifndef _THREAD_SET_NAME_METHODDEF
     #define _THREAD_SET_NAME_METHODDEF
 #endif /* !defined(_THREAD_SET_NAME_METHODDEF) */
-/*[clinic end generated code: output=1255a1520f43f97a input=a9049054013a1b77]*/
+/*[clinic end generated code: output=42640738d643bacd input=a9049054013a1b77]*/

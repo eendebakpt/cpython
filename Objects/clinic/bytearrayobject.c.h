@@ -8,7 +8,7 @@ preserve
 #endif
 #include "pycore_abstract.h"      // _PyNumber_Index()
 #include "pycore_critical_section.h"// Py_BEGIN_CRITICAL_SECTION()
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
+#include "pycore_modsupport.h"    // _PyArg_UnpackKeywordsLight()
 
 static int
 bytearray___init___impl(PyByteArrayObject *self, PyObject *arg,
@@ -39,9 +39,10 @@ bytearray___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"source", "encoding", "errors", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "bytearray",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -53,7 +54,7 @@ bytearray___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     const char *encoding = NULL;
     const char *errors = NULL;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -714,9 +715,10 @@ bytearray_translate(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyO
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "delete", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "translate",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -725,7 +727,7 @@ bytearray_translate(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyO
     PyObject *table;
     PyObject *deletechars = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -837,9 +839,10 @@ bytearray_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObj
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "", "count", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "replace",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -849,7 +852,7 @@ bytearray_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObj
     Py_buffer new = {NULL, NULL};
     Py_ssize_t count = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 2, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -939,9 +942,10 @@ bytearray_split(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"sep", "maxsplit", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "split",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -950,7 +954,7 @@ bytearray_split(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     PyObject *sep = Py_None;
     Py_ssize_t maxsplit = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1096,9 +1100,10 @@ bytearray_rsplit(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObje
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"sep", "maxsplit", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "rsplit",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1107,7 +1112,7 @@ bytearray_rsplit(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObje
     PyObject *sep = Py_None;
     Py_ssize_t maxsplit = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1513,9 +1518,10 @@ bytearray_decode(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObje
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"encoding", "errors", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "decode",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1524,7 +1530,7 @@ bytearray_decode(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObje
     const char *encoding = NULL;
     const char *errors = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1640,9 +1646,10 @@ bytearray_splitlines(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"keepends", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "splitlines",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1650,7 +1657,7 @@ bytearray_splitlines(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     int keepends = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1751,9 +1758,10 @@ bytearray_hex(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject 
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"sep", "bytes_per_sep", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "hex",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1762,7 +1770,7 @@ bytearray_hex(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject 
     PyObject *sep = NULL;
     Py_ssize_t bytes_per_sep = 1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1875,4 +1883,4 @@ bytearray_sizeof(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return bytearray_sizeof_impl((PyByteArrayObject *)self);
 }
-/*[clinic end generated code: output=2cacb323147202b9 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=600cb6a6bcc84565 input=a9049054013a1b77]*/

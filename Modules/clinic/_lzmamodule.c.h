@@ -119,9 +119,10 @@ _lzma_LZMADecompressor_decompress(PyObject *self, PyObject *const *args, Py_ssiz
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"data", "max_length", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -130,7 +131,7 @@ _lzma_LZMADecompressor_decompress(PyObject *self, PyObject *const *args, Py_ssiz
     Py_buffer data = {NULL, NULL};
     Py_ssize_t max_length = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -217,9 +218,10 @@ _lzma_LZMADecompressor(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"format", "memlimit", "filters", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "LZMADecompressor",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -231,7 +233,7 @@ _lzma_LZMADecompressor(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     PyObject *memlimit = Py_None;
     PyObject *filters = Py_None;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -333,4 +335,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=6386084cb43d2533 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=08c95a57154c920d input=a9049054013a1b77]*/

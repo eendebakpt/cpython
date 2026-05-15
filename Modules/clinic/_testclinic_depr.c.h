@@ -61,9 +61,10 @@ depr_star_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "DeprStarNew",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -82,7 +83,7 @@ depr_star_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
             goto exit;
         }
     }
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -149,9 +150,10 @@ depr_star_new_clone(PyObject *type, PyObject *const *args, Py_ssize_t nargs, PyO
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "cloned",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -168,7 +170,7 @@ depr_star_new_clone(PyObject *type, PyObject *const *args, Py_ssize_t nargs, PyO
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -234,9 +236,10 @@ depr_star_init(PyObject *self, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "DeprStarInit",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -255,7 +258,7 @@ depr_star_init(PyObject *self, PyObject *args, PyObject *kwargs)
             goto exit;
         }
     }
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -322,9 +325,10 @@ depr_star_init_clone(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "cloned",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -341,7 +345,7 @@ depr_star_init_clone(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -478,9 +482,10 @@ depr_kwd_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "DeprKwdNew",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -490,7 +495,7 @@ depr_kwd_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     Py_ssize_t noptargs = nargs + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - 0;
     PyObject *a = Py_None;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -564,9 +569,10 @@ depr_kwd_init(PyObject *self, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "DeprKwdInit",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -576,7 +582,7 @@ depr_kwd_init(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_ssize_t noptargs = nargs + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - 0;
     PyObject *a = Py_None;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -727,9 +733,10 @@ depr_star_pos0_len1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos0_len1",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -745,7 +752,7 @@ depr_star_pos0_len1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -808,9 +815,10 @@ depr_star_pos0_len2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos0_len2",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -827,7 +835,7 @@ depr_star_pos0_len2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -892,9 +900,10 @@ depr_star_pos0_len3_with_kwd(PyObject *module, PyObject *const *args, Py_ssize_t
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos0_len3_with_kwd",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -913,7 +922,7 @@ depr_star_pos0_len3_with_kwd(PyObject *module, PyObject *const *args, Py_ssize_t
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 1, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -979,9 +988,10 @@ depr_star_pos1_len1_opt(PyObject *module, PyObject *const *args, Py_ssize_t narg
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos1_len1_opt",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -999,7 +1009,7 @@ depr_star_pos1_len1_opt(PyObject *module, PyObject *const *args, Py_ssize_t narg
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1067,9 +1077,10 @@ depr_star_pos1_len1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos1_len1",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1086,7 +1097,7 @@ depr_star_pos1_len1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1151,9 +1162,10 @@ depr_star_pos1_len2_with_kwd(PyObject *module, PyObject *const *args, Py_ssize_t
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos1_len2_with_kwd",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1172,7 +1184,7 @@ depr_star_pos1_len2_with_kwd(PyObject *module, PyObject *const *args, Py_ssize_t
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 1, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1239,9 +1251,10 @@ depr_star_pos2_len1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos2_len1",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1259,7 +1272,7 @@ depr_star_pos2_len1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1325,9 +1338,10 @@ depr_star_pos2_len2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos2_len2",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1346,7 +1360,7 @@ depr_star_pos2_len2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 4, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1413,9 +1427,10 @@ depr_star_pos2_len2_with_kwd(PyObject *module, PyObject *const *args, Py_ssize_t
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", "e", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_pos2_len2_with_kwd",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1435,7 +1450,7 @@ depr_star_pos2_len2_with_kwd(PyObject *module, PyObject *const *args, Py_ssize_t
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 4, /*maxpos*/ 4, /*minkw*/ 1, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1589,9 +1604,10 @@ depr_star_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", "e", "f", "g", "h", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_star_multi",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1616,7 +1632,7 @@ depr_star_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 7, /*maxpos*/ 7, /*minkw*/ 1, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1685,9 +1701,10 @@ depr_kwd_required_1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_required_1",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1695,7 +1712,7 @@ depr_kwd_required_1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     PyObject *a;
     PyObject *b;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1769,9 +1786,10 @@ depr_kwd_required_2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_required_2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1780,7 +1798,7 @@ depr_kwd_required_2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     PyObject *b;
     PyObject *c;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1853,9 +1871,10 @@ depr_kwd_optional_1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_optional_1",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1864,7 +1883,7 @@ depr_kwd_optional_1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     PyObject *a;
     PyObject *b = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1942,9 +1961,10 @@ depr_kwd_optional_2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_optional_2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1954,7 +1974,7 @@ depr_kwd_optional_2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     PyObject *b = Py_None;
     PyObject *c = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2038,9 +2058,10 @@ depr_kwd_optional_3(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_optional_3",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2050,7 +2071,7 @@ depr_kwd_optional_3(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     PyObject *b = Py_None;
     PyObject *c = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2139,9 +2160,10 @@ depr_kwd_required_optional(PyObject *module, PyObject *const *args, Py_ssize_t n
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_required_optional",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2151,7 +2173,7 @@ depr_kwd_required_optional(PyObject *module, PyObject *const *args, Py_ssize_t n
     PyObject *b;
     PyObject *c = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 2, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2319,9 +2341,10 @@ depr_kwd_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", "d", "e", "f", "g", "h", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_multi",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2335,7 +2358,7 @@ depr_kwd_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     PyObject *g;
     PyObject *h;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 8, /*maxpos*/ 8, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2423,9 +2446,10 @@ depr_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", "d", "e", "f", "g", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "depr_multi",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2448,7 +2472,7 @@ depr_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
             goto exit;
         }
     }
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 6, /*maxpos*/ 6, /*minkw*/ 1, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2474,4 +2498,4 @@ depr_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=2231bec0ed196830 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6b044162b2206dab input=a9049054013a1b77]*/

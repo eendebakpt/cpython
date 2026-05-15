@@ -113,9 +113,10 @@ _codecs_encode(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"obj", "encoding", "errors", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "encode",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -125,7 +126,7 @@ _codecs_encode(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     const char *encoding = NULL;
     const char *errors = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -216,9 +217,10 @@ _codecs_decode(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"obj", "encoding", "errors", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "decode",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -228,7 +230,7 @@ _codecs_decode(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     const char *encoding = NULL;
     const char *errors = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2818,16 +2820,17 @@ _codecs__normalize_encoding(PyObject *module, PyObject *const *args, Py_ssize_t 
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"encoding", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "_normalize_encoding",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
     PyObject *argsbuf[1];
     PyObject *encoding;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -2866,4 +2869,4 @@ exit:
 #ifndef _CODECS_CODE_PAGE_ENCODE_METHODDEF
     #define _CODECS_CODE_PAGE_ENCODE_METHODDEF
 #endif /* !defined(_CODECS_CODE_PAGE_ENCODE_METHODDEF) */
-/*[clinic end generated code: output=a968c493bb28be3e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7ec423e4d8595c45 input=a9049054013a1b77]*/

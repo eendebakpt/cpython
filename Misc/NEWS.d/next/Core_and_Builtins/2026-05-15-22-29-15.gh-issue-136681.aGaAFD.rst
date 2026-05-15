@@ -1,0 +1,6 @@
+Argument Clinic now generates a smaller ``_PyArg_Parser_Light`` structure
+(instead of :c:type:`!_PyArg_Parser`) for functions that parse their
+arguments without a format string -- the large majority.  It drops the
+four format-string fields and computes the positional-only count at
+code-generation time, so no per-function run-time initialisation scan is
+needed.

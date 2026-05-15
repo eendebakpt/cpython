@@ -6,7 +6,7 @@ preserve
 #  include "pycore_gc.h"          // PyGC_Head
 #  include "pycore_runtime.h"     // _Py_ID()
 #endif
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
+#include "pycore_modsupport.h"    // _PyArg_UnpackKeywordsLight()
 
 PyDoc_STRVAR(_symtable_symtable__doc__,
 "symtable($module, source, filename, startstr, /, *, module=None)\n"
@@ -47,9 +47,10 @@ _symtable_symtable(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "", "", "module", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "symtable",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -60,7 +61,7 @@ _symtable_symtable(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     const char *startstr;
     PyObject *modname = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -95,4 +96,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=0137be60c487c841 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=43cf433dc0b666aa input=a9049054013a1b77]*/

@@ -91,6 +91,44 @@ PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywords(
      _PyArg_UnpackKeywords((args), (nargs), (kwargs), (kwnames), (parser), \
                            (minpos), (maxpos), (minkw), (varpos), (buf)))
 
+// --- _PyArg_Parser_Light API ---------------------------------------------
+//
+// A lighter-weight parser for Argument Clinic functions that do not use a
+// format string (the _PyArg_UnpackKeywords path -- the large majority).
+// Compared with _PyArg_Parser it drops the four format-string fields and
+// 'is_kwtuple_owned'.  'pos' (the number of positional-only parameters) is
+// filled in by Argument Clinic at code-generation time, so no run-time
+// scan of the keyword list is needed.  'kwtuple' is either built
+// statically (Py_BUILD_CORE) or lazily on first use, guarded by 'once';
+// lazily-built parsers are linked into a cleanup list through 'next'.
+typedef struct _PyArg_Parser_Light {
+    const char * const *keywords;
+    const char *fname;
+    int pos;                          /* number of positional-only arguments */
+    _PyOnceFlag once;                 /* lazy kwtuple construction guard */
+    PyObject *kwtuple;                /* tuple of keyword parameter names */
+    struct _PyArg_Parser_Light *next; /* cleanup list (lazy kwtuple only) */
+} _PyArg_Parser_Light;
+
+// Export for 'array' shared extension
+PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywordsLight(
+    PyObject *const *args,
+    Py_ssize_t nargs,
+    PyObject *kwargs,
+    PyObject *kwnames,
+    struct _PyArg_Parser_Light *parser,
+    int minpos,
+    int maxpos,
+    int minkw,
+    int varpos,
+    PyObject **buf);
+#define _PyArg_UnpackKeywordsLight(args, nargs, kwargs, kwnames, parser, minpos, maxpos, minkw, varpos, buf) \
+    (((minkw) == 0 && (kwargs) == NULL && (kwnames) == NULL && \
+      (minpos) <= (nargs) && ((varpos) || (nargs) <= (maxpos)) && (args) != NULL) ? \
+      (args) : \
+     _PyArg_UnpackKeywordsLight((args), (nargs), (kwargs), (kwnames), (parser), \
+                                (minpos), (maxpos), (minkw), (varpos), (buf)))
+
 #ifdef __cplusplus
 }
 #endif

@@ -8,7 +8,7 @@ preserve
 #endif
 #include "pycore_abstract.h"      // _PyNumber_Index()
 #include "pycore_long.h"          // _PyLong_UnsignedInt_Converter()
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
+#include "pycore_modsupport.h"    // _PyArg_UnpackKeywordsLight()
 
 PyDoc_STRVAR(faulthandler_dump_traceback_py__doc__,
 "dump_traceback($module, /, file=sys.stderr, all_threads=True, *,\n"
@@ -52,9 +52,10 @@ faulthandler_dump_traceback_py(PyObject *module, PyObject *const *args, Py_ssize
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"file", "all_threads", "max_threads", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "dump_traceback",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -64,7 +65,7 @@ faulthandler_dump_traceback_py(PyObject *module, PyObject *const *args, Py_ssize
     int all_threads = 1;
     Py_ssize_t max_threads = 100;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -147,9 +148,10 @@ faulthandler_dump_c_stack_py(PyObject *module, PyObject *const *args, Py_ssize_t
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"file", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "dump_c_stack",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -157,7 +159,7 @@ faulthandler_dump_c_stack_py(PyObject *module, PyObject *const *args, Py_ssize_t
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     PyObject *file = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -213,9 +215,10 @@ faulthandler_py_enable(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"file", "all_threads", "c_stack", "max_threads", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "enable",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -226,7 +229,7 @@ faulthandler_py_enable(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     int c_stack = 1;
     Py_ssize_t max_threads = 100;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -372,9 +375,10 @@ faulthandler_dump_traceback_later(PyObject *module, PyObject *const *args, Py_ss
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"timeout", "repeat", "file", "exit", "max_threads", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "dump_traceback_later",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -386,7 +390,7 @@ faulthandler_dump_traceback_later(PyObject *module, PyObject *const *args, Py_ss
     int exit = 0;
     Py_ssize_t max_threads = 100;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -506,9 +510,10 @@ faulthandler_register_py(PyObject *module, PyObject *const *args, Py_ssize_t nar
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"signum", "file", "all_threads", "chain", "max_threads", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "register",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -520,7 +525,7 @@ faulthandler_register_py(PyObject *module, PyObject *const *args, Py_ssize_t nar
     int chain = 0;
     Py_ssize_t max_threads = 100;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -782,4 +787,4 @@ exit:
 #ifndef FAULTHANDLER__RAISE_EXCEPTION_METHODDEF
     #define FAULTHANDLER__RAISE_EXCEPTION_METHODDEF
 #endif /* !defined(FAULTHANDLER__RAISE_EXCEPTION_METHODDEF) */
-/*[clinic end generated code: output=2452d767c85130a6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2048990fc998744d input=a9049054013a1b77]*/

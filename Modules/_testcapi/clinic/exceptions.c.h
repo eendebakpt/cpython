@@ -93,9 +93,10 @@ _testcapi_make_exception_with_doc(PyObject *module, PyObject *const *args, Py_ss
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"name", "doc", "base", "dict", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "make_exception_with_doc",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -106,7 +107,7 @@ _testcapi_make_exception_with_doc(PyObject *module, PyObject *const *args, Py_ss
     PyObject *base = NULL;
     PyObject *dict = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -459,4 +460,4 @@ _testcapi_unstable_exc_prep_reraise_star(PyObject *module, PyObject *const *args
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=357caea020348789 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=31aaff2c38c41a0d input=a9049054013a1b77]*/

@@ -198,9 +198,10 @@ code_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"co_argcount", "co_posonlyargcount", "co_kwonlyargcount", "co_nlocals", "co_stacksize", "co_flags", "co_firstlineno", "co_code", "co_consts", "co_names", "co_varnames", "co_freevars", "co_cellvars", "co_filename", "co_name", "co_qualname", "co_linetable", "co_exceptiontable", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "replace",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -225,7 +226,7 @@ code_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *
     PyObject *co_linetable = ((PyCodeObject *)self)->co_linetable;
     PyObject *co_exceptiontable = ((PyCodeObject *)self)->co_exceptiontable;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 0, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -447,16 +448,17 @@ code__varname_from_oparg(PyObject *self, PyObject *const *args, Py_ssize_t nargs
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"oparg", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "_varname_from_oparg",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
     PyObject *argsbuf[1];
     int oparg;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -470,4 +472,4 @@ code__varname_from_oparg(PyObject *self, PyObject *const *args, Py_ssize_t nargs
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c5c6e40fc357defe input=a9049054013a1b77]*/
+/*[clinic end generated code: output=85f941136c21e963 input=a9049054013a1b77]*/

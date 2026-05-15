@@ -8,7 +8,7 @@ preserve
 #endif
 #include "pycore_critical_section.h"// Py_BEGIN_CRITICAL_SECTION()
 #include "pycore_long.h"          // _PyLong_UnsignedLongLong_Converter()
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
+#include "pycore_modsupport.h"    // _PyArg_UnpackKeywordsLight()
 
 PyDoc_STRVAR(_remote_debugging_RemoteUnwinder___init____doc__,
 "RemoteUnwinder(pid, *, all_threads=False, only_active_thread=False,\n"
@@ -85,9 +85,10 @@ _remote_debugging_RemoteUnwinder___init__(PyObject *self, PyObject *args, PyObje
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"pid", "all_threads", "only_active_thread", "mode", "debug", "skip_non_matching_threads", "native", "gc", "opcodes", "cache_frames", "stats", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "RemoteUnwinder",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -107,7 +108,7 @@ _remote_debugging_RemoteUnwinder___init__(PyObject *self, PyObject *args, PyObje
     int cache_frames = 0;
     int stats = 0;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -543,9 +544,10 @@ _remote_debugging_GCMonitor___init__(PyObject *self, PyObject *args, PyObject *k
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"pid", "debug", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "GCMonitor",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -556,7 +558,7 @@ _remote_debugging_GCMonitor___init__(PyObject *self, PyObject *args, PyObject *k
     int pid;
     int debug = 0;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -640,9 +642,10 @@ _remote_debugging_GCMonitor_get_gc_stats(PyObject *self, PyObject *const *args, 
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"all_interpreters", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "get_gc_stats",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -650,7 +653,7 @@ _remote_debugging_GCMonitor_get_gc_stats(PyObject *self, PyObject *const *args, 
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     int all_interpreters = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -718,9 +721,10 @@ _remote_debugging_BinaryWriter___init__(PyObject *self, PyObject *args, PyObject
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"filename", "sample_interval_us", "start_time_us", "compression", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "BinaryWriter",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -733,7 +737,7 @@ _remote_debugging_BinaryWriter___init__(PyObject *self, PyObject *args, PyObject
     unsigned long long start_time_us;
     int compression = 0;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 3, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -802,9 +806,10 @@ _remote_debugging_BinaryWriter_write_sample(PyObject *self, PyObject *const *arg
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"stack_frames", "timestamp_us", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "write_sample",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -812,7 +817,7 @@ _remote_debugging_BinaryWriter_write_sample(PyObject *self, PyObject *const *arg
     PyObject *stack_frames;
     unsigned long long timestamp_us;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 2, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -923,9 +928,10 @@ _remote_debugging_BinaryWriter___exit__(PyObject *self, PyObject *const *args, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"exc_type", "exc_val", "exc_tb", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "__exit__",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -935,7 +941,7 @@ _remote_debugging_BinaryWriter___exit__(PyObject *self, PyObject *const *args, P
     PyObject *exc_val = Py_None;
     PyObject *exc_tb = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1024,9 +1030,10 @@ _remote_debugging_BinaryReader___init__(PyObject *self, PyObject *args, PyObject
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"filename", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "BinaryReader",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1035,7 +1042,7 @@ _remote_debugging_BinaryReader___init__(PyObject *self, PyObject *args, PyObject
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
     PyObject *filename;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
+    fastargs = _PyArg_UnpackKeywordsLight(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!fastargs) {
         goto exit;
@@ -1093,9 +1100,10 @@ _remote_debugging_BinaryReader_replay(PyObject *self, PyObject *const *args, Py_
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"collector", "progress_callback", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "replay",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1104,7 +1112,7 @@ _remote_debugging_BinaryReader_replay(PyObject *self, PyObject *const *args, Py_
     PyObject *collector;
     PyObject *progress_callback = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1239,9 +1247,10 @@ _remote_debugging_BinaryReader___exit__(PyObject *self, PyObject *const *args, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"exc_type", "exc_val", "exc_tb", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "__exit__",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1251,7 +1260,7 @@ _remote_debugging_BinaryReader___exit__(PyObject *self, PyObject *const *args, P
     PyObject *exc_val = Py_None;
     PyObject *exc_tb = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 3, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1354,9 +1363,10 @@ _remote_debugging_get_child_pids(PyObject *module, PyObject *const *args, Py_ssi
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"pid", "recursive", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "get_child_pids",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1365,7 +1375,7 @@ _remote_debugging_get_child_pids(PyObject *module, PyObject *const *args, Py_ssi
     int pid;
     int recursive = 1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1425,16 +1435,17 @@ _remote_debugging_is_python_process(PyObject *module, PyObject *const *args, Py_
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"pid", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "is_python_process",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
     PyObject *argsbuf[1];
     int pid;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1507,9 +1518,10 @@ _remote_debugging_get_gc_stats(PyObject *module, PyObject *const *args, Py_ssize
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"pid", "all_interpreters", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "get_gc_stats",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1518,7 +1530,7 @@ _remote_debugging_get_gc_stats(PyObject *module, PyObject *const *args, Py_ssize
     int pid;
     int all_interpreters = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -1540,4 +1552,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=5e2a29746a0c5d65 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b970c9721abc1a08 input=a9049054013a1b77]*/

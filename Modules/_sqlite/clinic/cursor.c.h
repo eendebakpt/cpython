@@ -209,9 +209,10 @@ pysqlite_cursor_fetchmany(PyObject *self, PyObject *const *args, Py_ssize_t narg
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"size", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_Parser_Light _parser = {
         .keywords = _keywords,
         .fname = "fetchmany",
+        .pos = 0,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -219,7 +220,7 @@ pysqlite_cursor_fetchmany(PyObject *self, PyObject *const *args, Py_ssize_t narg
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     uint32_t maxrows = ((pysqlite_Cursor *)self)->arraysize;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
+    args = _PyArg_UnpackKeywordsLight(args, nargs, NULL, kwnames, &_parser,
             /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
     if (!args) {
         goto exit;
@@ -371,4 +372,4 @@ _sqlite3_Cursor_arraysize_set(PyObject *self, PyObject *value, void *Py_UNUSED(c
 
     return return_value;
 }
-/*[clinic end generated code: output=a0e3ebba9e4d0ece input=a9049054013a1b77]*/
+/*[clinic end generated code: output=188da4ff8db62a8c input=a9049054013a1b77]*/

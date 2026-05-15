@@ -6,7 +6,7 @@ preserve
 #  include "pycore_runtime.h"     // _Py_SINGLETON()
 #endif
 #include "pycore_critical_section.h"// Py_BEGIN_CRITICAL_SECTION()
-#include "pycore_modsupport.h"    // _PyArg_UnpackKeywords()
+#include "pycore_modsupport.h"    // _PyArg_UnpackKeywordsLight()
 
 PyDoc_STRVAR(_dbm_dbm_close__doc__,
 "close($self, /)\n"
@@ -246,4 +246,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=279511ea7cda38dd input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2c3d7852d4bd7c15 input=a9049054013a1b77]*/

@@ -242,6 +242,7 @@ struct pyruntimestate {
     } gilstate;
     struct _getargs_runtime_state {
         struct _PyArg_Parser *static_parsers;
+        struct _PyArg_Parser_Light *static_parsers_light;
     } getargs;
     struct _fileutils_state fileutils;
     struct _faulthandler_runtime_state faulthandler;

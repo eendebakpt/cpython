@@ -2514,44 +2514,26 @@ vgetargskeywordsfast(PyObject *args, PyObject *keywords,
 
 
 #undef _PyArg_UnpackKeywords
+#undef _PyArg_UnpackKeywordsLight
 
-PyObject * const *
-_PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
-                      PyObject *kwargs, PyObject *kwnames,
-                      struct _PyArg_Parser *parser,
-                      int minpos, int maxpos, int minkw, int varpos,
-                      PyObject **buf)
+/* Core of _PyArg_UnpackKeywords() and _PyArg_UnpackKeywordsLight(): the
+   keyword tuple, the positional-only count and the function name have
+   already been resolved by the caller.  Force-inlined so that each public
+   entry point stays a single monolithic function -- otherwise the call
+   here (with its many arguments) would slow the keyword path down. */
+static inline Py_ALWAYS_INLINE PyObject * const *
+unpack_keywords(PyObject *const *args, Py_ssize_t nargs,
+                PyObject *kwargs, PyObject *kwnames,
+                PyObject *kwtuple, int posonly, const char *fname,
+                int minpos, int maxpos, int minkw, int varpos,
+                PyObject **buf)
 {
-    PyObject *kwtuple;
     PyObject *keyword;
-    int i, posonly, minposonly, maxargs;
+    int i, minposonly, maxargs;
     int reqlimit = minkw ? maxpos + minkw : minpos;
     Py_ssize_t nkwargs;
     PyObject * const *kwstack = NULL;
 
-    assert(kwargs == NULL || PyDict_Check(kwargs));
-    assert(kwargs == NULL || kwnames == NULL);
-
-    if (parser == NULL) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
-
-    if (kwnames != NULL && !PyTuple_Check(kwnames)) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
-
-    if (args == NULL && nargs == 0) {
-        args = buf;
-    }
-
-    if (parser_init(parser) < 0) {
-        return NULL;
-    }
-
-    kwtuple = parser->kwtuple;
-    posonly = parser->pos;
     minposonly = Py_MIN(posonly, minpos);
     maxargs = posonly + (int)PyTuple_GET_SIZE(kwtuple);
 
@@ -2574,8 +2556,8 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
            messages in some special cases (see bpo-31229). */
         PyErr_Format(PyExc_TypeError,
                      "%.200s%s takes at most %d %sargument%s (%zd given)",
-                     (parser->fname == NULL) ? "function" : parser->fname,
-                     (parser->fname == NULL) ? "" : "()",
+                     (fname == NULL) ? "function" : fname,
+                     (fname == NULL) ? "" : "()",
                      maxargs,
                      (nargs == 0) ? "keyword " : "",
                      (maxargs == 1) ? "" : "s",
@@ -2586,14 +2568,14 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
         if (maxpos == 0) {
             PyErr_Format(PyExc_TypeError,
                          "%.200s%s takes no positional arguments",
-                         (parser->fname == NULL) ? "function" : parser->fname,
-                         (parser->fname == NULL) ? "" : "()");
+                         (fname == NULL) ? "function" : fname,
+                         (fname == NULL) ? "" : "()");
         }
         else {
             PyErr_Format(PyExc_TypeError,
                          "%.200s%s takes %s %d positional argument%s (%zd given)",
-                         (parser->fname == NULL) ? "function" : parser->fname,
-                         (parser->fname == NULL) ? "" : "()",
+                         (fname == NULL) ? "function" : fname,
+                         (fname == NULL) ? "" : "()",
                          (minpos < maxpos) ? "at most" : "exactly",
                          maxpos,
                          (maxpos == 1) ? "" : "s",
@@ -2605,8 +2587,8 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
         PyErr_Format(PyExc_TypeError,
                      "%.200s%s takes %s %d positional argument%s"
                      " (%zd given)",
-                     (parser->fname == NULL) ? "function" : parser->fname,
-                     (parser->fname == NULL) ? "" : "()",
+                     (fname == NULL) ? "function" : fname,
+                     (fname == NULL) ? "" : "()",
                      (varpos || minposonly < maxpos) ? "at least" : "exactly",
                      minposonly,
                      minposonly == 1 ? "" : "s",
@@ -2654,8 +2636,8 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
             keyword = PyTuple_GET_ITEM(kwtuple, i - posonly);
             PyErr_Format(PyExc_TypeError,  "%.200s%s missing required "
                          "argument '%U' (pos %d)",
-                         (parser->fname == NULL) ? "function" : parser->fname,
-                         (parser->fname == NULL) ? "" : "()",
+                         (fname == NULL) ? "function" : fname,
+                         (fname == NULL) ? "" : "()",
                          keyword, i+1);
             return NULL;
         }
@@ -2680,18 +2662,125 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
                 PyErr_Format(PyExc_TypeError,
                              "argument for %.200s%s given by name ('%U') "
                              "and position (%d)",
-                             (parser->fname == NULL) ? "function" : parser->fname,
-                             (parser->fname == NULL) ? "" : "()",
+                             (fname == NULL) ? "function" : fname,
+                             (fname == NULL) ? "" : "()",
                              keyword, i+1);
                 return NULL;
             }
         }
 
-        error_unexpected_keyword_arg(kwargs, kwnames, kwtuple, parser->fname);
+        error_unexpected_keyword_arg(kwargs, kwnames, kwtuple, fname);
         return NULL;
     }
 
     return buf;
+}
+
+PyObject * const *
+_PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
+                      PyObject *kwargs, PyObject *kwnames,
+                      struct _PyArg_Parser *parser,
+                      int minpos, int maxpos, int minkw, int varpos,
+                      PyObject **buf)
+{
+    assert(kwargs == NULL || PyDict_Check(kwargs));
+    assert(kwargs == NULL || kwnames == NULL);
+
+    if (parser == NULL) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    if (kwnames != NULL && !PyTuple_Check(kwnames)) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    if (args == NULL && nargs == 0) {
+        args = buf;
+    }
+    if (parser_init(parser) < 0) {
+        return NULL;
+    }
+    return unpack_keywords(args, nargs, kwargs, kwnames,
+                           parser->kwtuple, parser->pos, parser->fname,
+                           minpos, maxpos, minkw, varpos, buf);
+}
+
+/* _PyOnceFlag callback: build the keyword tuple of a _PyArg_Parser_Light
+   that was generated without a static one (non-core extension modules). */
+static int
+light_parser_build_kwtuple(void *arg)
+{
+    _PyArg_Parser_Light *parser = (_PyArg_Parser_Light *)arg;
+    int total, posonly;
+    if (scan_keywords(parser->keywords, &total, &posonly) < 0) {
+        return -1;
+    }
+    /* Build the tuple under the main interpreter, like _parser_init(), so
+       that it cannot outlive its owning interpreter. */
+    PyThreadState *save_tstate = NULL;
+    PyThreadState *temp_tstate = NULL;
+    if (!_Py_IsMainInterpreter(PyInterpreterState_Get())) {
+        temp_tstate = PyThreadState_New(_PyInterpreterState_Main());
+        if (temp_tstate == NULL) {
+            return -1;
+        }
+        save_tstate = PyThreadState_Swap(temp_tstate);
+    }
+    PyObject *kwtuple = new_kwtuple(parser->keywords, total, posonly);
+    if (temp_tstate != NULL) {
+        PyThreadState_Clear(temp_tstate);
+        (void)PyThreadState_Swap(save_tstate);
+        PyThreadState_Delete(temp_tstate);
+    }
+    if (kwtuple == NULL) {
+        return -1;
+    }
+    parser->kwtuple = kwtuple;
+
+    /* Link into the cleanup list so _PyArg_Fini() can free the tuple. */
+    assert(parser->next == NULL);
+    parser->next = _Py_atomic_load_ptr(&_PyRuntime.getargs.static_parsers_light);
+    do {
+        // compare-exchange updates parser->next on failure
+    } while (!_Py_atomic_compare_exchange_ptr(
+                 &_PyRuntime.getargs.static_parsers_light,
+                 &parser->next, parser));
+    return 0;
+}
+
+PyObject * const *
+_PyArg_UnpackKeywordsLight(PyObject *const *args, Py_ssize_t nargs,
+                           PyObject *kwargs, PyObject *kwnames,
+                           struct _PyArg_Parser_Light *parser,
+                           int minpos, int maxpos, int minkw, int varpos,
+                           PyObject **buf)
+{
+    assert(kwargs == NULL || PyDict_Check(kwargs));
+    assert(kwargs == NULL || kwnames == NULL);
+
+    if (parser == NULL) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    if (kwnames != NULL && !PyTuple_Check(kwnames)) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    if (args == NULL && nargs == 0) {
+        args = buf;
+    }
+    PyObject *kwtuple = parser->kwtuple;
+    if (kwtuple == NULL) {
+        /* Non-core extension module: build the keyword tuple lazily. */
+        if (_PyOnceFlag_CallOnce(&parser->once,
+                                 &light_parser_build_kwtuple, parser) < 0) {
+            return NULL;
+        }
+        kwtuple = parser->kwtuple;
+    }
+    return unpack_keywords(args, nargs, kwargs, kwnames,
+                           kwtuple, parser->pos, parser->fname,
+                           minpos, maxpos, minkw, varpos, buf);
 }
 
 static const char *
@@ -3003,4 +3092,15 @@ _PyArg_Fini(void)
         s = tmp;
     }
     _PyRuntime.getargs.static_parsers = NULL;
+
+    /* _PyArg_Parser_Light: only parsers with a lazily-built keyword tuple
+       are on this list; a statically-built kwtuple is never freed. */
+    _PyArg_Parser_Light *tmpl, *sl = _PyRuntime.getargs.static_parsers_light;
+    while (sl) {
+        tmpl = sl->next;
+        sl->next = NULL;
+        Py_CLEAR(sl->kwtuple);
+        sl = tmpl;
+    }
+    _PyRuntime.getargs.static_parsers_light = NULL;
 }

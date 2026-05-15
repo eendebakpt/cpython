@@ -19,20 +19,20 @@ def declare_parser(
     *,
     hasformat: bool = False,
     codegen: CodeGen,
+    pos_only: int = 0,
 ) -> str:
     """
     Generates the code template for a static local PyArg_Parser variable,
     with an initializer.  For core code (incl. builtin modules) the
     kwtuple field is also statically initialized.  Otherwise
     it is initialized at runtime.
+
+    When 'hasformat' is false the lighter '_PyArg_Parser_Light' struct is
+    used (the '_PyArg_UnpackKeywords' path); 'pos_only' is the number of
+    positional-only parameters, stored so that no run-time keyword scan is
+    needed.  When 'hasformat' is true the full '_PyArg_Parser' is used.
     """
     limited_capi = codegen.limited_capi
-    if hasformat:
-        fname = ''
-        format_ = '.format = "{format_units}:{name}",'
-    else:
-        fname = '.fname = "{name}",'
-        format_ = ''
 
     num_keywords = len([
         p for p in f.parameters.values()
@@ -85,15 +85,31 @@ def declare_parser(
         codegen.add_include('pycore_runtime.h', '_Py_ID()',
                             condition=condition)
 
-    declarations += """
-            static const char * const _keywords[] = {{{keywords_c} NULL}};
-            static _PyArg_Parser _parser = {{
-                .keywords = _keywords,
-                %s
-                .kwtuple = KWTUPLE,
-            }};
-            #undef KWTUPLE
-    """ % (format_ or fname)
+    if hasformat:
+        parser_struct = (
+            "            static _PyArg_Parser _parser = {{\n"
+            "                .keywords = _keywords,\n"
+            '                .format = "{format_units}:{name}",\n'
+            "                .kwtuple = KWTUPLE,\n"
+            "            }};"
+        )
+    else:
+        parser_struct = (
+            "            static _PyArg_Parser_Light _parser = {{\n"
+            "                .keywords = _keywords,\n"
+            '                .fname = "{name}",\n'
+            "                .pos = %d,\n"
+            "                .kwtuple = KWTUPLE,\n"
+            "            }};" % pos_only
+        )
+
+    declarations += (
+        "\n"
+        "            static const char * const _keywords[] = {{{keywords_c} NULL}};\n"
+        + parser_struct + "\n"
+        "            #undef KWTUPLE\n"
+        "    "
+    )
     return libclinic.normalize_snippet(declarations)
 
 
@@ -671,7 +687,7 @@ class ParseArgsCodeGen:
             self.fastcall = False
         else:
             self.codegen.add_include('pycore_modsupport.h',
-                                     '_PyArg_UnpackKeywords()')
+                                     '_PyArg_UnpackKeywordsLight()')
             if not self.varpos:
                 nargs = "nargs"
             else:
@@ -680,7 +696,8 @@ class ParseArgsCodeGen:
             if self.fastcall:
                 self.flags = "METH_FASTCALL|METH_KEYWORDS"
                 self.parser_prototype = PARSER_PROTOTYPE_FASTCALL_KEYWORDS
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 if self.varpos:
                     self.declarations += "\nPyObject * const *fastargs;"
@@ -698,7 +715,8 @@ class ParseArgsCodeGen:
                 self.parser_prototype = PARSER_PROTOTYPE_KEYWORD
                 argsname = 'fastargs'
                 argname_fmt = 'fastargs[%d]'
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 self.declarations += "\nPyObject * const *fastargs;"
                 self.declarations += "\nPy_ssize_t nargs = PyTuple_GET_SIZE(args);"
@@ -706,7 +724,7 @@ class ParseArgsCodeGen:
                     self.declarations += "\nPy_ssize_t noptargs = %s + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - %d;" % (nargs, self.min_pos + self.min_kw_only)
                 unpack_args = '_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL'
             parser_code = [libclinic.normalize_snippet(f"""
-                {argsname} = _PyArg_UnpackKeywords({unpack_args}, &_parser,
+                {argsname} = _PyArg_UnpackKeywordsLight({unpack_args}, &_parser,
                         /*minpos*/ {self.min_pos}, /*maxpos*/ {self.max_pos}, /*minkw*/ {self.min_kw_only}, /*varpos*/ {1 if self.varpos else 0}, argsbuf);
                 if (!{argsname}) {{{{
                     goto exit;
