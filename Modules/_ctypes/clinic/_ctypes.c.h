@@ -102,6 +102,7 @@ CDataType_from_address(PyObject *type, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_address",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -149,6 +150,7 @@ CDataType_from_buffer(PyObject *type, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_buffer",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -218,6 +220,7 @@ CDataType_from_buffer_copy(PyObject *type, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_buffer_copy",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -294,6 +297,7 @@ CDataType_in_dll(PyObject *type, PyTypeObject *cls, PyObject *const *args, Py_ss
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "in_dll",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -352,6 +356,7 @@ CDataType_from_param(PyObject *type, PyTypeObject *cls, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_param",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -396,6 +401,7 @@ PyCPointerType_set_type(PyObject *self, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_type",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -441,6 +447,7 @@ PyCPointerType_from_param(PyObject *type, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_param",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -584,6 +591,7 @@ c_wchar_p_from_param(PyObject *type, PyTypeObject *cls, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_param",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -627,6 +635,7 @@ c_char_p_from_param(PyObject *type, PyTypeObject *cls, PyObject *const *args, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_param",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -670,6 +679,7 @@ c_void_p_from_param(PyObject *type, PyTypeObject *cls, PyObject *const *args, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_param",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -715,6 +725,7 @@ PyCSimpleType_from_param(PyObject *type, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_param",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1052,4 +1063,4 @@ Simple_from_outparm(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py
     }
     return Simple_from_outparm_impl(self, cls);
 }
-/*[clinic end generated code: output=22105663d71237ca input=a9049054013a1b77]*/
+/*[clinic end generated code: output=d029cdb4ba0ba484 input=a9049054013a1b77]*/

@@ -2734,6 +2734,7 @@ test_posonly_keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2756,7 +2757,7 @@ exit:
 
 static PyObject *
 test_posonly_keywords_impl(PyObject *module, PyObject *a, PyObject *b)
-/*[clinic end generated code: output=7ddf55a744ba53dc input=1767b0ebdf06060e]*/
+/*[clinic end generated code: output=0d575af89b6dc8d8 input=1767b0ebdf06060e]*/
 
 
 /*[clinic input]
@@ -2808,6 +2809,7 @@ test_posonly_kwonly(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_kwonly",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2830,7 +2832,7 @@ exit:
 
 static PyObject *
 test_posonly_kwonly_impl(PyObject *module, PyObject *a, PyObject *c)
-/*[clinic end generated code: output=095a4e17e22609bc input=9042f2818f664839]*/
+/*[clinic end generated code: output=5ad4721a59f84935 input=9042f2818f664839]*/
 
 
 /*[clinic input]
@@ -2884,6 +2886,7 @@ test_posonly_keywords_kwonly(PyObject *module, PyObject *const *args, Py_ssize_t
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_kwonly",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2909,7 +2912,7 @@ exit:
 static PyObject *
 test_posonly_keywords_kwonly_impl(PyObject *module, PyObject *a, PyObject *b,
                                   PyObject *c)
-/*[clinic end generated code: output=2f03aff955026341 input=29546ebdca492fea]*/
+/*[clinic end generated code: output=fc3d568a549ae7b2 input=29546ebdca492fea]*/
 
 
 /*[clinic input]
@@ -2963,6 +2966,7 @@ test_posonly_keywords_opt(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3000,7 +3004,7 @@ exit:
 static PyObject *
 test_posonly_keywords_opt_impl(PyObject *module, PyObject *a, PyObject *b,
                                PyObject *c, PyObject *d)
-/*[clinic end generated code: output=2c8b2ca42f821c66 input=cdf5a9625e554e9b]*/
+/*[clinic end generated code: output=70dc95386d8d5f74 input=cdf5a9625e554e9b]*/
 
 
 /*[clinic input]
@@ -3053,6 +3057,7 @@ test_posonly_keywords_opt2(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_opt2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3088,7 +3093,7 @@ exit:
 static PyObject *
 test_posonly_keywords_opt2_impl(PyObject *module, PyObject *a, PyObject *b,
                                 PyObject *c)
-/*[clinic end generated code: output=969a3b2b020310f1 input=1581299d21d16f14]*/
+/*[clinic end generated code: output=e0769c7ccb78a4f8 input=1581299d21d16f14]*/
 
 
 /*[clinic input]
@@ -3142,6 +3147,7 @@ test_posonly_opt_keywords_opt(PyObject *module, PyObject *const *args, Py_ssize_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_opt_keywords_opt",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3184,7 +3190,7 @@ exit:
 static PyObject *
 test_posonly_opt_keywords_opt_impl(PyObject *module, PyObject *a,
                                    PyObject *b, PyObject *c, PyObject *d)
-/*[clinic end generated code: output=02bf5e64403946fc input=408798ec3d42949f]*/
+/*[clinic end generated code: output=80563584dfb72713 input=408798ec3d42949f]*/
 
 
 /*[clinic input]
@@ -3239,6 +3245,7 @@ test_posonly_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3276,7 +3283,7 @@ exit:
 static PyObject *
 test_posonly_kwonly_opt_impl(PyObject *module, PyObject *a, PyObject *b,
                              PyObject *c, PyObject *d)
-/*[clinic end generated code: output=26510e61948015e8 input=8d8e5643bbbc2309]*/
+/*[clinic end generated code: output=dba1389cb61756e6 input=8d8e5643bbbc2309]*/
 
 
 /*[clinic input]
@@ -3330,6 +3337,7 @@ test_posonly_kwonly_opt2(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_kwonly_opt2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3365,7 +3373,7 @@ exit:
 static PyObject *
 test_posonly_kwonly_opt2_impl(PyObject *module, PyObject *a, PyObject *b,
                               PyObject *c)
-/*[clinic end generated code: output=b31416e16c908756 input=f7e5eed94f75fff0]*/
+/*[clinic end generated code: output=59d5076bd73da08d input=f7e5eed94f75fff0]*/
 
 
 /*[clinic input]
@@ -3420,6 +3428,7 @@ test_posonly_opt_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_opt_kwonly_opt",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3462,7 +3471,7 @@ exit:
 static PyObject *
 test_posonly_opt_kwonly_opt_impl(PyObject *module, PyObject *a, PyObject *b,
                                  PyObject *c, PyObject *d)
-/*[clinic end generated code: output=dc2337647059cb51 input=1e557dc979d120fd]*/
+/*[clinic end generated code: output=2117ec22a0c62dee input=1e557dc979d120fd]*/
 
 
 /*[clinic input]
@@ -3519,6 +3528,7 @@ test_posonly_keywords_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssi
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3559,7 +3569,7 @@ static PyObject *
 test_posonly_keywords_kwonly_opt_impl(PyObject *module, PyObject *a,
                                       PyObject *b, PyObject *c, PyObject *d,
                                       PyObject *e)
-/*[clinic end generated code: output=b7adeae40c9833a4 input=c3884a4f956fdc89]*/
+/*[clinic end generated code: output=49b9cdd256bee643 input=c3884a4f956fdc89]*/
 
 
 /*[clinic input]
@@ -3614,6 +3624,7 @@ test_posonly_keywords_kwonly_opt2(PyObject *module, PyObject *const *args, Py_ss
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_kwonly_opt2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3651,7 +3662,7 @@ exit:
 static PyObject *
 test_posonly_keywords_kwonly_opt2_impl(PyObject *module, PyObject *a,
                                        PyObject *b, PyObject *c, PyObject *d)
-/*[clinic end generated code: output=827a349e36e89c82 input=68d01d7c0f6dafb0]*/
+/*[clinic end generated code: output=46024e589669be25 input=68d01d7c0f6dafb0]*/
 
 
 /*[clinic input]
@@ -3709,6 +3720,7 @@ test_posonly_keywords_opt_kwonly_opt(PyObject *module, PyObject *const *args, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_opt_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3758,7 +3770,7 @@ static PyObject *
 test_posonly_keywords_opt_kwonly_opt_impl(PyObject *module, PyObject *a,
                                           PyObject *b, PyObject *c,
                                           PyObject *d, PyObject *e)
-/*[clinic end generated code: output=bcb0088555123966 input=d0883d45876f186c]*/
+/*[clinic end generated code: output=22835f48c2b242a4 input=d0883d45876f186c]*/
 
 
 /*[clinic input]
@@ -3816,6 +3828,7 @@ test_posonly_keywords_opt2_kwonly_opt(PyObject *module, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_keywords_opt2_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3870,7 +3883,7 @@ static PyObject *
 test_posonly_keywords_opt2_kwonly_opt_impl(PyObject *module, PyObject *a,
                                            PyObject *b, PyObject *c,
                                            PyObject *d, PyObject *e)
-/*[clinic end generated code: output=a22d1276d4c2c9c7 input=c95e2e1ec93035ad]*/
+/*[clinic end generated code: output=ee82ba2ce5f1c1aa input=c95e2e1ec93035ad]*/
 
 
 /*[clinic input]
@@ -3930,6 +3943,7 @@ test_posonly_opt_keywords_opt_kwonly_opt(PyObject *module, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "test_posonly_opt_keywords_opt_kwonly_opt",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3992,7 +4006,7 @@ test_posonly_opt_keywords_opt_kwonly_opt_impl(PyObject *module, PyObject *a,
                                               PyObject *b, PyObject *c,
                                               PyObject *d, PyObject *e,
                                               PyObject *f)
-/*[clinic end generated code: output=ebdbe695ee85a2ea input=9914857713c5bbf8]*/
+/*[clinic end generated code: output=5e4c9886b37596f3 input=9914857713c5bbf8]*/
 
 /*[clinic input]
 test_keyword_only_parameter
@@ -5810,6 +5824,7 @@ Test__pyarg_parsestackandkeywords(PyObject *self, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_pyarg_parsestackandkeywords",
+        .pos = 1,
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -5831,7 +5846,7 @@ static PyObject *
 Test__pyarg_parsestackandkeywords_impl(TestObj *self, PyTypeObject *cls,
                                        const char *key,
                                        Py_ssize_t key_length)
-/*[clinic end generated code: output=e77c29e479020860 input=fc72ef4b4cfafabc]*/
+/*[clinic end generated code: output=088cef74daa12109 input=fc72ef4b4cfafabc]*/
 
 
 /*[clinic input]

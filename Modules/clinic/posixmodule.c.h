@@ -3975,6 +3975,7 @@ os_posix_spawn(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posix_spawn",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4128,6 +4129,7 @@ os_posix_spawnp(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posix_spawnp",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6897,6 +6899,7 @@ os_timerfd_create(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timerfd_create",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6982,6 +6985,7 @@ os_timerfd_settime(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timerfd_settime",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7099,6 +7103,7 @@ os_timerfd_settime_ns(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timerfd_settime_ns",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -13702,4 +13707,4 @@ exit:
 #ifndef OS__EMSCRIPTEN_LOG_METHODDEF
     #define OS__EMSCRIPTEN_LOG_METHODDEF
 #endif /* !defined(OS__EMSCRIPTEN_LOG_METHODDEF) */
-/*[clinic end generated code: output=c4cf19262e42e352 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b52bca64bbe5d968 input=a9049054013a1b77]*/

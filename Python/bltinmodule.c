@@ -2034,10 +2034,21 @@ min_max(PyObject *const *args, Py_ssize_t nargs, PyObject *kwnames, int op)
     PyObject *it = NULL, *item, *val, *maxitem, *maxval, *keyfunc=NULL;
     PyObject *defaultval = NULL;
     static const char * const keywords[] = {"key", "default", NULL};
-    static _PyArg_ParserExt _parser_min_ext = {.format = "|$OO:min"};
-    static _PyArg_ParserExt _parser_max_ext = {.format = "|$OO:max"};
-    static _PyArg_Parser _parser_min = {.keywords = keywords, .ext = &_parser_min_ext};
-    static _PyArg_Parser _parser_max = {.keywords = keywords, .ext = &_parser_max_ext};
+    /* min/max = 0 because '|' and '$' both appear at position 0 of the
+       format ("|$OO:min" / "|$OO:max"): both args are optional and
+       keyword-only. */
+    static _PyArg_ParserExt _parser_min_ext = {
+        .format = "|$OO:min", .min = 0, .max = 0,
+    };
+    static _PyArg_ParserExt _parser_max_ext = {
+        .format = "|$OO:max", .min = 0, .max = 0,
+    };
+    static _PyArg_Parser _parser_min = {
+        .keywords = keywords, .fname = "min", .ext = &_parser_min_ext,
+    };
+    static _PyArg_Parser _parser_max = {
+        .keywords = keywords, .fname = "max", .ext = &_parser_max_ext,
+    };
     const char *name = (op == Py_LT) ? "min" : "max";
     _PyArg_Parser *_parser = (op == Py_LT) ? &_parser_min : &_parser_max;
 

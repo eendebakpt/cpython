@@ -655,6 +655,7 @@ depr_kwd_init_noinline(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "DeprKwdInitNoInline",
+        .pos = 1,
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1706,6 +1707,7 @@ depr_kwd_required_1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_required_1",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1790,6 +1792,7 @@ depr_kwd_required_2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_required_2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1874,6 +1877,7 @@ depr_kwd_optional_1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_optional_1",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1963,6 +1967,7 @@ depr_kwd_optional_2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_optional_2",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2160,6 +2165,7 @@ depr_kwd_required_optional(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_required_optional",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2256,6 +2262,7 @@ depr_kwd_noinline(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_noinline",
+        .pos = 1,
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -2346,6 +2353,7 @@ depr_kwd_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_kwd_multi",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2450,6 +2458,7 @@ depr_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "depr_multi",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2498,4 +2507,4 @@ depr_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=9bfad28952f5f758 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=810d71393f498d0d input=a9049054013a1b77]*/

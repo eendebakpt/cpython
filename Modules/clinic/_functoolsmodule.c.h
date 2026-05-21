@@ -119,6 +119,7 @@ _functools_reduce(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "reduce",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -193,4 +194,4 @@ _functools__lru_cache_wrapper_cache_clear(PyObject *self, PyObject *Py_UNUSED(ig
 
     return return_value;
 }
-/*[clinic end generated code: output=ac9e26d0a5a23d40 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=cf4c1f29fb1112a4 input=a9049054013a1b77]*/

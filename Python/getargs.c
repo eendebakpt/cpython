@@ -2153,23 +2153,26 @@ _parser_init(void *arg)
     const char * const *keywords = parser->keywords;
     struct _PyArg_ParserExt *ext = parser->ext;
     assert(keywords != NULL);
-    assert(parser->pos == 0);
-
-    int len, pos;
-    if (scan_keywords(keywords, &len, &pos) < 0) {
-        return -1;
-    }
 
     /* Two paths:
-       - AC-emitted parsers pre-set parser->fname (and ext->min/max if
-         hasformat).  We trust those and skip parse_format entirely.
-       - Hand-written parsers with only ext->format set are lazy-derived
-         here via parse_format. */
+       - AC-emitted parsers pre-set parser->fname and parser->pos.  Skip
+         scan_keywords and parse_format entirely.
+       - Hand-written parsers with only ext->format set lazy-derive here. */
     const char *fname;
+    int len, pos;
     if (parser->fname != NULL) {
         fname = parser->fname;
+        pos = parser->pos;
+        len = 0;
+        while (keywords[len]) {
+            len++;
+        }
     }
     else {
+        assert(parser->pos == 0);
+        if (scan_keywords(keywords, &len, &pos) < 0) {
+            return -1;
+        }
         assert(ext != NULL && ext->format != NULL);
         assert(ext->custom_msg == NULL && ext->min == 0 && ext->max == 0);
         const char *custommsg = NULL;

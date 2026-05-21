@@ -326,6 +326,7 @@ signal_set_wakeup_fd(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_wakeup_fd",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -794,4 +795,4 @@ exit:
 #ifndef SIGNAL_PIDFD_SEND_SIGNAL_METHODDEF
     #define SIGNAL_PIDFD_SEND_SIGNAL_METHODDEF
 #endif /* !defined(SIGNAL_PIDFD_SEND_SIGNAL_METHODDEF) */
-/*[clinic end generated code: output=42e20d118435d7fa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=966f3b47d914911f input=a9049054013a1b77]*/

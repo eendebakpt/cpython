@@ -20,6 +20,7 @@ def declare_parser(
     hasformat: bool = False,
     min_pos: int = 0,
     max_pos: int = 0,
+    pos_only: int = 0,
     codegen: CodeGen,
 ) -> str:
     """
@@ -100,12 +101,17 @@ def declare_parser(
         codegen.add_include('pycore_runtime.h', '_Py_ID()',
                             condition=condition)
 
+    # Emit .pos statically when there are positional-only parameters, so
+    # _parser_init can skip scan_keywords for AC-emitted parsers (the
+    # default zero from designated init is correct when pos_only == 0).
+    pos_field = ('.pos = %d,' % pos_only) if pos_only else ''
     if hasformat:
-        # Both fname and ext are emitted for hasformat (fname statically set
-        # so _parser_init skips the parse_format derivation step).
-        parser_fields = '\n                '.join([fname, format_])
+        parser_fields = '\n                '.join(
+            [fname, pos_field, format_] if pos_field
+            else [fname, format_])
     else:
-        parser_fields = fname
+        parser_fields = (fname + '\n                ' + pos_field
+                         if pos_field else fname)
 
     declarations += """
             static const char * const _keywords[] = {{{keywords_c} NULL}};
@@ -702,7 +708,8 @@ class ParseArgsCodeGen:
             if self.fastcall:
                 self.flags = "METH_FASTCALL|METH_KEYWORDS"
                 self.parser_prototype = PARSER_PROTOTYPE_FASTCALL_KEYWORDS
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 if self.varpos:
                     self.declarations += "\nPyObject * const *fastargs;"
@@ -720,7 +727,8 @@ class ParseArgsCodeGen:
                 self.parser_prototype = PARSER_PROTOTYPE_KEYWORD
                 argsname = 'fastargs'
                 argname_fmt = 'fastargs[%d]'
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 self.declarations += "\nPyObject * const *fastargs;"
                 self.declarations += "\nPy_ssize_t nargs = PyTuple_GET_SIZE(args);"
@@ -816,7 +824,8 @@ class ParseArgsCodeGen:
             self.declarations = declare_parser(self.func, codegen=self.codegen,
                                                hasformat=True,
                                                min_pos=self.min_pos,
-                                               max_pos=self.max_pos)
+                                               max_pos=self.max_pos,
+                                               pos_only=self.pos_only)
             if self.limited_capi:
                 # positional-or-keyword arguments
                 assert not self.fastcall

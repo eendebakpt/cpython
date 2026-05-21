@@ -205,6 +205,7 @@ _gdbm_gdbm_nextkey(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "nextkey",
+        .pos = 1,
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -395,4 +396,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=15795863c3baa563 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7c3d6db0fb0edcd1 input=a9049054013a1b77]*/
