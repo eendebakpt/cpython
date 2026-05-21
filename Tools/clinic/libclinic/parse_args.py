@@ -29,10 +29,18 @@ def declare_parser(
     limited_capi = codegen.limited_capi
     if hasformat:
         fname = ''
-        format_ = '.format = "{format_units}:{name}",'
+        # Emit a sibling _PyArg_ParserExt that carries the format string and
+        # the parser cross-references via its .ext field. See Include/cpython/
+        # modsupport.h for the split.
+        format_ = '.ext = &_parser_ext,'
+        ext_decl = (
+            'static _PyArg_ParserExt _parser_ext = '
+            '{{ .format = "{format_units}:{name}", }};\n            '
+        )
     else:
         fname = '.fname = "{name}",'
         format_ = ''
+        ext_decl = ''
 
     num_keywords = len([
         p for p in f.parameters.values()
@@ -87,13 +95,13 @@ def declare_parser(
 
     declarations += """
             static const char * const _keywords[] = {{{keywords_c} NULL}};
-            static _PyArg_Parser _parser = {{
+            %sstatic _PyArg_Parser _parser = {{
                 .keywords = _keywords,
                 %s
                 .kwtuple = KWTUPLE,
             }};
             #undef KWTUPLE
-    """ % (format_ or fname)
+    """ % (ext_decl, format_ or fname)
     return libclinic.normalize_snippet(declarations)
 
 

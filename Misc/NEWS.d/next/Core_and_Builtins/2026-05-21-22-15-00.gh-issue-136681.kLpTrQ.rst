@@ -1,0 +1,7 @@
+Split ``_PyArg_Parser`` into a slim core struct and an optional companion
+``_PyArg_ParserExt`` that carries the format-string-only fields
+(``format``, ``custom_msg``, ``min``, ``max``).  Argument Clinic wrappers
+that go through ``_PyArg_UnpackKeywords`` (>95% of generated parsers)
+leave ``_PyArg_Parser.ext`` ``NULL`` and lose 24 bytes per parser; the
+format-string callers attach an ``_PyArg_ParserExt`` instance via the
+``ext`` pointer.

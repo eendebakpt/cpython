@@ -85,9 +85,10 @@ _dbm_dbm_get(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_
     #endif
 
     static const char * const _keywords[] = {"", "", NULL};
+    static _PyArg_ParserExt _parser_ext = { .format = "s#|O:get", };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
-        .format = "s#|O:get",
+        .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -133,9 +134,10 @@ _dbm_dbm_setdefault(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py
     #endif
 
     static const char * const _keywords[] = {"", "", NULL};
+    static _PyArg_ParserExt _parser_ext = { .format = "s#|O:setdefault", };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
-        .format = "s#|O:setdefault",
+        .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -246,4 +248,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=279511ea7cda38dd input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6a9900bbc5e47820 input=a9049054013a1b77]*/

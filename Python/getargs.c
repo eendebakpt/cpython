@@ -2151,12 +2151,13 @@ _parser_init(void *arg)
 {
     struct _PyArg_Parser *parser = (struct _PyArg_Parser *)arg;
     const char * const *keywords = parser->keywords;
+    struct _PyArg_ParserExt *ext = parser->ext;
     assert(keywords != NULL);
     assert(parser->pos == 0 &&
-           (parser->format == NULL || parser->fname == NULL) &&
-           parser->custom_msg == NULL &&
-           parser->min == 0 &&
-           parser->max == 0);
+           (ext == NULL || ext->format == NULL || parser->fname == NULL) &&
+           (ext == NULL || ext->custom_msg == NULL) &&
+           (ext == NULL || ext->min == 0) &&
+           (ext == NULL || ext->max == 0));
 
     int len, pos;
     if (scan_keywords(keywords, &len, &pos) < 0) {
@@ -2165,9 +2166,9 @@ _parser_init(void *arg)
 
     const char *fname, *custommsg = NULL;
     int min = 0, max = 0;
-    if (parser->format) {
+    if (ext != NULL && ext->format) {
         assert(parser->fname == NULL);
-        if (parse_format(parser->format, len, pos,
+        if (parse_format(ext->format, len, pos,
                          &fname, &custommsg, &min, &max) < 0) {
             return -1;
         }
@@ -2208,9 +2209,11 @@ _parser_init(void *arg)
 
     parser->pos = pos;
     parser->fname = fname;
-    parser->custom_msg = custommsg;
-    parser->min = min;
-    parser->max = max;
+    if (ext != NULL) {
+        ext->custom_msg = custommsg;
+        ext->min = min;
+        ext->max = max;
+    }
     parser->kwtuple = kwtuple;
     parser->is_kwtuple_owned = owned;
 
@@ -2236,16 +2239,18 @@ parser_clear(struct _PyArg_Parser *parser)
         Py_CLEAR(parser->kwtuple);
     }
 
-    if (parser->format) {
+    if (parser->ext != NULL && parser->ext->format) {
         parser->fname = NULL;
     }
     else {
         assert(parser->fname != NULL);
     }
-    parser->custom_msg = NULL;
+    if (parser->ext != NULL) {
+        parser->ext->custom_msg = NULL;
+        parser->ext->min = 0;
+        parser->ext->max = 0;
+    }
     parser->pos = 0;
-    parser->min = 0;
-    parser->max = 0;
     parser->is_kwtuple_owned = 0;
     parser->once.v = 0;
 }
@@ -2353,8 +2358,10 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                      nargs + nkwargs);
         return cleanreturn(0, &freelist);
     }
-    if (parser->max < nargs) {
-        if (parser->max == 0) {
+    assert(parser->ext != NULL);
+    struct _PyArg_ParserExt *ext = parser->ext;
+    if (ext->max < nargs) {
+        if (ext->max == 0) {
             PyErr_Format(PyExc_TypeError,
                          "%.200s%s takes no positional arguments",
                          (parser->fname == NULL) ? "function" : parser->fname,
@@ -2365,15 +2372,15 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                          "%.200s%s takes %s %d positional argument%s (%zd given)",
                          (parser->fname == NULL) ? "function" : parser->fname,
                          (parser->fname == NULL) ? "" : "()",
-                         (parser->min < parser->max) ? "at most" : "exactly",
-                         parser->max,
-                         parser->max == 1 ? "" : "s",
+                         (ext->min < ext->max) ? "at most" : "exactly",
+                         ext->max,
+                         ext->max == 1 ? "" : "s",
                          nargs);
         }
         return cleanreturn(0, &freelist);
     }
 
-    format = parser->format;
+    format = ext->format;
     assert(format != NULL || len == 0);
     /* convert tuple args and keyword args in same loop, using kwtuple to drive process */
     for (i = 0; i < len; i++) {
@@ -2412,22 +2419,22 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                 levels, msgbuf, sizeof(msgbuf), &freelist);
             Py_DECREF(current_arg);
             if (msg) {
-                seterror(i+1, msg, levels, parser->fname, parser->custom_msg);
+                seterror(i+1, msg, levels, parser->fname, ext->custom_msg);
                 return cleanreturn(0, &freelist);
             }
             continue;
         }
 
-        if (i < parser->min) {
+        if (i < ext->min) {
             /* Less arguments than required */
             if (i < pos) {
-                int min = Py_MIN(pos, parser->min);
+                int min = Py_MIN(pos, ext->min);
                 PyErr_Format(PyExc_TypeError,
                              "%.200s%s takes %s %d positional argument%s"
                              " (%zd given)",
                              (parser->fname == NULL) ? "function" : parser->fname,
                              (parser->fname == NULL) ? "" : "()",
-                             min < parser->max ? "at least" : "exactly",
+                             min < ext->max ? "at least" : "exactly",
                              min,
                              min == 1 ? "" : "s",
                              nargs);

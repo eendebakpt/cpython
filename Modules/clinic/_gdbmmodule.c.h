@@ -197,9 +197,10 @@ _gdbm_gdbm_nextkey(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_
     #endif
 
     static const char * const _keywords[] = {"", NULL};
+    static _PyArg_ParserExt _parser_ext = { .format = "s#:nextkey", };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
-        .format = "s#:nextkey",
+        .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -389,4 +390,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=8bca34ce9d4493dd input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7bd8dea50c251dae input=a9049054013a1b77]*/
