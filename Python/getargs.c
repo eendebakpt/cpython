@@ -2153,29 +2153,34 @@ _parser_init(void *arg)
     const char * const *keywords = parser->keywords;
     struct _PyArg_ParserExt *ext = parser->ext;
     assert(keywords != NULL);
-    assert(parser->pos == 0 &&
-           (ext == NULL || ext->format == NULL || parser->fname == NULL) &&
-           (ext == NULL || ext->custom_msg == NULL) &&
-           (ext == NULL || ext->min == 0) &&
-           (ext == NULL || ext->max == 0));
+    assert(parser->pos == 0);
 
     int len, pos;
     if (scan_keywords(keywords, &len, &pos) < 0) {
         return -1;
     }
 
-    const char *fname, *custommsg = NULL;
-    int min = 0, max = 0;
-    if (ext != NULL && ext->format) {
-        assert(parser->fname == NULL);
+    /* Two paths:
+       - AC-emitted parsers pre-set parser->fname (and ext->min/max if
+         hasformat).  We trust those and skip parse_format entirely.
+       - Hand-written parsers with only ext->format set are lazy-derived
+         here via parse_format. */
+    const char *fname;
+    if (parser->fname != NULL) {
+        fname = parser->fname;
+    }
+    else {
+        assert(ext != NULL && ext->format != NULL);
+        assert(ext->custom_msg == NULL && ext->min == 0 && ext->max == 0);
+        const char *custommsg = NULL;
+        int min = 0, max = 0;
         if (parse_format(ext->format, len, pos,
                          &fname, &custommsg, &min, &max) < 0) {
             return -1;
         }
-    }
-    else {
-        assert(parser->fname != NULL);
-        fname = parser->fname;
+        ext->custom_msg = custommsg;
+        ext->min = min;
+        ext->max = max;
     }
 
     int owned;
@@ -2209,11 +2214,6 @@ _parser_init(void *arg)
 
     parser->pos = pos;
     parser->fname = fname;
-    if (ext != NULL) {
-        ext->custom_msg = custommsg;
-        ext->min = min;
-        ext->max = max;
-    }
     parser->kwtuple = kwtuple;
     parser->is_kwtuple_owned = owned;
 
@@ -2239,16 +2239,17 @@ parser_clear(struct _PyArg_Parser *parser)
         Py_CLEAR(parser->kwtuple);
     }
 
-    if (parser->ext != NULL && parser->ext->format) {
-        parser->fname = NULL;
-    }
-    else {
-        assert(parser->fname != NULL);
-    }
-    if (parser->ext != NULL) {
+    /* If the parser has a format string, fname may have been lazy-derived
+       and ext->custom_msg/min/max may have been written by parse_format on
+       a prior interp.  Reset them so the next interp re-runs the same
+       derivation (or, for AC-emitted parsers, the same static values are
+       re-derivable from ext->format).  Hand-written kwarg-only parsers
+       set fname statically and have no ext -- leave them alone. */
+    if (parser->ext != NULL && parser->ext->format != NULL) {
         parser->ext->custom_msg = NULL;
         parser->ext->min = 0;
         parser->ext->max = 0;
+        parser->fname = NULL;
     }
     parser->pos = 0;
     parser->is_kwtuple_owned = 0;

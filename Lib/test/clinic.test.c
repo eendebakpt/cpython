@@ -5802,9 +5802,14 @@ Test__pyarg_parsestackandkeywords(PyObject *self, PyTypeObject *cls, PyObject *c
     #endif
 
     static const char * const _keywords[] = {"", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "s#:_pyarg_parsestackandkeywords", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "s#:_pyarg_parsestackandkeywords",
+        .min = 1,
+        .max = 1,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "_pyarg_parsestackandkeywords",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -5826,7 +5831,7 @@ static PyObject *
 Test__pyarg_parsestackandkeywords_impl(TestObj *self, PyTypeObject *cls,
                                        const char *key,
                                        Py_ssize_t key_length)
-/*[clinic end generated code: output=06d944de84ba3e95 input=fc72ef4b4cfafabc]*/
+/*[clinic end generated code: output=e77c29e479020860 input=fc72ef4b4cfafabc]*/
 
 
 /*[clinic input]

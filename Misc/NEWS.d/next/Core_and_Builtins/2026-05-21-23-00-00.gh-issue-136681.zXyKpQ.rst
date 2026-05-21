@@ -1,0 +1,5 @@
+Compute Argument Clinic format-string parser fields (``fname``, ``min``,
+``max``) at code-generation time instead of deriving them at runtime via
+``parse_format``.  ``_parser_init`` now skips the entire format-parsing
+derivation step for AC-emitted parsers (gated on ``parser->fname``
+already being set).

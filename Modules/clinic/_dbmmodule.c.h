@@ -85,9 +85,14 @@ _dbm_dbm_get(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_ssize_
     #endif
 
     static const char * const _keywords[] = {"", "", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "s#|O:get", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "s#|O:get",
+        .min = 1,
+        .max = 2,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "get",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -134,9 +139,14 @@ _dbm_dbm_setdefault(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py
     #endif
 
     static const char * const _keywords[] = {"", "", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "s#|O:setdefault", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "s#|O:setdefault",
+        .min = 1,
+        .max = 2,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "setdefault",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -248,4 +258,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=6a9900bbc5e47820 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=88294fe57550b782 input=a9049054013a1b77]*/

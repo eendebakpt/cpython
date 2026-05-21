@@ -18,6 +18,8 @@ def declare_parser(
     f: Function,
     *,
     hasformat: bool = False,
+    min_pos: int = 0,
+    max_pos: int = 0,
     codegen: CodeGen,
 ) -> str:
     """
@@ -28,15 +30,20 @@ def declare_parser(
     """
     limited_capi = codegen.limited_capi
     if hasformat:
-        fname = ''
-        # Emit a sibling _PyArg_ParserExt that carries the format string and
-        # the parser cross-references via its .ext field. See Include/cpython/
-        # modsupport.h for the split.
+        # Emit a sibling _PyArg_ParserExt with min/max pre-computed at AC
+        # time (no runtime parse_format needed).  custom_msg is always NULL
+        # because AC always emits ":name" not ";custom_msg".  fname is set
+        # on the parser directly, so _parser_init's lazy-derivation branch
+        # is skipped entirely.
+        fname = '.fname = "{name}",'
         format_ = '.ext = &_parser_ext,'
         ext_decl = (
-            'static _PyArg_ParserExt _parser_ext = '
-            '{{ .format = "{format_units}:{name}", }};\n            '
-        )
+            'static _PyArg_ParserExt _parser_ext = {{\n'
+            '                .format = "{format_units}:{name}",\n'
+            '                .min = %d,\n'
+            '                .max = %d,\n'
+            '            }};\n            '
+        ) % (min_pos, max_pos)
     else:
         fname = '.fname = "{name}",'
         format_ = ''
@@ -93,6 +100,13 @@ def declare_parser(
         codegen.add_include('pycore_runtime.h', '_Py_ID()',
                             condition=condition)
 
+    if hasformat:
+        # Both fname and ext are emitted for hasformat (fname statically set
+        # so _parser_init skips the parse_format derivation step).
+        parser_fields = '\n                '.join([fname, format_])
+    else:
+        parser_fields = fname
+
     declarations += """
             static const char * const _keywords[] = {{{keywords_c} NULL}};
             %sstatic _PyArg_Parser _parser = {{
@@ -101,7 +115,7 @@ def declare_parser(
                 .kwtuple = KWTUPLE,
             }};
             #undef KWTUPLE
-    """ % (ext_decl, format_ or fname)
+    """ % (ext_decl, parser_fields)
     return libclinic.normalize_snippet(declarations)
 
 
@@ -800,7 +814,9 @@ class ParseArgsCodeGen:
                 parameter.converter.use_converter()
 
             self.declarations = declare_parser(self.func, codegen=self.codegen,
-                                               hasformat=True)
+                                               hasformat=True,
+                                               min_pos=self.min_pos,
+                                               max_pos=self.max_pos)
             if self.limited_capi:
                 # positional-or-keyword arguments
                 assert not self.fastcall

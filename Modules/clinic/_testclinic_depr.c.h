@@ -397,9 +397,14 @@ depr_star_init_noinline(PyObject *self, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "OO|O$s#:DeprStarInitNoInline", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "OO|O$s#:DeprStarInitNoInline",
+        .min = 2,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "DeprStarInitNoInline",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -642,9 +647,14 @@ depr_kwd_init_noinline(PyObject *self, PyObject *args, PyObject *kwargs)
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", "d", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "OO|Os#:DeprKwdInitNoInline", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "OO|Os#:DeprKwdInitNoInline",
+        .min = 2,
+        .max = 4,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "DeprKwdInitNoInline",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1505,9 +1515,14 @@ depr_star_noinline(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"a", "b", "c", "d", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "OO|O$s#:depr_star_noinline", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "OO|O$s#:depr_star_noinline",
+        .min = 2,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "depr_star_noinline",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -2233,9 +2248,14 @@ depr_kwd_noinline(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"", "b", "c", "d", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "OO|Os#:depr_kwd_noinline", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "OO|Os#:depr_kwd_noinline",
+        .min = 2,
+        .max = 4,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "depr_kwd_noinline",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -2478,4 +2498,4 @@ depr_multi(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=f8fc2cc0f087d0ce input=a9049054013a1b77]*/
+/*[clinic end generated code: output=9bfad28952f5f758 input=a9049054013a1b77]*/

@@ -134,9 +134,14 @@ _winapi_ConnectNamedPipe(PyObject *module, PyObject *const *args, Py_ssize_t nar
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"handle", "overlapped", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE "|p:ConnectNamedPipe", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE "|p:ConnectNamedPipe",
+        .min = 1,
+        .max = 2,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "ConnectNamedPipe",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -194,9 +199,14 @@ _winapi_CreateEventW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"security_attributes", "manual_reset", "initial_state", "name", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_POINTER "iiO&:CreateEventW", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_POINTER "iiO&:CreateEventW",
+        .min = 4,
+        .max = 4,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "CreateEventW",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -411,9 +421,14 @@ _winapi_CreateMutexW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"security_attributes", "initial_owner", "name", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_POINTER "iO&:CreateMutexW", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_POINTER "iO&:CreateMutexW",
+        .min = 3,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "CreateMutexW",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1107,9 +1122,14 @@ _winapi_OpenEventW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"desired_access", "inherit_handle", "name", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "kiO&:OpenEventW", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "kiO&:OpenEventW",
+        .min = 3,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "OpenEventW",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1176,9 +1196,14 @@ _winapi_OpenMutexW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"desired_access", "inherit_handle", "name", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "kiO&:OpenMutexW", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "kiO&:OpenMutexW",
+        .min = 3,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "OpenMutexW",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1352,9 +1377,14 @@ _winapi_LCMapStringEx(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"locale", "flags", "src", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "O&kU:LCMapStringEx", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "O&kU:LCMapStringEx",
+        .min = 3,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "LCMapStringEx",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1413,9 +1443,14 @@ _winapi_ReadFile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"handle", "size", "overlapped", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE "k|p:ReadFile", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE "k|p:ReadFile",
+        .min = 2,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "ReadFile",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1470,9 +1505,14 @@ _winapi_ReleaseMutex(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"mutex", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE ":ReleaseMutex", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE ":ReleaseMutex",
+        .min = 1,
+        .max = 1,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "ReleaseMutex",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1525,9 +1565,14 @@ _winapi_ResetEvent(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"event", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE ":ResetEvent", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE ":ResetEvent",
+        .min = 1,
+        .max = 1,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "ResetEvent",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1580,9 +1625,14 @@ _winapi_SetEvent(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"event", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE ":SetEvent", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE ":SetEvent",
+        .min = 1,
+        .max = 1,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "SetEvent",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1778,9 +1828,14 @@ _winapi_BatchedWaitForMultipleObjects(PyObject *module, PyObject *const *args, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"handle_seq", "wait_all", "milliseconds", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "Oi|k:BatchedWaitForMultipleObjects", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "Oi|k:BatchedWaitForMultipleObjects",
+        .min = 2,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "BatchedWaitForMultipleObjects",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1906,9 +1961,14 @@ _winapi_WriteFile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"handle", "buffer", "overlapped", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE "O|p:WriteFile", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE "O|p:WriteFile",
+        .min = 2,
+        .max = 3,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "WriteFile",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -1999,9 +2059,14 @@ _winapi_GetFileType(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"handle", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "" F_HANDLE ":GetFileType", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_HANDLE ":GetFileType",
+        .min = 1,
+        .max = 1,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "GetFileType",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -2171,9 +2236,14 @@ _winapi_CopyFile2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     #endif  // !Py_BUILD_CORE
 
     static const char * const _keywords[] = {"existing_file_name", "new_file_name", "flags", "progress_routine", NULL};
-    static _PyArg_ParserExt _parser_ext = { .format = "O&O&k|O:CopyFile2", };
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "O&O&k|O:CopyFile2",
+        .min = 3,
+        .max = 4,
+    };
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
+        .fname = "CopyFile2",
         .ext = &_parser_ext,
         .kwtuple = KWTUPLE,
     };
@@ -2348,4 +2418,4 @@ exit:
 #ifndef _WINAPI_GETSHORTPATHNAME_METHODDEF
     #define _WINAPI_GETSHORTPATHNAME_METHODDEF
 #endif /* !defined(_WINAPI_GETSHORTPATHNAME_METHODDEF) */
-/*[clinic end generated code: output=3870ce054a7577e3 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=85c4836a45a3e3aa input=a9049054013a1b77]*/
