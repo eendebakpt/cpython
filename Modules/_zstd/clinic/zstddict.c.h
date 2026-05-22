@@ -56,6 +56,7 @@ _zstd_ZstdDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "ZstdDict",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -222,4 +223,4 @@ _zstd_ZstdDict_as_prefix_get(PyObject *self, void *Py_UNUSED(context))
 {
     return _zstd_ZstdDict_as_prefix_get_impl((ZstdDict *)self);
 }
-/*[clinic end generated code: output=f41d9e2e2cc2928f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=a5a8a2f09091db6f input=a9049054013a1b77]*/

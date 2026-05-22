@@ -56,6 +56,7 @@ _zstd_ZstdCompressor_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "ZstdCompressor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -144,6 +145,7 @@ _zstd_ZstdCompressor_compress(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compress",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -227,6 +229,7 @@ _zstd_ZstdCompressor_flush(PyObject *self, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "flush",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -291,4 +294,4 @@ _zstd_ZstdCompressor_set_pledged_input_size(PyObject *self, PyObject *arg)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c1d5c2cf06a8becd input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6a8154eca8b4e849 input=a9049054013a1b77]*/

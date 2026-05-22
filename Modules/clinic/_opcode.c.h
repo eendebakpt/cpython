@@ -49,6 +49,7 @@ _opcode_stack_effect(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "stack_effect",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -129,6 +130,7 @@ _opcode_is_valid(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_valid",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -195,6 +197,7 @@ _opcode_has_arg(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_arg",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -261,6 +264,7 @@ _opcode_has_const(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_const",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -327,6 +331,7 @@ _opcode_has_name(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_name",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -393,6 +398,7 @@ _opcode_has_jump(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_jump",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -464,6 +470,7 @@ _opcode_has_free(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_free",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -530,6 +537,7 @@ _opcode_has_local(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_local",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -596,6 +604,7 @@ _opcode_has_exc(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "has_exc",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -754,6 +763,7 @@ _opcode_get_executor(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_executor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -776,4 +786,4 @@ _opcode_get_executor(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=a11f02989c3175d7 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7bc1c6f994424f62 input=a9049054013a1b77]*/

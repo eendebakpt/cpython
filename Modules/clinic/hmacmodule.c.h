@@ -49,6 +49,7 @@ _hmac_new(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "new",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -143,6 +144,7 @@ _hmac_HMAC_update(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "update",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -301,6 +303,7 @@ _hmac_compute_digest(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compute_digest",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -670,4 +673,4 @@ _hmac_compute_blake2b_32(PyObject *module, PyObject *const *args, Py_ssize_t nar
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=30c0614482d963f5 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=ad356f3b0739f6e6 input=a9049054013a1b77]*/

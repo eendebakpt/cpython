@@ -2716,6 +2716,7 @@ _curses_setupterm(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "setupterm",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4450,4 +4451,4 @@ _curses_has_extended_color_support(PyObject *module, PyObject *Py_UNUSED(ignored
 #ifndef _CURSES_ASSUME_DEFAULT_COLORS_METHODDEF
     #define _CURSES_ASSUME_DEFAULT_COLORS_METHODDEF
 #endif /* !defined(_CURSES_ASSUME_DEFAULT_COLORS_METHODDEF) */
-/*[clinic end generated code: output=135246e29163510c input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f8ab607e3713055a input=a9049054013a1b77]*/

@@ -50,6 +50,7 @@ grp_getgrgid(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getgrgid",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -110,6 +111,7 @@ grp_getgrnam(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getgrnam",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -152,4 +154,4 @@ grp_getgrall(PyObject *module, PyObject *Py_UNUSED(ignored))
 {
     return grp_getgrall_impl(module);
 }
-/*[clinic end generated code: output=35aa81c00dbd3229 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1d8610b2838363f8 input=a9049054013a1b77]*/

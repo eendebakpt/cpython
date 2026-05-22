@@ -47,6 +47,7 @@ _ssl_Certificate_public_bytes(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "public_bytes",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -89,4 +90,4 @@ _ssl_Certificate_get_info(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return _ssl_Certificate_get_info_impl((PySSLCertificate *)self);
 }
-/*[clinic end generated code: output=bab2dba7dbc1523c input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2007aa0347e75fd9 input=a9049054013a1b77]*/

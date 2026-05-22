@@ -116,6 +116,7 @@ _codecs_encode(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "encode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -219,6 +220,7 @@ _codecs_decode(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2821,6 +2823,7 @@ _codecs__normalize_encoding(PyObject *module, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_normalize_encoding",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2866,4 +2869,4 @@ exit:
 #ifndef _CODECS_CODE_PAGE_ENCODE_METHODDEF
     #define _CODECS_CODE_PAGE_ENCODE_METHODDEF
 #endif /* !defined(_CODECS_CODE_PAGE_ENCODE_METHODDEF) */
-/*[clinic end generated code: output=a968c493bb28be3e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=aed9191062b4c12d input=a9049054013a1b77]*/

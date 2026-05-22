@@ -48,6 +48,7 @@ typevar_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "typevar",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -246,6 +247,7 @@ paramspecargs_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "paramspecargs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -303,6 +305,7 @@ paramspeckwargs_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "paramspeckwargs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -363,6 +366,7 @@ paramspec_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "paramspec",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -556,6 +560,7 @@ typevartuple(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "typevartuple",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -764,6 +769,7 @@ typealias_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "typealias",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -803,4 +809,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=2e7dd170924d92e5 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f9c0eb8bf600cfda input=a9049054013a1b77]*/

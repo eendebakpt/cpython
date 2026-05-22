@@ -99,6 +99,7 @@ warnings_warn(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "warn",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -209,6 +210,7 @@ warnings_warn_explicit(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "warn_explicit",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -284,4 +286,4 @@ warnings_filters_mutated_lock_held(PyObject *module, PyObject *Py_UNUSED(ignored
 {
     return warnings_filters_mutated_lock_held_impl(module);
 }
-/*[clinic end generated code: output=610ed5764bf40bb5 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=95f79357fea73500 input=a9049054013a1b77]*/

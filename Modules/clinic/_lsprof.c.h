@@ -287,6 +287,7 @@ _lsprof_Profiler_enable(PyObject *self, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "enable",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -416,6 +417,7 @@ profiler_init(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Profiler",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -476,4 +478,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=af26a0b0ddcc3351 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=79f4930a2bef5a46 input=a9049054013a1b77]*/

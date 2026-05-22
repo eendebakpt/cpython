@@ -46,6 +46,7 @@ memoryview(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "memoryview",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -106,6 +107,7 @@ memoryview__from_flags(PyObject *type, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_from_flags",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -188,6 +190,7 @@ memoryview_cast(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "cast",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -299,6 +302,7 @@ memoryview_tobytes(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "tobytes",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -397,6 +401,7 @@ memoryview_hex(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "hex",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -505,4 +510,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=348b6ddb98a1f412 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b877767661517162 input=a9049054013a1b77]*/

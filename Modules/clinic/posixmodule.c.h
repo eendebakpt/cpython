@@ -69,6 +69,7 @@ os_stat(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "stat",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -154,6 +155,7 @@ os_lstat(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "lstat",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -249,6 +251,7 @@ os_statx(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "statx",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -387,6 +390,7 @@ os_access(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "access",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -550,6 +554,7 @@ os_chdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "chdir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -618,6 +623,7 @@ os_fchdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fchdir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -706,6 +712,7 @@ os_chmod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "chmod",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -805,6 +812,7 @@ os_fchmod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fchmod",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -878,6 +886,7 @@ os_lchmod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "lchmod",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -957,6 +966,7 @@ os_chflags(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "chflags",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1058,6 +1068,7 @@ os_lchflags(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "lchflags",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1146,6 +1157,7 @@ os_chroot(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "chroot",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1213,6 +1225,7 @@ os_fsync(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fsync",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1300,6 +1313,7 @@ os_fdatasync(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fdatasync",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1390,6 +1404,7 @@ os_chown(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "chown",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1486,6 +1501,7 @@ os_fchown(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fchown",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1562,6 +1578,7 @@ os_lchown(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "lchown",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1685,6 +1702,7 @@ os_link(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "link",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1795,6 +1813,7 @@ os_listdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "listdir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1915,6 +1934,7 @@ os_listmounts(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "listmounts",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1982,6 +2002,7 @@ os__path_isdevdrive(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_isdevdrive",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2150,6 +2171,7 @@ os__getvolumepathname(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_getvolumepathname",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2251,6 +2273,7 @@ os__path_exists(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_exists",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2323,6 +2346,7 @@ os__path_lexists(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_lexists",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2434,6 +2458,7 @@ os__path_isfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_isfile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2506,6 +2531,7 @@ os__path_islink(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_islink",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2578,6 +2604,7 @@ os__path_isjunction(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_isjunction",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2680,6 +2707,7 @@ os__path_normpath(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_path_normpath",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2751,6 +2779,7 @@ os_mkdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "mkdir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2871,6 +2900,7 @@ os_getpriority(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getpriority",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2941,6 +2971,7 @@ os_setpriority(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "setpriority",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3021,6 +3052,7 @@ os_rename(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "rename",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3115,6 +3147,7 @@ os_replace(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3207,6 +3240,7 @@ os_rmdir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "rmdir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3281,6 +3315,7 @@ os_system(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "system",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3358,6 +3393,7 @@ os_system(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "system",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3465,6 +3501,7 @@ os_unlink(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unlink",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3542,6 +3579,7 @@ os_remove(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "remove",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3663,6 +3701,7 @@ os_utime(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "utime",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3763,6 +3802,7 @@ os__exit(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_exit",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3877,6 +3917,7 @@ os_execve(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "execve",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3975,6 +4016,7 @@ os_posix_spawn(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posix_spawn",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4128,6 +4170,7 @@ os_posix_spawnp(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posix_spawnp",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4374,6 +4417,7 @@ os_register_at_fork(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "register_at_fork",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4503,6 +4547,7 @@ os_sched_get_priority_max(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sched_get_priority_max",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4568,6 +4613,7 @@ os_sched_get_priority_min(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sched_get_priority_min",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4667,6 +4713,7 @@ os_sched_param(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sched_param",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5536,6 +5583,7 @@ os_getpgid(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getpgid",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6050,6 +6098,7 @@ os_wait3(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "wait3",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6118,6 +6167,7 @@ os_wait4(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "wait4",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6361,6 +6411,7 @@ os_pidfd_open(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "pidfd_open",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6443,6 +6494,7 @@ os_pidfd_getfd(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "pidfd_getfd",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6527,6 +6579,7 @@ os_setns(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "setns",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6605,6 +6658,7 @@ os_unshare(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unshare",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6676,6 +6730,7 @@ os_readlink(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "readlink",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6763,6 +6818,7 @@ os_symlink(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "symlink",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6897,6 +6953,7 @@ os_timerfd_create(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timerfd_create",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6982,6 +7039,7 @@ os_timerfd_settime(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timerfd_settime",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7099,6 +7157,7 @@ os_timerfd_settime_ns(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timerfd_settime_ns",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7433,6 +7492,7 @@ os_open(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "open",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7529,6 +7589,7 @@ os_close(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "close",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7661,6 +7722,7 @@ os_dup2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "dup2",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -8178,6 +8240,7 @@ os_sendfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sendfile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -8283,6 +8346,7 @@ os_sendfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sendfile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -8400,6 +8464,7 @@ os_sendfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sendfile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -8536,6 +8601,7 @@ os_fstat(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fstat",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -8889,6 +8955,7 @@ os_copy_file_range(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "copy_file_range",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -9011,6 +9078,7 @@ os_splice(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "splice",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -9127,6 +9195,7 @@ os_mkfifo(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "mkfifo",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -9230,6 +9299,7 @@ os_mknod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "mknod",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -9476,6 +9546,7 @@ os_truncate(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "truncate",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -9892,6 +9963,7 @@ os_WIFCONTINUED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WIFCONTINUED",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -9962,6 +10034,7 @@ os_WIFSTOPPED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WIFSTOPPED",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10032,6 +10105,7 @@ os_WIFSIGNALED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WIFSIGNALED",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10102,6 +10176,7 @@ os_WIFEXITED(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WIFEXITED",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10172,6 +10247,7 @@ os_WEXITSTATUS(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WEXITSTATUS",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10242,6 +10318,7 @@ os_WTERMSIG(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WTERMSIG",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10312,6 +10389,7 @@ os_WSTOPSIG(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "WSTOPSIG",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10420,6 +10498,7 @@ os_statvfs(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "statvfs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10487,6 +10566,7 @@ os__getdiskusage(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_getdiskusage",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10604,6 +10684,7 @@ os_pathconf(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "pathconf",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10796,6 +10877,7 @@ os_startfile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "startfile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -10943,6 +11025,7 @@ os_device_encoding(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "device_encoding",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11140,6 +11223,7 @@ os_getxattr(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getxattr",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11230,6 +11314,7 @@ os_setxattr(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "setxattr",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11341,6 +11426,7 @@ os_removexattr(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "removexattr",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11430,6 +11516,7 @@ os_listxattr(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "listxattr",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11556,6 +11643,7 @@ os_memfd_create(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "memfd_create",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11645,6 +11733,7 @@ os_eventfd(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "eventfd",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11719,6 +11808,7 @@ os_eventfd_read(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "eventfd_read",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -11784,6 +11874,7 @@ os_eventfd_write(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "eventfd_write",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12204,6 +12295,7 @@ os_DirEntry_stat(PyObject *self, PyTypeObject *defining_class, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "stat",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12271,6 +12363,7 @@ os_DirEntry_is_dir(PyObject *self, PyTypeObject *defining_class, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_dir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12343,6 +12436,7 @@ os_DirEntry_is_file(PyObject *self, PyTypeObject *defining_class, PyObject *cons
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_file",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12456,6 +12550,7 @@ os_scandir(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "scandir",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12528,6 +12623,7 @@ os_fspath(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fspath",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12588,6 +12684,7 @@ os_getrandom(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getrandom",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12678,6 +12775,7 @@ os__add_dll_directory(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_add_dll_directory",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12749,6 +12847,7 @@ os__remove_dll_directory(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_remove_dll_directory",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12823,6 +12922,7 @@ os_waitstatus_to_exitcode(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "waitstatus_to_exitcode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -12983,6 +13083,7 @@ os__emscripten_log(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_emscripten_log",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -13702,4 +13803,4 @@ exit:
 #ifndef OS__EMSCRIPTEN_LOG_METHODDEF
     #define OS__EMSCRIPTEN_LOG_METHODDEF
 #endif /* !defined(OS__EMSCRIPTEN_LOG_METHODDEF) */
-/*[clinic end generated code: output=c4cf19262e42e352 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=fdfd21b212d0e2f9 input=a9049054013a1b77]*/

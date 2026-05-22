@@ -2207,15 +2207,24 @@ _parser_init(void *arg)
         owned = 0;
     }
 
-    parser->pos = pos;
+    /* parser->pos is now pre-computed statically by Argument Clinic, but
+       legacy/handwritten parsers still go through scan_keywords above.
+       Only overwrite if AC didn't already set it. */
+    if (parser->pos == 0) {
+        parser->pos = pos;
+    } else {
+        assert(parser->pos == pos);
+    }
     parser->fname = fname;
     if (ext != NULL) {
         ext->custom_msg = custommsg;
         ext->min = min;
         ext->max = max;
     }
-    parser->kwtuple = kwtuple;
     parser->is_kwtuple_owned = owned;
+    /* Release-publish kwtuple so the load-acquire fast path in the worker
+       safely observes a fully-constructed tuple. */
+    _Py_atomic_store_ptr_release(&parser->kwtuple, kwtuple);
 
     assert(parser->next == NULL);
     parser->next = _Py_atomic_load_ptr(&_PyRuntime.getargs.static_parsers);
@@ -2522,42 +2531,44 @@ vgetargskeywordsfast(PyObject *args, PyObject *keywords,
 
 #undef _PyArg_UnpackKeywords
 
+/* Worker: assumes the contract documented in pycore_modsupport.h.  Called
+   directly by Argument-Clinic-generated wrappers via the macro and
+   indirectly via the safety-check public function below. */
 PyObject * const *
-_PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
-                      PyObject *kwargs, PyObject *kwnames,
-                      struct _PyArg_Parser *parser,
-                      int minpos, int maxpos, int minkw, int varpos,
-                      PyObject **buf)
+_PyArg_UnpackKeywords_unchecked(PyObject *const *args, Py_ssize_t nargs,
+                                PyObject *kwargs, PyObject *kwnames,
+                                struct _PyArg_Parser *parser,
+                                int minpos, int maxpos, int minkw, int varpos,
+                                PyObject **buf)
 {
-    PyObject *kwtuple;
     PyObject *keyword;
     int i, posonly, minposonly, maxargs;
     int reqlimit = minkw ? maxpos + minkw : minpos;
     Py_ssize_t nkwargs;
     PyObject * const *kwstack = NULL;
 
+    assert(parser != NULL);
     assert(kwargs == NULL || PyDict_Check(kwargs));
     assert(kwargs == NULL || kwnames == NULL);
+    assert(kwnames == NULL || PyTuple_Check(kwnames));
 
-    if (parser == NULL) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
-
-    if (kwnames != NULL && !PyTuple_Check(kwnames)) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
-
+    /* AC FASTCALL callers may pass args=NULL when nargs == 0 (no positional
+       args at all).  The inner fast path below returns `args` directly, so
+       we need a real buffer for it -- use the caller's argsbuf. */
     if (args == NULL && nargs == 0) {
         args = buf;
     }
 
-    if (parser_init(parser) < 0) {
-        return NULL;
+    /* Fast path: kwtuple already statically built (the Py_BUILD_CORE case
+       for ~95% of AC-generated parsers).  Skip parser_init's once-flag
+       check.  Acquire-load pairs with the release-store in _parser_init. */
+    PyObject *kwtuple = _Py_atomic_load_ptr_acquire(&parser->kwtuple);
+    if (kwtuple == NULL) {
+        if (parser_init(parser) < 0) {
+            return NULL;
+        }
+        kwtuple = parser->kwtuple;
     }
-
-    kwtuple = parser->kwtuple;
     posonly = parser->pos;
     minposonly = Py_MIN(posonly, minpos);
     maxargs = posonly + (int)PyTuple_GET_SIZE(kwtuple);
@@ -2573,7 +2584,10 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
         nkwargs = 0;
     }
     if (nkwargs == 0 && minkw == 0 && minpos <= nargs && (varpos || nargs <= maxpos)) {
-        /* Fast path. */
+        /* Fast path: empty kwargs container.  The header macro already
+           handles the kwargs==NULL && kwnames==NULL case before calling
+           us, but external callers (math.so etc.) may reach here with
+           kwnames=() or kwargs={}.  Keep the check for them. */
         return args;
     }
     if (!varpos && nargs + nkwargs > maxargs) {
@@ -2699,6 +2713,30 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
     }
 
     return buf;
+}
+
+/* Public-API safety wrapper.  External callers (e.g. math.so) reach here;
+   AC-generated code skips this and calls _PyArg_UnpackKeywords_unchecked
+   via the macro. */
+PyObject * const *
+_PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
+                      PyObject *kwargs, PyObject *kwnames,
+                      struct _PyArg_Parser *parser,
+                      int minpos, int maxpos, int minkw, int varpos,
+                      PyObject **buf)
+{
+    if (parser == NULL) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    if (kwnames != NULL && !PyTuple_Check(kwnames)) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    /* args==NULL/nargs==0 handling lives inside the worker. */
+    return _PyArg_UnpackKeywords_unchecked(args, nargs, kwargs, kwnames,
+                                           parser, minpos, maxpos, minkw,
+                                           varpos, buf);
 }
 
 static const char *

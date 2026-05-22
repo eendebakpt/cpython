@@ -49,6 +49,7 @@ Struct(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Struct",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -109,6 +110,7 @@ Struct___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Struct",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -211,6 +213,7 @@ Struct_unpack_from(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unpack_from",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -636,6 +639,7 @@ unpack_from(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unpack_from",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -724,4 +728,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=0f417d43a2a387c8 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=806378eb6e58eb8d input=a9049054013a1b77]*/

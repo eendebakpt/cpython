@@ -145,6 +145,7 @@ _io__BufferedIOBase_read(PyObject *self, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "read",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -200,6 +201,7 @@ _io__BufferedIOBase_read1(PyObject *self, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "read1",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -258,6 +260,7 @@ _io__BufferedIOBase_write(PyObject *self, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "write",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -914,6 +917,7 @@ _io__Buffered_truncate(PyObject *self, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "truncate",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -976,6 +980,7 @@ _io_BufferedReader___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "BufferedReader",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1056,6 +1061,7 @@ _io_BufferedWriter___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "BufferedWriter",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1228,6 +1234,7 @@ _io_BufferedRandom___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "BufferedRandom",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1265,4 +1272,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=3ee17211d2010462 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e97948c1758ef603 input=a9049054013a1b77]*/

@@ -225,6 +225,7 @@ sock_initobj(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "socket",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -541,4 +542,4 @@ exit:
 #ifndef _SOCKET_IF_INDEXTONAME_METHODDEF
     #define _SOCKET_IF_INDEXTONAME_METHODDEF
 #endif /* !defined(_SOCKET_IF_INDEXTONAME_METHODDEF) */
-/*[clinic end generated code: output=36051ebf6ad1e6f8 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=18ddec952e747089 input=a9049054013a1b77]*/

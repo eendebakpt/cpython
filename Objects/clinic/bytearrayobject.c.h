@@ -42,6 +42,7 @@ bytearray___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "bytearray",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -717,6 +718,7 @@ bytearray_translate(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "translate",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -840,6 +842,7 @@ bytearray_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -942,6 +945,7 @@ bytearray_split(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "split",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1099,6 +1103,7 @@ bytearray_rsplit(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "rsplit",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1516,6 +1521,7 @@ bytearray_decode(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1643,6 +1649,7 @@ bytearray_splitlines(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "splitlines",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1754,6 +1761,7 @@ bytearray_hex(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "hex",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1875,4 +1883,4 @@ bytearray_sizeof(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return bytearray_sizeof_impl((PyByteArrayObject *)self);
 }
-/*[clinic end generated code: output=2cacb323147202b9 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=5d56dbc567c01d8a input=a9049054013a1b77]*/

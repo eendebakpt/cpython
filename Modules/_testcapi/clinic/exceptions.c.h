@@ -96,6 +96,7 @@ _testcapi_make_exception_with_doc(PyObject *module, PyObject *const *args, Py_ss
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "make_exception_with_doc",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -459,4 +460,4 @@ _testcapi_unstable_exc_prep_reraise_star(PyObject *module, PyObject *const *args
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=357caea020348789 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=35b4f5039e3d3c6e input=a9049054013a1b77]*/

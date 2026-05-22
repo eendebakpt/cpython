@@ -48,6 +48,7 @@ _testinternalcapi_compiler_cleandoc(PyObject *module, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compiler_cleandoc",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -134,6 +135,7 @@ _testinternalcapi_compiler_codegen(PyObject *module, PyObject *const *args, Py_s
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compiler_codegen",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -213,6 +215,7 @@ _testinternalcapi_optimize_cfg(PyObject *module, PyObject *const *args, Py_ssize
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "optimize_cfg",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -281,6 +284,7 @@ _testinternalcapi_assemble_code_object(PyObject *module, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "assemble_code_object",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -360,6 +364,7 @@ gh_119213_getargs(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "gh_119213_getargs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -399,4 +404,4 @@ get_next_dict_keys_version(PyObject *module, PyObject *Py_UNUSED(ignored))
 {
     return get_next_dict_keys_version_impl(module);
 }
-/*[clinic end generated code: output=ecb5d7ac85b153fa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2a49d36a0fc2f1f8 input=a9049054013a1b77]*/

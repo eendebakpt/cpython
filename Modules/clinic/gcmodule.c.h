@@ -119,6 +119,7 @@ gc_collect(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "collect",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -413,6 +414,7 @@ gc_get_objects(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_objects",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -583,4 +585,4 @@ gc_get_freeze_count(PyObject *module, PyObject *Py_UNUSED(ignored))
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=19738854607938db input=a9049054013a1b77]*/
+/*[clinic end generated code: output=5670bc65bd0f9c87 input=a9049054013a1b77]*/

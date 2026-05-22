@@ -122,6 +122,7 @@ _lzma_LZMADecompressor_decompress(PyObject *self, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -220,6 +221,7 @@ _lzma_LZMADecompressor(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "LZMADecompressor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -333,4 +335,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=6386084cb43d2533 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=66ce8801d9ca8535 input=a9049054013a1b77]*/

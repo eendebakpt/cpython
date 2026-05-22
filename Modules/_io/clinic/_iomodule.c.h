@@ -163,6 +163,7 @@ _io_open(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "open",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -389,6 +390,7 @@ _io_open_code(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "open_code",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -410,4 +412,4 @@ _io_open_code(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=7a8e032c0424bce2 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1f84c33fc1660306 input=a9049054013a1b77]*/

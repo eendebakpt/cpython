@@ -240,6 +240,7 @@ unicode_encode(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "encode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -336,6 +337,7 @@ unicode_expandtabs(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "expandtabs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -956,6 +958,7 @@ unicode_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1284,6 +1287,7 @@ unicode_split(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "split",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1409,6 +1413,7 @@ unicode_rsplit(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "rsplit",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1493,6 +1498,7 @@ unicode_splitlines(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "splitlines",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1846,6 +1852,7 @@ unicode_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "str",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1908,4 +1915,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=13eaf65699ea9fc9 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b0d6a5ffd9c71a12 input=a9049054013a1b77]*/

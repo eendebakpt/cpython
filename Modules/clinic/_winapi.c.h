@@ -138,6 +138,7 @@ _winapi_ConnectNamedPipe(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -198,6 +199,7 @@ _winapi_CreateEventW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -415,6 +417,7 @@ _winapi_CreateMutexW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -798,6 +801,7 @@ _winapi_GetLongPathName(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "GetLongPathName",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -907,6 +911,7 @@ _winapi_GetShortPathName(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "GetShortPathName",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1111,6 +1116,7 @@ _winapi_OpenEventW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1180,6 +1186,7 @@ _winapi_OpenMutexW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1356,6 +1363,7 @@ _winapi_LCMapStringEx(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1417,6 +1425,7 @@ _winapi_ReadFile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1474,6 +1483,7 @@ _winapi_ReleaseMutex(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1529,6 +1539,7 @@ _winapi_ResetEvent(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1584,6 +1595,7 @@ _winapi_SetEvent(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1782,6 +1794,7 @@ _winapi_BatchedWaitForMultipleObjects(PyObject *module, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1910,6 +1923,7 @@ _winapi_WriteFile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2003,6 +2017,7 @@ _winapi_GetFileType(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2067,6 +2082,7 @@ _winapi__mimetypes_read_windows_registry(PyObject *module, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_mimetypes_read_windows_registry",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2175,6 +2191,7 @@ _winapi_CopyFile2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2348,4 +2365,4 @@ exit:
 #ifndef _WINAPI_GETSHORTPATHNAME_METHODDEF
     #define _WINAPI_GETSHORTPATHNAME_METHODDEF
 #endif /* !defined(_WINAPI_GETSHORTPATHNAME_METHODDEF) */
-/*[clinic end generated code: output=3870ce054a7577e3 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f5ee09b22438bef2 input=a9049054013a1b77]*/

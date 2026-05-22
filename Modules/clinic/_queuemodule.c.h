@@ -82,6 +82,7 @@ _queue_SimpleQueue_put(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "put",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -162,6 +163,7 @@ _queue_SimpleQueue_put_nowait(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "put_nowait",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -231,6 +233,7 @@ _queue_SimpleQueue_get(PyObject *self, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -388,4 +391,4 @@ _queue_SimpleQueue___sizeof__(PyObject *self, PyObject *Py_UNUSED(ignored))
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=4af5d1b1ea31ac7d input=a9049054013a1b77]*/
+/*[clinic end generated code: output=db5d45194c17404a input=a9049054013a1b77]*/

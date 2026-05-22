@@ -164,6 +164,7 @@ _bz2_BZ2Decompressor_decompress(PyObject *self, PyObject *const *args, Py_ssize_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -237,4 +238,4 @@ _bz2_BZ2Decompressor(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=552ac6d4c5a101b7 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=3e056560cac8f433 input=a9049054013a1b77]*/

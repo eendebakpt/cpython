@@ -132,6 +132,7 @@ complex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "complex",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -185,4 +186,4 @@ complex_from_number(PyObject *type, PyObject *number)
 
     return return_value;
 }
-/*[clinic end generated code: output=05d2ff43fc409733 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=50587b6d467e9208 input=a9049054013a1b77]*/

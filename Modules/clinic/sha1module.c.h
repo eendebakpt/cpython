@@ -129,6 +129,7 @@ _sha1_sha1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sha1",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -172,4 +173,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=fd5a917404b68c4f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b6d4b20d4058bc03 input=a9049054013a1b77]*/

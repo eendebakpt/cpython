@@ -212,6 +212,7 @@ pysqlite_cursor_fetchmany(PyObject *self, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fetchmany",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -371,4 +372,4 @@ _sqlite3_Cursor_arraysize_set(PyObject *self, PyObject *value, void *Py_UNUSED(c
 
     return return_value;
 }
-/*[clinic end generated code: output=a0e3ebba9e4d0ece input=a9049054013a1b77]*/
+/*[clinic end generated code: output=06ae3000723cb76d input=a9049054013a1b77]*/

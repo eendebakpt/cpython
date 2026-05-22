@@ -233,6 +233,7 @@ func_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "function",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -290,4 +291,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=12cb900088d41bdb input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c055b7009b3d06e2 input=a9049054013a1b77]*/

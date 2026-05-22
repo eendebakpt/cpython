@@ -47,6 +47,7 @@ module___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "module",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -77,4 +78,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=523344ad09ab2ea1 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f6d0e1027c6ddb4e input=a9049054013a1b77]*/

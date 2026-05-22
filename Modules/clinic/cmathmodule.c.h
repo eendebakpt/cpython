@@ -923,6 +923,7 @@ cmath_isclose(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "isclose",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -985,4 +986,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=631db17fb1c79d66 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=42bbb8a310b0dd49 input=a9049054013a1b77]*/

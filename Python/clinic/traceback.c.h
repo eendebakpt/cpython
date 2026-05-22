@@ -47,6 +47,7 @@ tb_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "traceback",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -132,4 +133,4 @@ traceback_tb_next_set(PyObject *self, PyObject *value, void *Py_UNUSED(context))
 
     return return_value;
 }
-/*[clinic end generated code: output=5361141395da963e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=20ece7e229251f5b input=a9049054013a1b77]*/

@@ -55,6 +55,7 @@ _zstd_ZstdDecompressor_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "ZstdDecompressor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -178,6 +179,7 @@ _zstd_ZstdDecompressor_decompress(PyObject *self, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -220,4 +222,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=30c12ef047027ede input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2407b41a873d0d12 input=a9049054013a1b77]*/

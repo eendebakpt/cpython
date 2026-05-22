@@ -45,6 +45,7 @@ mappingproxy_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "mappingproxy",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -134,6 +135,7 @@ property_init(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "property",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -179,4 +181,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=2e8df497abc4f915 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=56f4889307f40579 input=a9049054013a1b77]*/

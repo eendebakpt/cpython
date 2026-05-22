@@ -206,6 +206,7 @@ _sre_SRE_Pattern_prefixmatch(PyObject *self, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "prefixmatch",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -302,6 +303,7 @@ _sre_SRE_Pattern_fullmatch(PyObject *self, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fullmatch",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -400,6 +402,7 @@ _sre_SRE_Pattern_search(PyObject *self, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "search",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -495,6 +498,7 @@ _sre_SRE_Pattern_findall(PyObject *self, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "findall",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -593,6 +597,7 @@ _sre_SRE_Pattern_finditer(PyObject *self, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "finditer",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -688,6 +693,7 @@ _sre_SRE_Pattern_scanner(PyObject *self, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "scanner",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -783,6 +789,7 @@ _sre_SRE_Pattern_split(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "split",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -860,6 +867,7 @@ _sre_SRE_Pattern_sub(PyObject *self, PyTypeObject *cls, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sub",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -940,6 +948,7 @@ _sre_SRE_Pattern_subn(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "subn",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1096,6 +1105,7 @@ _sre_compile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1229,6 +1239,7 @@ _sre_SRE_Match_expand(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "expand",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1290,6 +1301,7 @@ _sre_SRE_Match_groups(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "groups",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1356,6 +1368,7 @@ _sre_SRE_Match_groupdict(PyObject *self, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "groupdict",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1568,4 +1581,4 @@ _sre_SRE_Scanner_search(PyObject *self, PyTypeObject *cls, PyObject *const *args
 #ifndef _SRE_SRE_PATTERN__FAIL_AFTER_METHODDEF
     #define _SRE_SRE_PATTERN__FAIL_AFTER_METHODDEF
 #endif /* !defined(_SRE_SRE_PATTERN__FAIL_AFTER_METHODDEF) */
-/*[clinic end generated code: output=0c867efb64e020aa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f64c2db3d7ffa372 input=a9049054013a1b77]*/

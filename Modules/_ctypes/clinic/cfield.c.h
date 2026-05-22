@@ -43,6 +43,7 @@ PyCField_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "CField",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -126,4 +127,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=7eb1621e22ea2e05 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=3e6a82ed8f372fe9 input=a9049054013a1b77]*/

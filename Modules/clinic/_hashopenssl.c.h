@@ -128,6 +128,7 @@ _hashlib_HASHXOF_digest(PyObject *self, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "digest",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -206,6 +207,7 @@ _hashlib_HASHXOF_hexdigest(PyObject *self, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "hexdigest",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -288,6 +290,7 @@ _hashlib_HASH_new(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "new",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -387,6 +390,7 @@ _hashlib_openssl_md5(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_md5",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -472,6 +476,7 @@ _hashlib_openssl_sha1(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha1",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -558,6 +563,7 @@ _hashlib_openssl_sha224(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha224",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -644,6 +650,7 @@ _hashlib_openssl_sha256(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha256",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -730,6 +737,7 @@ _hashlib_openssl_sha384(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha384",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -816,6 +824,7 @@ _hashlib_openssl_sha512(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha512",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -904,6 +913,7 @@ _hashlib_openssl_sha3_224(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha3_224",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -994,6 +1004,7 @@ _hashlib_openssl_sha3_256(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha3_256",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1084,6 +1095,7 @@ _hashlib_openssl_sha3_384(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha3_384",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1174,6 +1186,7 @@ _hashlib_openssl_sha3_512(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_sha3_512",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1264,6 +1277,7 @@ _hashlib_openssl_shake_128(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_shake_128",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1354,6 +1368,7 @@ _hashlib_openssl_shake_256(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "openssl_shake_256",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1443,6 +1458,7 @@ pbkdf2_hmac(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "pbkdf2_hmac",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1544,6 +1560,7 @@ _hashlib_scrypt(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "scrypt",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1650,6 +1667,7 @@ _hashlib_hmac_singleshot(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "hmac_digest",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1726,6 +1744,7 @@ _hashlib_hmac_new(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "hmac_new",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1823,6 +1842,7 @@ _hashlib_HMAC_update(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "update",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1986,4 +2006,4 @@ exit:
 #ifndef _HASHLIB_OPENSSL_SHAKE_256_METHODDEF
     #define _HASHLIB_OPENSSL_SHAKE_256_METHODDEF
 #endif /* !defined(_HASHLIB_OPENSSL_SHAKE_256_METHODDEF) */
-/*[clinic end generated code: output=9ba35fcc33795b1e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7f68c233ff19ec0f input=a9049054013a1b77]*/

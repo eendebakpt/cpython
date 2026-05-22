@@ -588,6 +588,7 @@ select_epoll(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "epoll",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -763,6 +764,7 @@ select_epoll_register(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "register",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -856,6 +858,7 @@ select_epoll_modify(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "modify",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -941,6 +944,7 @@ select_epoll_unregister(PyObject *self, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unregister",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1016,6 +1020,7 @@ select_epoll_poll(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "poll",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1399,4 +1404,4 @@ exit:
 #ifndef SELECT_KQUEUE_CONTROL_METHODDEF
     #define SELECT_KQUEUE_CONTROL_METHODDEF
 #endif /* !defined(SELECT_KQUEUE_CONTROL_METHODDEF) */
-/*[clinic end generated code: output=52e3be5cc66cf1b6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=fb5a69ca62bc97c3 input=a9049054013a1b77]*/

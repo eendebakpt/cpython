@@ -66,6 +66,7 @@ _csv_unregister_dialect(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unregister_dialect",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -124,6 +125,7 @@ _csv_get_dialect(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_dialect",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -185,6 +187,7 @@ _csv_field_size_limit(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "field_size_limit",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -207,4 +210,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=ed77cb69fad9f3b4 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=d5700284af95e5d6 input=a9049054013a1b77]*/

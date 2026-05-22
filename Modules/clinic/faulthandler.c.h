@@ -55,6 +55,7 @@ faulthandler_dump_traceback_py(PyObject *module, PyObject *const *args, Py_ssize
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "dump_traceback",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -150,6 +151,7 @@ faulthandler_dump_c_stack_py(PyObject *module, PyObject *const *args, Py_ssize_t
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "dump_c_stack",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -216,6 +218,7 @@ faulthandler_py_enable(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "enable",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -375,6 +378,7 @@ faulthandler_dump_traceback_later(PyObject *module, PyObject *const *args, Py_ss
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "dump_traceback_later",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -509,6 +513,7 @@ faulthandler_register_py(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "register",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -782,4 +787,4 @@ exit:
 #ifndef FAULTHANDLER__RAISE_EXCEPTION_METHODDEF
     #define FAULTHANDLER__RAISE_EXCEPTION_METHODDEF
 #endif /* !defined(FAULTHANDLER__RAISE_EXCEPTION_METHODDEF) */
-/*[clinic end generated code: output=2452d767c85130a6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=ef4eb8938f7fa6f9 input=a9049054013a1b77]*/

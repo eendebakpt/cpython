@@ -217,6 +217,7 @@ _imp_find_frozen(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "find_frozen",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -592,6 +593,7 @@ _imp_source_hash(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "source_hash",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -664,4 +666,4 @@ exit:
 #ifndef _IMP_EXEC_DYNAMIC_METHODDEF
     #define _IMP_EXEC_DYNAMIC_METHODDEF
 #endif /* !defined(_IMP_EXEC_DYNAMIC_METHODDEF) */
-/*[clinic end generated code: output=5fa42f580441b3fa input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f2a1002ca55e7f58 input=a9049054013a1b77]*/

@@ -78,6 +78,7 @@ InstructionSequenceType_use_label(PyObject *self, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "use_label",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -142,6 +143,7 @@ InstructionSequenceType_addop(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "addop",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -257,6 +259,7 @@ InstructionSequenceType_add_nested(PyObject *self, PyObject *const *args, Py_ssi
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "add_nested",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -310,4 +313,4 @@ InstructionSequenceType_get_instructions(PyObject *self, PyObject *Py_UNUSED(ign
 {
     return InstructionSequenceType_get_instructions_impl((_PyInstructionSequence *)self);
 }
-/*[clinic end generated code: output=c80501a59a1a1103 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=5d9f590da2fba2e9 input=a9049054013a1b77]*/

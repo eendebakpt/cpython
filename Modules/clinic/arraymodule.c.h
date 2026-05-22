@@ -227,6 +227,7 @@ array_array_extend(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "extend",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -396,6 +397,7 @@ array_array_fromfile(PyObject *self, PyTypeObject *cls, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fromfile",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -458,6 +460,7 @@ array_array_tofile(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "tofile",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -719,6 +722,7 @@ array_array___reduce_ex__(PyObject *self, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__reduce_ex__",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -780,4 +784,4 @@ array_arrayiterator___setstate__(PyObject *self, PyObject *state)
 
     return return_value;
 }
-/*[clinic end generated code: output=8699475b51151247 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=5ba28b0989bb60e6 input=a9049054013a1b77]*/

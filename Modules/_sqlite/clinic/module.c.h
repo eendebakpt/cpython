@@ -48,6 +48,7 @@ pysqlite_complete_statement(PyObject *module, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "complete_statement",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -211,4 +212,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=17c4e031680a5168 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6bbff1f378b23fde input=a9049054013a1b77]*/

@@ -51,6 +51,7 @@ delta_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timedelta",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -155,6 +156,7 @@ datetime_date(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "date",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -336,6 +338,7 @@ datetime_date_fromisocalendar(PyObject *type, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fromisocalendar",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -454,6 +457,7 @@ datetime_date_strftime(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "strftime",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -537,6 +541,7 @@ iso_calendar_date_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "IsoCalendarDate",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -611,6 +616,7 @@ datetime_date_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -694,6 +700,7 @@ timezone_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "timezone",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -770,6 +777,7 @@ datetime_time(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "time",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -938,6 +946,7 @@ datetime_time_isoformat(PyObject *self, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "isoformat",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1018,6 +1027,7 @@ datetime_time_strftime(PyObject *self, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "strftime",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1112,6 +1122,7 @@ datetime_time_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1305,6 +1316,7 @@ datetime_datetime(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "datetime",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1444,6 +1456,7 @@ datetime_datetime_now(PyObject *type, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "now",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1529,6 +1542,7 @@ datetime_datetime_fromtimestamp(PyObject *type, PyObject *const *args, Py_ssize_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fromtimestamp",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1660,6 +1674,7 @@ datetime_datetime_combine(PyObject *type, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "combine",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1778,6 +1793,7 @@ datetime_datetime_isoformat(PyObject *self, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "isoformat",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1876,6 +1892,7 @@ datetime_datetime_replace(PyObject *self, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2024,6 +2041,7 @@ datetime_datetime_astimezone(PyObject *self, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "astimezone",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2090,4 +2108,4 @@ datetime_datetime___reduce__(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return datetime_datetime___reduce___impl((PyDateTime_DateTime *)self);
 }
-/*[clinic end generated code: output=69658acff6a43ac4 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=0e0dbb675a1f2eed input=a9049054013a1b77]*/

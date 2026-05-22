@@ -190,6 +190,7 @@ _zstd_get_param_bounds(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_param_bounds",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -260,6 +261,7 @@ _zstd_get_frame_size(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_frame_size",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -328,6 +330,7 @@ _zstd_get_frame_info(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_frame_info",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -399,6 +402,7 @@ _zstd_set_parameter_types(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_parameter_types",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -426,4 +430,4 @@ _zstd_set_parameter_types(PyObject *module, PyObject *const *args, Py_ssize_t na
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=437b084f149e68e5 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c9749220598fe015 input=a9049054013a1b77]*/

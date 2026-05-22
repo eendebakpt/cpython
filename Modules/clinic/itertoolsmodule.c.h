@@ -62,6 +62,7 @@ batched_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "batched",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -181,6 +182,7 @@ itertools_groupby(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "groupby",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -548,6 +550,7 @@ itertools_combinations(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "combinations",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -627,6 +630,7 @@ itertools_combinations_with_replacement(PyTypeObject *type, PyObject *args, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "combinations_with_replacement",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -705,6 +709,7 @@ itertools_permutations(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "permutations",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -770,6 +775,7 @@ itertools_accumulate(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "accumulate",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -848,6 +854,7 @@ itertools_compress(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compress",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -949,6 +956,7 @@ itertools_count(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "count",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -980,4 +988,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=7f385837b13edbeb input=a9049054013a1b77]*/
+/*[clinic end generated code: output=d48e53f2d2d3e370 input=a9049054013a1b77]*/

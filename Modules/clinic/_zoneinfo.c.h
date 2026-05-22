@@ -46,6 +46,7 @@ zoneinfo_ZoneInfo(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "ZoneInfo",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -109,6 +110,7 @@ zoneinfo_ZoneInfo_from_file(PyObject *type, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_file",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -175,6 +177,7 @@ zoneinfo_ZoneInfo_no_cache(PyObject *type, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "no_cache",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -234,6 +237,7 @@ zoneinfo_ZoneInfo_clear_cache(PyObject *type, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "clear_cache",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -286,6 +290,7 @@ zoneinfo_ZoneInfo_utcoffset(PyObject *self, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "utcoffset",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -330,6 +335,7 @@ zoneinfo_ZoneInfo_dst(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "dst",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -375,6 +381,7 @@ zoneinfo_ZoneInfo_tzname(PyObject *self, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "tzname",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -420,6 +427,7 @@ zoneinfo_ZoneInfo__unpickle(PyObject *type, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_unpickle",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -454,4 +462,4 @@ zoneinfo_ZoneInfo__unpickle(PyObject *type, PyTypeObject *cls, PyObject *const *
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c6df04d7b400bd7f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=a62157a8265d5b57 input=a9049054013a1b77]*/

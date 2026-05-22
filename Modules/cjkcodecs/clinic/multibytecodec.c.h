@@ -55,6 +55,7 @@ _multibytecodec_MultibyteCodec_encode(PyObject *self, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "encode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -144,6 +145,7 @@ _multibytecodec_MultibyteCodec_decode(PyObject *self, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -234,6 +236,7 @@ _multibytecodec_MultibyteIncrementalEncoder_encode(PyObject *self, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "encode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -366,6 +369,7 @@ _multibytecodec_MultibyteIncrementalDecoder_decode(PyObject *self, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -604,6 +608,7 @@ _multibytecodec_MultibyteStreamWriter_write(PyObject *self, PyTypeObject *cls, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "write",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -649,6 +654,7 @@ _multibytecodec_MultibyteStreamWriter_writelines(PyObject *self, PyTypeObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "writelines",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -696,4 +702,4 @@ PyDoc_STRVAR(_multibytecodec___create_codec__doc__,
 
 #define _MULTIBYTECODEC___CREATE_CODEC_METHODDEF    \
     {"__create_codec", (PyCFunction)_multibytecodec___create_codec, METH_O, _multibytecodec___create_codec__doc__},
-/*[clinic end generated code: output=014f4f6bb9d29594 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=722c4b8525733d18 input=a9049054013a1b77]*/

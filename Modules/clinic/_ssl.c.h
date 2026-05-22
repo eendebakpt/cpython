@@ -801,6 +801,7 @@ _ssl__SSLSocket_get_channel_binding(PyObject *self, PyObject *const *args, Py_ss
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_channel_binding",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1157,6 +1158,7 @@ _ssl__SSLContext_get_groups(PyObject *self, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_groups",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1803,6 +1805,7 @@ _ssl__SSLContext_load_cert_chain(PyObject *self, PyObject *const *args, Py_ssize
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "load_cert_chain",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1877,6 +1880,7 @@ _ssl__SSLContext_load_verify_locations(PyObject *self, PyObject *const *args, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "load_verify_locations",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1981,6 +1985,7 @@ _ssl__SSLContext__wrap_socket(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_wrap_socket",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2078,6 +2083,7 @@ _ssl__SSLContext__wrap_bio(PyObject *self, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_wrap_bio",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2345,6 +2351,7 @@ _ssl__SSLContext_get_ca_certs(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_ca_certs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2413,6 +2420,7 @@ _ssl__SSLContext_set_psk_client_callback(PyObject *self, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_psk_client_callback",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2474,6 +2482,7 @@ _ssl__SSLContext_set_psk_server_callback(PyObject *self, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_psk_server_callback",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3077,6 +3086,7 @@ _ssl_txt2obj(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "txt2obj",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3197,6 +3207,7 @@ _ssl_enum_certificates(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "enum_certificates",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3278,6 +3289,7 @@ _ssl_enum_crls(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "enum_crls",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3323,4 +3335,4 @@ exit:
 #ifndef _SSL_ENUM_CRLS_METHODDEF
     #define _SSL_ENUM_CRLS_METHODDEF
 #endif /* !defined(_SSL_ENUM_CRLS_METHODDEF) */
-/*[clinic end generated code: output=e29d5ada294f97bb input=a9049054013a1b77]*/
+/*[clinic end generated code: output=66c97d32943fb8b8 input=a9049054013a1b77]*/

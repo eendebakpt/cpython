@@ -1,0 +1,8 @@
+Argument Clinic now emits ``.pos = N`` statically when a function has
+positional-only parameters, and ``_PyArg_UnpackKeywords`` is split into
+a public-API safety wrapper (``_PyArg_UnpackKeywords``) and an AC-fastpath
+worker (``_PyArg_UnpackKeywords_unchecked``).  The worker skips
+``parser_init``'s once-flag check when the kwtuple is statically built
+(the ``Py_BUILD_CORE`` case).  AC-generated wrappers reach the worker
+directly via the macro in ``pycore_modsupport.h``; external callers
+keep the same public symbol.

@@ -54,6 +54,7 @@ _interpqueues_create(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -145,6 +146,7 @@ _interpqueues_destroy(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "destroy",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -226,6 +228,7 @@ _interpqueues_put(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "put",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -310,6 +313,7 @@ _interpqueues_get(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -372,6 +376,7 @@ _interpqueues_bind(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "bind",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -434,6 +439,7 @@ _interpqueues_release(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "release",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -494,6 +500,7 @@ _interpqueues_get_maxsize(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_maxsize",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -554,6 +561,7 @@ _interpqueues_get_queue_defaults(PyObject *module, PyObject *const *args, Py_ssi
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_queue_defaults",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -614,6 +622,7 @@ _interpqueues_is_full(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_full",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -674,6 +683,7 @@ _interpqueues_get_count(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_count",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -737,6 +747,7 @@ _interpqueues__register_heap_types(PyObject *module, PyObject *const *args, Py_s
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_register_heap_types",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -762,4 +773,4 @@ _interpqueues__register_heap_types(PyObject *module, PyObject *const *args, Py_s
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=64cea8e1063429b6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1c3daa1753d83bac input=a9049054013a1b77]*/

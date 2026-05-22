@@ -48,6 +48,7 @@ sys_addaudithook(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "addaudithook",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -638,6 +639,7 @@ sys_set_coroutine_origin_tracking_depth(PyObject *module, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_coroutine_origin_tracking_depth",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -914,6 +916,7 @@ sys_set_int_max_str_digits(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_int_max_str_digits",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1066,6 +1069,7 @@ sys_getunicodeinternedsize(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "getunicodeinternedsize",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1565,6 +1569,7 @@ sys_remote_exec(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "remote_exec",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1628,6 +1633,7 @@ sys__dump_tracelets(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_dump_tracelets",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1692,6 +1698,7 @@ sys__getframemodulename(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_getframemodulename",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1840,6 +1847,7 @@ sys_set_lazy_imports_filter(PyObject *module, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_lazy_imports_filter",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1925,6 +1933,7 @@ sys_set_lazy_imports(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_lazy_imports",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2087,4 +2096,4 @@ exit:
 #ifndef SYS_GETANDROIDAPILEVEL_METHODDEF
     #define SYS_GETANDROIDAPILEVEL_METHODDEF
 #endif /* !defined(SYS_GETANDROIDAPILEVEL_METHODDEF) */
-/*[clinic end generated code: output=fb4fe1af274124e0 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=b748e567c8a760b5 input=a9049054013a1b77]*/

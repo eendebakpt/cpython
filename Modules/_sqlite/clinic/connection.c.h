@@ -44,6 +44,7 @@ pysqlite_connection_init(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Connection",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -185,6 +186,7 @@ pysqlite_connection_cursor(PyObject *self, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "cursor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -260,6 +262,7 @@ blobopen(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwna
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "blobopen",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -440,6 +443,7 @@ pysqlite_connection_create_function(PyObject *self, PyTypeObject *cls, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create_function",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -526,6 +530,7 @@ create_window_function(PyObject *self, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create_window_function",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -594,6 +599,7 @@ pysqlite_connection_create_aggregate(PyObject *self, PyTypeObject *cls, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create_aggregate",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -659,6 +665,7 @@ pysqlite_connection_set_authorizer(PyObject *self, PyTypeObject *cls, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_authorizer",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -729,6 +736,7 @@ pysqlite_connection_set_progress_handler(PyObject *self, PyTypeObject *cls, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_progress_handler",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -780,6 +788,7 @@ pysqlite_connection_set_trace_callback(PyObject *self, PyTypeObject *cls, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_trace_callback",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -875,6 +884,7 @@ pysqlite_connection_load_extension(PyObject *self, PyObject *const *args, Py_ssi
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "load_extension",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1090,6 +1100,7 @@ pysqlite_connection_iterdump(PyObject *self, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "iterdump",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1157,6 +1168,7 @@ pysqlite_connection_backup(PyObject *self, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "backup",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1260,6 +1272,7 @@ pysqlite_connection_create_collation(PyObject *self, PyTypeObject *cls, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create_collation",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1342,6 +1355,7 @@ serialize(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "serialize",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1434,6 +1448,7 @@ deserialize(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "deserialize",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1722,4 +1737,4 @@ exit:
 #ifndef DESERIALIZE_METHODDEF
     #define DESERIALIZE_METHODDEF
 #endif /* !defined(DESERIALIZE_METHODDEF) */
-/*[clinic end generated code: output=16d44c1d8a45e622 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=75bed6c2c78e30f1 input=a9049054013a1b77]*/

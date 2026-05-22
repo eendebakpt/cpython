@@ -41,6 +41,7 @@ interpolation_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Interpolation",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -91,4 +92,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=2391391e2d7708c0 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2e82a542b301ba9a input=a9049054013a1b77]*/

@@ -57,6 +57,7 @@ _interpreters_create(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -137,6 +138,7 @@ _interpreters_destroy(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "destroy",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -205,6 +207,7 @@ _interpreters_list_all(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "list_all",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -308,6 +311,7 @@ _interpreters_set___main___attrs(PyObject *module, PyObject *const *args, Py_ssi
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set___main___attrs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -396,6 +400,7 @@ _interpreters_exec(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "exec",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -485,6 +490,7 @@ _interpreters_run_string(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "run_string",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -580,6 +586,7 @@ _interpreters_run_func(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "run_func",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -670,6 +677,7 @@ _interpreters_call(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "call",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -776,6 +784,7 @@ _interpreters_is_shareable(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_shareable",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -834,6 +843,7 @@ _interpreters_is_running(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_running",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -902,6 +912,7 @@ _interpreters_get_config(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_config",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -970,6 +981,7 @@ _interpreters_whence(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "whence",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1028,6 +1040,7 @@ _interpreters_incref(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "incref",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1105,6 +1118,7 @@ _interpreters_decref(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decref",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1176,6 +1190,7 @@ _interpreters_capture_exception(PyObject *module, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "capture_exception",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1198,4 +1213,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c80f73761f860f6c input=a9049054013a1b77]*/
+/*[clinic end generated code: output=65fd47f4dbf757ef input=a9049054013a1b77]*/

@@ -242,6 +242,7 @@ list_sort(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *kwn
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sort",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -468,4 +469,4 @@ list___reversed__(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return list___reversed___impl((PyListObject *)self);
 }
-/*[clinic end generated code: output=ae13fc2b56dc27c2 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=8744158c153e3c39 input=a9049054013a1b77]*/

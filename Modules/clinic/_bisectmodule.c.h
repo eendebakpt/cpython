@@ -59,6 +59,7 @@ _bisect_bisect_right(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "bisect_right",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -175,6 +176,7 @@ _bisect_insort_right(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "insort_right",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -288,6 +290,7 @@ _bisect_bisect_left(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "bisect_left",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -404,6 +407,7 @@ _bisect_insort_left(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "insort_left",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -466,4 +470,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=a3c44ed440dd6d81 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=0890a3f0c3aa7a8d input=a9049054013a1b77]*/

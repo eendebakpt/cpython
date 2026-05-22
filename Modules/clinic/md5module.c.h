@@ -129,6 +129,7 @@ _md5_md5(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "md5",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -172,4 +173,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=920fe54b9ed06f92 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=404fe3354c7fa32f input=a9049054013a1b77]*/

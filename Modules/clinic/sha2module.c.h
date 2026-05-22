@@ -209,6 +209,7 @@ _sha2_sha256(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sha256",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -294,6 +295,7 @@ _sha2_sha224(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sha224",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -379,6 +381,7 @@ _sha2_sha512(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sha512",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -464,6 +467,7 @@ _sha2_sha384(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sha384",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -507,4 +511,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=90625b237c774a9f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=9b45e33f7733e4f4 input=a9049054013a1b77]*/

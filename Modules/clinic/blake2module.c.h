@@ -54,6 +54,7 @@ py_blake2b_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "blake2b",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -263,6 +264,7 @@ py_blake2s_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "blake2s",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -506,4 +508,4 @@ _blake2_blake2b_hexdigest(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return _blake2_blake2b_hexdigest_impl((Blake2Object *)self);
 }
-/*[clinic end generated code: output=5f76c18211cd7f8f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1a7e0b00788c0829 input=a9049054013a1b77]*/

@@ -57,6 +57,7 @@ _asyncio_Future___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Future",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -174,6 +175,7 @@ _asyncio_Future_set_result(PyObject *self, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_result",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -224,6 +226,7 @@ _asyncio_Future_set_exception(PyObject *self, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_exception",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -289,6 +292,7 @@ _asyncio_Future_add_done_callback(PyObject *self, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "add_done_callback",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -345,6 +349,7 @@ _asyncio_Future_remove_done_callback(PyObject *self, PyTypeObject *cls, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "remove_done_callback",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -410,6 +415,7 @@ _asyncio_Future_cancel(PyObject *self, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "cancel",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -907,6 +913,7 @@ _asyncio_Task___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1169,6 +1176,7 @@ _asyncio_Task_cancel(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "cancel",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1309,6 +1317,7 @@ _asyncio_Task_get_stack(PyObject *self, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_stack",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1379,6 +1388,7 @@ _asyncio_Task_print_stack(PyObject *self, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "print_stack",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1657,6 +1667,7 @@ _asyncio__register_task(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_register_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1717,6 +1728,7 @@ _asyncio__register_eager_task(PyObject *module, PyObject *const *args, Py_ssize_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_register_eager_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1777,6 +1789,7 @@ _asyncio__unregister_task(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_unregister_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1837,6 +1850,7 @@ _asyncio__unregister_eager_task(PyObject *module, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_unregister_eager_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1899,6 +1913,7 @@ _asyncio__enter_task(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_enter_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1963,6 +1978,7 @@ _asyncio__leave_task(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_leave_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2026,6 +2042,7 @@ _asyncio__swap_current_task(PyObject *module, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_swap_current_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2086,6 +2103,7 @@ _asyncio_current_task(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "current_task",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2149,6 +2167,7 @@ _asyncio_all_tasks(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "all_tasks",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2232,4 +2251,4 @@ _asyncio_future_discard_from_awaited_by(PyObject *module, PyObject *const *args,
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=b69948ed810591d9 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=79890c5aad7cbd8c input=a9049054013a1b77]*/

@@ -52,6 +52,7 @@ _functools_cmp_to_key(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "cmp_to_key",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -119,6 +120,7 @@ _functools_reduce(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "reduce",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -193,4 +195,4 @@ _functools__lru_cache_wrapper_cache_clear(PyObject *self, PyObject *Py_UNUSED(ig
 
     return return_value;
 }
-/*[clinic end generated code: output=ac9e26d0a5a23d40 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=30a86908f788cdb1 input=a9049054013a1b77]*/

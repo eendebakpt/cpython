@@ -88,6 +88,7 @@ _remote_debugging_RemoteUnwinder___init__(PyObject *self, PyObject *args, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "RemoteUnwinder",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -553,6 +554,7 @@ _remote_debugging_GCMonitor___init__(PyObject *self, PyObject *args, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "GCMonitor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -650,6 +652,7 @@ _remote_debugging_GCMonitor_get_gc_stats(PyObject *self, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_gc_stats",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -728,6 +731,7 @@ _remote_debugging_BinaryWriter___init__(PyObject *self, PyObject *args, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "BinaryWriter",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -812,6 +816,7 @@ _remote_debugging_BinaryWriter_write_sample(PyObject *self, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "write_sample",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -933,6 +938,7 @@ _remote_debugging_BinaryWriter___exit__(PyObject *self, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__exit__",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1034,6 +1040,7 @@ _remote_debugging_BinaryReader___init__(PyObject *self, PyObject *args, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "BinaryReader",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1103,6 +1110,7 @@ _remote_debugging_BinaryReader_replay(PyObject *self, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replay",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1249,6 +1257,7 @@ _remote_debugging_BinaryReader___exit__(PyObject *self, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__exit__",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1364,6 +1373,7 @@ _remote_debugging_get_child_pids(PyObject *module, PyObject *const *args, Py_ssi
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_child_pids",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1435,6 +1445,7 @@ _remote_debugging_is_python_process(PyObject *module, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_python_process",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1517,6 +1528,7 @@ _remote_debugging_get_gc_stats(PyObject *module, PyObject *const *args, Py_ssize
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_gc_stats",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1547,4 +1559,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=884914b100e9c90c input=a9049054013a1b77]*/
+/*[clinic end generated code: output=ba9bb7e6ff5fc60e input=a9049054013a1b77]*/

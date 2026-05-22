@@ -489,6 +489,7 @@ deque_init(PyObject *deque, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "deque",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -632,4 +633,4 @@ tuplegetter_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=b9d4d647c221cb9f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=3630358cb01dc487 input=a9049054013a1b77]*/

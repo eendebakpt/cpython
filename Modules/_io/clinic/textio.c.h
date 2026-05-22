@@ -64,6 +64,7 @@ _io__TextIOBase_read(PyObject *self, PyTypeObject *cls, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "read",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -119,6 +120,7 @@ _io__TextIOBase_readline(PyObject *self, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "readline",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -174,6 +176,7 @@ _io__TextIOBase_write(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "write",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -336,6 +339,7 @@ _io_IncrementalNewlineDecoder___init__(PyObject *self, PyObject *args, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "IncrementalNewlineDecoder",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -408,6 +412,7 @@ _io_IncrementalNewlineDecoder_decode(PyObject *self, PyObject *const *args, Py_s
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decode",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -576,6 +581,7 @@ _io_TextIOWrapper___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "TextIOWrapper",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -717,6 +723,7 @@ _io_TextIOWrapper_reconfigure(PyObject *self, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "reconfigure",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1328,4 +1335,4 @@ _io_TextIOWrapper__CHUNK_SIZE_set(PyObject *self, PyObject *value, void *Py_UNUS
 
     return return_value;
 }
-/*[clinic end generated code: output=c38e6cd5ff4b7eea input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f94d072d8ec16ca7 input=a9049054013a1b77]*/

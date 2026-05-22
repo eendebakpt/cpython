@@ -64,6 +64,7 @@ builtin___import__(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__import__",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -159,6 +160,7 @@ builtin___lazy_import__(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__lazy_import__",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -386,6 +388,7 @@ builtin_compile(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compile",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -553,6 +556,7 @@ builtin_eval(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "eval",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -634,6 +638,7 @@ builtin_exec(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "exec",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -997,6 +1002,7 @@ builtin_pow(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "pow",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1075,6 +1081,7 @@ builtin_print(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "print",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1219,6 +1226,7 @@ builtin_round(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "round",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1288,6 +1296,7 @@ builtin_sum(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sum",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1382,4 +1391,4 @@ builtin_issubclass(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=f1fc836a63d89826 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=49ff54a0bcfb3fb3 input=a9049054013a1b77]*/

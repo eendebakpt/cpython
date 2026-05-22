@@ -326,6 +326,7 @@ _io_StringIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "StringIO",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -550,4 +551,4 @@ _io_StringIO_newlines_get(PyObject *self, void *Py_UNUSED(context))
 
     return return_value;
 }
-/*[clinic end generated code: output=bccc25ef8e6ce9ef input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e48051f08a13fb7e input=a9049054013a1b77]*/

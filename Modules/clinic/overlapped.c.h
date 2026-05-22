@@ -477,6 +477,7 @@ _overlapped_Overlapped(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "Overlapped",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1242,4 +1243,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=3e4cb2b55342cd96 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=4202e37b74225ce5 input=a9049054013a1b77]*/

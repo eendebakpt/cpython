@@ -56,6 +56,7 @@ _thread_lock_acquire(PyObject *self, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "acquire",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -130,6 +131,7 @@ _thread_lock_acquire_lock(PyObject *self, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "acquire_lock",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -388,6 +390,7 @@ _thread_RLock_acquire(PyObject *self, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "acquire",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -701,6 +704,7 @@ _thread_set_name(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_name",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -740,4 +744,4 @@ exit:
 #ifndef _THREAD_SET_NAME_METHODDEF
     #define _THREAD_SET_NAME_METHODDEF
 #endif /* !defined(_THREAD_SET_NAME_METHODDEF) */
-/*[clinic end generated code: output=1255a1520f43f97a input=a9049054013a1b77]*/
+/*[clinic end generated code: output=90a91e24a5ed008a input=a9049054013a1b77]*/

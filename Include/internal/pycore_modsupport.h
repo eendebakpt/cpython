@@ -72,7 +72,9 @@ PyAPI_FUNC(int) _PyArg_ParseStackAndKeywords(
     struct _PyArg_Parser *,
     ...);
 
-// Export for 'math' shared extension
+// Export for 'math' shared extension.  Performs argument-shape safety
+// checks (parser != NULL, kwnames is a tuple, etc.) then dispatches to
+// _PyArg_UnpackKeywords_unchecked.
 PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywords(
     PyObject *const *args,
     Py_ssize_t nargs,
@@ -84,12 +86,31 @@ PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywords(
     int minkw,
     int varpos,
     PyObject **buf);
+
+// AC-fastpath worker.  Caller must guarantee:
+//   - parser != NULL
+//   - kwnames is NULL or a tuple
+//   - args/nargs is well-formed (args != NULL when nargs > 0)
+// Argument-Clinic-generated wrappers call this directly via the macro
+// below, bypassing the safety checks in the public function.
+PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywords_unchecked(
+    PyObject *const *args,
+    Py_ssize_t nargs,
+    PyObject *kwargs,
+    PyObject *kwnames,
+    struct _PyArg_Parser *parser,
+    int minpos,
+    int maxpos,
+    int minkw,
+    int varpos,
+    PyObject **buf);
+
 #define _PyArg_UnpackKeywords(args, nargs, kwargs, kwnames, parser, minpos, maxpos, minkw, varpos, buf) \
     (((minkw) == 0 && (kwargs) == NULL && (kwnames) == NULL && \
       (minpos) <= (nargs) && ((varpos) || (nargs) <= (maxpos)) && (args) != NULL) ? \
       (args) : \
-     _PyArg_UnpackKeywords((args), (nargs), (kwargs), (kwnames), (parser), \
-                           (minpos), (maxpos), (minkw), (varpos), (buf)))
+     _PyArg_UnpackKeywords_unchecked((args), (nargs), (kwargs), (kwnames), (parser), \
+                                     (minpos), (maxpos), (minkw), (varpos), (buf)))
 
 #ifdef __cplusplus
 }

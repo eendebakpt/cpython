@@ -611,6 +611,7 @@ _io_BytesIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "BytesIO",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -637,4 +638,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=daa81dfdae5ccc57 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=5b794dd45474d8ea input=a9049054013a1b77]*/

@@ -39,6 +39,7 @@ structseq_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "structseq",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -65,4 +66,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=112d59f5e98d652b input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e7847dccd8c0c916 input=a9049054013a1b77]*/

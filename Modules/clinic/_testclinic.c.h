@@ -1651,6 +1651,7 @@ keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "keywords",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1710,6 +1711,7 @@ keywords_kwonly(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "keywords_kwonly",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1769,6 +1771,7 @@ keywords_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "keywords_opt",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1841,6 +1844,7 @@ keywords_opt_kwonly(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "keywords_opt_kwonly",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1924,6 +1928,7 @@ keywords_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "keywords_kwonly_opt",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1995,6 +2000,7 @@ posonly_keywords(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_keywords",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2054,6 +2060,7 @@ posonly_kwonly(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_kwonly",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2114,6 +2121,7 @@ posonly_keywords_kwonly(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_keywords_kwonly",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2176,6 +2184,7 @@ posonly_keywords_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_keywords_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2250,6 +2259,7 @@ posonly_opt_keywords_opt(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_opt_keywords_opt",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2329,6 +2339,7 @@ posonly_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2403,6 +2414,7 @@ posonly_opt_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_opt_kwonly_opt",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2482,6 +2494,7 @@ posonly_keywords_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_keywords_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2560,6 +2573,7 @@ posonly_keywords_opt_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_keywords_opt_kwonly_opt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2647,6 +2661,7 @@ posonly_opt_keywords_opt_kwonly_opt(PyObject *module, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_opt_keywords_opt_kwonly_opt",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2729,6 +2744,7 @@ keyword_only_parameter(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "keyword_only_parameter",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2899,6 +2915,7 @@ posonly_poskw_varpos(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_poskw_varpos",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2969,6 +2986,7 @@ poskw_varpos(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "poskw_varpos",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3038,6 +3056,7 @@ poskw_varpos_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t narg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "poskw_varpos_kwonly_opt",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3117,6 +3136,7 @@ poskw_varpos_kwonly_opt2(PyObject *module, PyObject *const *args, Py_ssize_t nar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "poskw_varpos_kwonly_opt2",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3199,6 +3219,7 @@ varpos_kwonly_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "varpos_kwonly_opt",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3271,6 +3292,7 @@ varpos_kwonly_req_opt(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "varpos_kwonly_req_opt",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3452,6 +3474,7 @@ posonly_poskw_varpos_array(PyObject *module, PyObject *const *args, Py_ssize_t n
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_poskw_varpos_array",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3518,6 +3541,7 @@ gh_32092_oob(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "gh_32092_oob",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3604,6 +3628,7 @@ gh_32092_kw_pass(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "gh_32092_kw_pass",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3746,6 +3771,7 @@ null_or_tuple_for_varargs(PyObject *module, PyObject *const *args, Py_ssize_t na
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "null_or_tuple_for_varargs",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3824,6 +3850,7 @@ clone_f1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "clone_f1",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3893,6 +3920,7 @@ clone_f2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *kw
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "clone_f2",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -3962,6 +3990,7 @@ clone_with_conv_f1(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "clone_with_conv_f1",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4028,6 +4057,7 @@ clone_with_conv_f2(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "clone_with_conv_f2",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4118,6 +4148,7 @@ _testclinic_TestClass_get_defining_class_arg(PyObject *self, PyTypeObject *cls, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "get_defining_class_arg",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4162,6 +4193,7 @@ _testclinic_TestClass_defclass_varpos(PyObject *self, PyTypeObject *cls, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "defclass_varpos",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4215,6 +4247,7 @@ _testclinic_TestClass_defclass_posonly_varpos(PyObject *self, PyTypeObject *cls,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "defclass_posonly_varpos",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4397,6 +4430,7 @@ _testclinic_TestClass_posonly_poskw_varpos_no_fastcall(PyObject *type, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_poskw_varpos_no_fastcall",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4575,6 +4609,7 @@ _testclinic_TestClass_posonly_poskw_varpos_array_no_fastcall(PyObject *type, PyO
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "posonly_poskw_varpos_array_no_fastcall",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4600,4 +4635,4 @@ _testclinic_TestClass_posonly_poskw_varpos_array_no_fastcall(PyObject *type, PyO
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=9971dbbc5f62b8d2 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1bdc6c2f576fd775 input=a9049054013a1b77]*/

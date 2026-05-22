@@ -201,6 +201,7 @@ _gdbm_gdbm_nextkey(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .ext = &_parser_ext,
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -390,4 +391,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=7bd8dea50c251dae input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f976215050c7ce8c input=a9049054013a1b77]*/

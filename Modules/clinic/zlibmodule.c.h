@@ -56,6 +56,7 @@ zlib_compress(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compress",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -149,6 +150,7 @@ zlib_decompress(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObj
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -272,6 +274,7 @@ zlib_compressobj(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compressobj",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -398,6 +401,7 @@ zlib_decompressobj(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompressobj",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -465,6 +469,7 @@ zlib_Compress_compress(PyObject *self, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compress",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -542,6 +547,7 @@ zlib_Decompress_decompress(PyObject *self, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -622,6 +628,7 @@ zlib_Compress_flush(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "flush",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -726,6 +733,7 @@ zlib_Compress___deepcopy__(PyObject *self, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__deepcopy__",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -825,6 +833,7 @@ zlib_Decompress___deepcopy__(PyObject *self, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__deepcopy__",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -875,6 +884,7 @@ zlib_Decompress_flush(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "flush",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -963,6 +973,7 @@ zlib__ZlibDecompressor_decompress(PyObject *self, PyObject *const *args, Py_ssiz
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "decompress",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1051,6 +1062,7 @@ zlib__ZlibDecompressor(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_ZlibDecompressor",
+
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1402,4 +1414,4 @@ exit:
 #ifndef ZLIB_DECOMPRESS___DEEPCOPY___METHODDEF
     #define ZLIB_DECOMPRESS___DEEPCOPY___METHODDEF
 #endif /* !defined(ZLIB_DECOMPRESS___DEEPCOPY___METHODDEF) */
-/*[clinic end generated code: output=13627e14206d3552 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c42e71b9d4aba64c input=a9049054013a1b77]*/
