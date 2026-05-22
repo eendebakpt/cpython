@@ -39,6 +39,26 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* Types whose truthiness is a Py_ssize_t size field at a known offset. Used
+ * by the _TO_BOOL optimizer rule to lower TO_BOOL to _TO_BOOL_SIZED (optionally
+ * preceded by a recorded-type _GUARD_TOS_<TYPE>). Keep guard_op and size_offset
+ * in sync per row -- they cannot drift because both come from the same table. */
+static const struct {
+    PyTypeObject *tp;
+    int guard_op;
+    uintptr_t size_offset;
+} _sized_to_bool_types[] = {
+    { &PyDict_Type,       _GUARD_TOS_DICT,       offsetof(PyDictObject, ma_used) },
+    { &PyFrozenDict_Type, _GUARD_TOS_FROZENDICT, offsetof(PyDictObject, ma_used) },
+    { &PyTuple_Type,      _GUARD_TOS_TUPLE,      offsetof(PyVarObject, ob_size) },
+    { &PyBytes_Type,      _GUARD_TOS_BYTES,      offsetof(PyVarObject, ob_size) },
+    { &PyByteArray_Type,  _GUARD_TOS_BYTEARRAY,  offsetof(PyVarObject, ob_size) },
+    { &PyList_Type,       _GUARD_TOS_LIST,       offsetof(PyVarObject, ob_size) },
+    { &PySet_Type,        _GUARD_TOS_SET,        offsetof(PySetObject, used) },
+    { &PyFrozenSet_Type,  _GUARD_TOS_FROZENSET,  offsetof(PySetObject, used) },
+};
+#define _SIZED_TO_BOOL_COUNT Py_ARRAY_LENGTH(_sized_to_bool_types)
+
 #ifdef Py_DEBUG
     extern const char *_PyUOpName(int index);
     extern void _PyUOpPrint(const _PyUOpInstruction *uop);

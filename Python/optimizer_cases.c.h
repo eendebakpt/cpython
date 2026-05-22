@@ -329,48 +329,27 @@
             if (!already_bool) {
                 PyTypeObject *tp = sym_get_type(value);
                 int emitted_guard = 0;
+                uintptr_t size_offset = 0;
                 if (tp == NULL) {
                     PyTypeObject *probable = sym_get_probable_type(value);
-                    int guard_op = 0;
-                    if (probable == &PyDict_Type) {
-                        guard_op = _GUARD_TOS_DICT;
-                    }
-                    else if (probable == &PyFrozenDict_Type) {
-                        guard_op = _GUARD_TOS_FROZENDICT;
-                    }
-                    else if (probable == &PyTuple_Type) {
-                        guard_op = _GUARD_TOS_TUPLE;
-                    }
-                    else if (probable == &PyBytes_Type) {
-                        guard_op = _GUARD_TOS_BYTES;
-                    }
-                    else if (probable == &PyByteArray_Type) {
-                        guard_op = _GUARD_TOS_BYTEARRAY;
-                    }
-                    else if (probable == &PySet_Type) {
-                        guard_op = _GUARD_TOS_SET;
-                    }
-                    else if (probable == &PyFrozenSet_Type) {
-                        guard_op = _GUARD_TOS_FROZENSET;
-                    }
-                    if (guard_op) {
-                        ADD_OP(guard_op, 0, 0);
-                        sym_set_type(value, probable);
-                        tp = probable;
-                        emitted_guard = 1;
+                    for (size_t i = 0; i < _SIZED_TO_BOOL_COUNT; i++) {
+                        if (_sized_to_bool_types[i].tp == probable) {
+                            ADD_OP(_sized_to_bool_types[i].guard_op, 0, 0);
+                            sym_set_type(value, probable);
+                            tp = probable;
+                            size_offset = _sized_to_bool_types[i].size_offset;
+                            emitted_guard = 1;
+                            break;
+                        }
                     }
                 }
-                uintptr_t size_offset = 0;
-                if (tp == &PyDict_Type || tp == &PyFrozenDict_Type) {
-                    size_offset = offsetof(PyDictObject, ma_used);
-                }
-                else if (tp == &PyTuple_Type ||
-                     tp == &PyBytes_Type ||
-                     tp == &PyByteArray_Type) {
-                    size_offset = offsetof(PyVarObject, ob_size);
-                }
-                else if (tp == &PySet_Type || tp == &PyFrozenSet_Type) {
-                    size_offset = offsetof(PySetObject, used);
+                else {
+                    for (size_t i = 0; i < _SIZED_TO_BOOL_COUNT; i++) {
+                        if (_sized_to_bool_types[i].tp == tp) {
+                            size_offset = _sized_to_bool_types[i].size_offset;
+                            break;
+                        }
+                    }
                 }
                 if (size_offset) {
                     if (emitted_guard) {
