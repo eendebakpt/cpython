@@ -476,6 +476,47 @@ static inline void Py_DECREF_MORTAL_SPECIALIZED(PyObject *op, destructor destruc
 # define Py_DECREF_MORTAL_SPECIALIZED(op, destruct) Py_DECREF(op)
 #endif
 
+/* Reinitialize an object's reference-count fields after popping it from a
+ * type freelist.  This is a fast-path variant of _Py_NewReference that
+ * relies on invariants the freelist push side has already established:
+ *
+ *   - ob_flags is 0.  No freelisted type sets ob_flags during its lifetime
+ *     (the only setters are _Py_SetImmortal*, which targets immortal
+ *     objects that never reach a freelist, and a few typeobject.c flags
+ *     that only apply to type objects).
+ *   - ob_mutex is 0.  Per-object locks must be unlocked at dealloc time;
+ *     a locked mutex at the moment of free would itself be a bug.
+ *   - ob_type is preserved.  The freelist link only clobbers ob_tid at
+ *     offset 0; the type pointer at the tail of the header is untouched.
+ */
+static inline void
+_Py_NewReferenceFreelist(PyObject *op)
+{
+#ifdef Py_REF_DEBUG
+    _Py_IncRefTotal(_PyThreadState_GET());
+#endif
+#ifndef Py_GIL_DISABLED
+#  if SIZEOF_VOID_P > 4
+    op->ob_refcnt_full = 1;
+    assert(op->ob_refcnt == 1);
+    assert(op->ob_flags == 0);
+#  else
+    op->ob_refcnt = 1;
+#  endif
+#else
+    assert(op->ob_flags == 0);
+    assert(((const PyMutex *)&op->ob_mutex)->_bits == 0);
+    op->ob_tid = _Py_ThreadId();
+    op->ob_gc_bits = 0;
+    op->ob_ref_local = 1;
+    op->ob_ref_shared = 0;
+#endif
+#ifdef Py_TRACE_REFS
+    _Py_AddToAllObjects(op);
+#endif
+    _PyReftracerTrack(op, PyRefTracer_CREATE);
+}
+
 /* Inline functions trading binary compatibility for speed:
    _PyObject_Init() is the fast version of PyObject_Init(), and
    _PyObject_InitVar() is the fast version of PyObject_InitVar().

@@ -10,6 +10,7 @@ extern "C" {
 
 #include "pycore_freelist_state.h"      // struct _Py_freelists
 #include "pycore_interp_structs.h"      // PyInterpreterState
+#include "pycore_object.h"              // _Py_NewReferenceFreelist()
 #include "pycore_pyatomic_ft_wrappers.h" // FT_ATOMIC_STORE_PTR_RELAXED()
 #include "pycore_pystate.h"             // _PyThreadState_GET
 #include "pycore_stats.h"               // OBJECT_STAT_INC
@@ -89,7 +90,7 @@ _PyFreeList_Pop(struct _Py_freelist *fl)
     PyObject *op = _PyFreeList_PopNoStats(fl);
     if (op != NULL) {
         OBJECT_STAT_INC(from_freelist);
-        _Py_NewReference(op);
+        _Py_NewReferenceFreelist(op);
     }
     return op;
 }
