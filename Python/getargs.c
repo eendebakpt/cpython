@@ -2022,107 +2022,10 @@ vgetargskeywords(PyObject *argstuple, PyObject *kwargs,
                                  format, kwlist, p_va, flags);
 }
 
-static int
-scan_keywords(const char * const *keywords, int *ptotal, int *pposonly)
-{
-    /* scan keywords and count the number of positional-only parameters */
-    int i;
-    for (i = 0; keywords[i] && !*keywords[i]; i++) {
-    }
-    *pposonly = i;
-
-    /* scan keywords and get greatest possible nbr of args */
-    for (; keywords[i]; i++) {
-        if (!*keywords[i]) {
-            PyErr_SetString(PyExc_SystemError,
-                            "Empty keyword parameter name");
-            return -1;
-        }
-    }
-    *ptotal = i;
-    return 0;
-}
-
-static int
-parse_format(const char *format, int total, int npos,
-             const char **pfname, const char **pcustommsg,
-             int *pmin, int *pmax)
-{
-    /* grab the function name or custom error msg first (mutually exclusive) */
-    const char *custommsg;
-    const char *fname = strchr(format, ':');
-    if (fname) {
-        fname++;
-        custommsg = NULL;
-    }
-    else {
-        custommsg = strchr(format,';');
-        if (custommsg) {
-            custommsg++;
-        }
-    }
-
-    int min = INT_MAX;
-    int max = INT_MAX;
-    for (int i = 0; i < total; i++) {
-        if (*format == '|') {
-            if (min != INT_MAX) {
-                PyErr_SetString(PyExc_SystemError,
-                                "Invalid format string (| specified twice)");
-                return -1;
-            }
-            if (max != INT_MAX) {
-                PyErr_SetString(PyExc_SystemError,
-                                "Invalid format string ($ before |)");
-                return -1;
-            }
-            min = i;
-            format++;
-        }
-        if (*format == '$') {
-            if (max != INT_MAX) {
-                PyErr_SetString(PyExc_SystemError,
-                                "Invalid format string ($ specified twice)");
-                return -1;
-            }
-            if (i < npos) {
-                PyErr_SetString(PyExc_SystemError,
-                                "Empty parameter name after $");
-                return -1;
-            }
-            max = i;
-            format++;
-        }
-        if (IS_END_OF_FORMAT(*format)) {
-            PyErr_Format(PyExc_SystemError,
-                        "More keyword list entries (%d) than "
-                        "format specifiers (%d)", total, i);
-            return -1;
-        }
-
-        const char *msg = skipitem(&format, NULL, 0);
-        if (msg) {
-            PyErr_Format(PyExc_SystemError, "%s: '%s'", msg,
-                        format);
-            return -1;
-        }
-    }
-    min = Py_MIN(min, total);
-    max = Py_MIN(max, total);
-
-    if (!IS_END_OF_FORMAT(*format) && (*format != '|') && (*format != '$')) {
-        PyErr_Format(PyExc_SystemError,
-            "more argument specifiers than keyword list entries "
-            "(remaining format:'%s')", format);
-        return -1;
-    }
-
-    *pfname = fname;
-    *pcustommsg = custommsg;
-    *pmin = min;
-    *pmax = max;
-    return 0;
-}
+/* scan_keywords() and parse_format() were removed: Argument Clinic and
+   the parsers in Python/bltinmodule.c now pre-compute parser->fname,
+   parser->pos, and ext->{custom_msg,min,max} as static initializers.  No
+   in-tree caller needed runtime derivation. */
 
 static PyObject *
 new_kwtuple(const char * const *keywords, int total, int pos)
@@ -2149,76 +2052,47 @@ new_kwtuple(const char * const *keywords, int total, int pos)
 static int
 _parser_init(void *arg)
 {
+    /* Lazy kwtuple build for shared-extension modules (non-Py_BUILD_CORE),
+       where the static `&_Py_ID()`-based kwtuple isn't available.  Every
+       other field (fname, pos, ext->min/max/custom_msg) is filled in
+       statically by Argument Clinic (or by hand for parsers in
+       Python/bltinmodule.c) -- this function exists only to build the
+       kwtuple on first use and register the parser for shutdown cleanup. */
     struct _PyArg_Parser *parser = (struct _PyArg_Parser *)arg;
     const char * const *keywords = parser->keywords;
-    struct _PyArg_ParserExt *ext = parser->ext;
     assert(keywords != NULL);
+    assert(parser->fname != NULL);
+    assert(parser->kwtuple == NULL);  // otherwise we wouldn't be called
 
-    /* Two paths:
-       - AC-emitted parsers pre-set parser->fname and parser->pos.  Skip
-         scan_keywords and parse_format entirely.
-       - Hand-written parsers with only ext->format set lazy-derive here. */
-    const char *fname;
-    int len, pos;
-    if (parser->fname != NULL) {
-        fname = parser->fname;
-        pos = parser->pos;
-        len = 0;
-        while (keywords[len]) {
-            len++;
-        }
-    }
-    else {
-        assert(parser->pos == 0);
-        if (scan_keywords(keywords, &len, &pos) < 0) {
-            return -1;
-        }
-        assert(ext != NULL && ext->format != NULL);
-        assert(ext->custom_msg == NULL && ext->min == 0 && ext->max == 0);
-        const char *custommsg = NULL;
-        int min = 0, max = 0;
-        if (parse_format(ext->format, len, pos,
-                         &fname, &custommsg, &min, &max) < 0) {
-            return -1;
-        }
-        ext->custom_msg = custommsg;
-        ext->min = min;
-        ext->max = max;
+    int len = 0;
+    while (keywords[len]) {
+        len++;
     }
 
-    int owned;
-    PyObject *kwtuple = parser->kwtuple;
+    /* We may temporarily switch to the main interpreter to avoid creating
+       a tuple that could outlive its owning interpreter. */
+    PyThreadState *save_tstate = NULL;
+    PyThreadState *temp_tstate = NULL;
+    if (!_Py_IsMainInterpreter(PyInterpreterState_Get())) {
+        temp_tstate = PyThreadState_New(_PyInterpreterState_Main());
+        if (temp_tstate == NULL) {
+            return -1;
+        }
+        save_tstate = PyThreadState_Swap(temp_tstate);
+    }
+    PyObject *kwtuple = new_kwtuple(keywords, len, parser->pos);
+    if (temp_tstate != NULL) {
+        PyThreadState_Clear(temp_tstate);
+        (void)PyThreadState_Swap(save_tstate);
+        PyThreadState_Delete(temp_tstate);
+    }
     if (kwtuple == NULL) {
-        /* We may temporarily switch to the main interpreter to avoid
-         * creating a tuple that could outlive its owning interpreter. */
-        PyThreadState *save_tstate = NULL;
-        PyThreadState *temp_tstate = NULL;
-        if (!_Py_IsMainInterpreter(PyInterpreterState_Get())) {
-            temp_tstate = PyThreadState_New(_PyInterpreterState_Main());
-            if (temp_tstate == NULL) {
-                return -1;
-            }
-            save_tstate = PyThreadState_Swap(temp_tstate);
-        }
-        kwtuple = new_kwtuple(keywords, len, pos);
-        if (temp_tstate != NULL) {
-            PyThreadState_Clear(temp_tstate);
-            (void)PyThreadState_Swap(save_tstate);
-            PyThreadState_Delete(temp_tstate);
-        }
-        if (kwtuple == NULL) {
-            return -1;
-        }
-        owned = 1;
+        return -1;
     }
-    else {
-        owned = 0;
-    }
-
-    parser->pos = pos;
-    parser->fname = fname;
-    parser->kwtuple = kwtuple;
-    parser->is_kwtuple_owned = owned;
+    parser->is_kwtuple_owned = 1;
+    /* Release-publish kwtuple so the load-acquire in _PyArg_UnpackKeywords
+       safely sees a fully-constructed tuple. */
+    _Py_atomic_store_ptr_release(&parser->kwtuple, kwtuple);
 
     assert(parser->next == NULL);
     parser->next = _Py_atomic_load_ptr(&_PyRuntime.getargs.static_parsers);
@@ -2238,23 +2112,13 @@ parser_init(struct _PyArg_Parser *parser)
 static void
 parser_clear(struct _PyArg_Parser *parser)
 {
+    /* fname, pos, and ext fields are all statically initialized by AC
+       (or by hand) and remain valid for the next interpreter.  Only the
+       lazily-built kwtuple (for non-Py_BUILD_CORE parsers) and the once
+       flag need to be reset. */
     if (parser->is_kwtuple_owned) {
         Py_CLEAR(parser->kwtuple);
     }
-
-    /* If the parser has a format string, fname may have been lazy-derived
-       and ext->custom_msg/min/max may have been written by parse_format on
-       a prior interp.  Reset them so the next interp re-runs the same
-       derivation (or, for AC-emitted parsers, the same static values are
-       re-derivable from ext->format).  Hand-written kwarg-only parsers
-       set fname statically and have no ext -- leave them alone. */
-    if (parser->ext != NULL && parser->ext->format != NULL) {
-        parser->ext->custom_msg = NULL;
-        parser->ext->min = 0;
-        parser->ext->max = 0;
-        parser->fname = NULL;
-    }
-    parser->pos = 0;
     parser->is_kwtuple_owned = 0;
     parser->once.v = 0;
 }
@@ -2322,11 +2186,16 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
         return 0;
     }
 
-    if (parser_init(parser) < 0) {
-        return 0;
+    /* Statically-built kwtuple (Py_BUILD_CORE parsers): kwtuple is already
+       non-NULL and we can skip parser_init entirely.  Shared extensions
+       (kwtuple == NULL initially) lazy-build under the once-flag. */
+    kwtuple = _Py_atomic_load_ptr_acquire(&parser->kwtuple);
+    if (kwtuple == NULL) {
+        if (parser_init(parser) < 0) {
+            return 0;
+        }
+        kwtuple = parser->kwtuple;
     }
-
-    kwtuple = parser->kwtuple;
     pos = parser->pos;
     len = pos + (int)PyTuple_GET_SIZE(kwtuple);
 
@@ -2557,11 +2426,15 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
         args = buf;
     }
 
-    if (parser_init(parser) < 0) {
-        return NULL;
+    /* Fast path: kwtuple already statically built (the Py_BUILD_CORE case
+       for ~95% of AC-generated parsers).  Skip the once-flag check. */
+    kwtuple = _Py_atomic_load_ptr_acquire(&parser->kwtuple);
+    if (kwtuple == NULL) {
+        if (parser_init(parser) < 0) {
+            return NULL;
+        }
+        kwtuple = parser->kwtuple;
     }
-
-    kwtuple = parser->kwtuple;
     posonly = parser->pos;
     minposonly = Py_MIN(posonly, minpos);
     maxargs = posonly + (int)PyTuple_GET_SIZE(kwtuple);
