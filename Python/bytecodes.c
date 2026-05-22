@@ -1146,9 +1146,17 @@ dummy_func(
                 index += PyList_GET_SIZE(list);
             }
 #ifdef Py_GIL_DISABLED
-            PyObject *res_o = _PyList_GetItemRef((PyListObject*)list, index);
-            EXIT_IF(res_o == NULL);
-            res = PyStackRef_FromPyObjectSteal(res_o);
+            // _PyList_GetItemRefNoLock requires the list to be either owned
+            // by the current thread or already marked _PyGC_BITS_SHARED. A
+            // list created on another thread and accessed here for the first
+            // time may satisfy neither (the SHARED bit is set lazily by
+            // mutating ops and by the locked subscript slow path). Deopt
+            // in that case so the generic BINARY_OP path handles it; the
+            // same guard is used by FOR_ITER_LIST's _ITER_CHECK_LIST.
+            EXIT_IF(!_Py_IsOwnedByCurrentThread((PyObject *)list) &&
+                    !_PyObject_GC_IS_SHARED(list));
+            int result = _PyList_GetItemRefNoLock((PyListObject*)list, index, &res);
+            EXIT_IF(result <= 0);
 #else
             EXIT_IF(index < 0 || index >= PyList_GET_SIZE(list));
             PyObject *res_o = PyList_GET_ITEM(list, index);

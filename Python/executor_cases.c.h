@@ -6871,14 +6871,23 @@
                 index += PyList_GET_SIZE(list);
             }
             #ifdef Py_GIL_DISABLED
+
+            if (!_Py_IsOwnedByCurrentThread((PyObject *)list) &&
+                    !_PyObject_GC_IS_SHARED(list)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache1 = sub_st;
+                _tos_cache0 = list_st;
+                SET_CURRENT_CACHED_VALUES(2);
+                JUMP_TO_JUMP_TARGET();
+            }
             stack_pointer[0] = list_st;
             stack_pointer[1] = sub_st;
             stack_pointer += 2;
             ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
             _PyFrame_SetStackPointer(frame, stack_pointer);
-            PyObject *res_o = _PyList_GetItemRef((PyListObject*)list, index);
+            int result = _PyList_GetItemRefNoLock((PyListObject*)list, index, &res);
             stack_pointer = _PyFrame_GetStackPointer(frame);
-            if (res_o == NULL) {
+            if (result <= 0) {
                 UOP_STAT_INC(uopcode, miss);
                 _tos_cache1 = sub_st;
                 _tos_cache0 = list_st;
@@ -6887,7 +6896,6 @@
                 ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
                 JUMP_TO_JUMP_TARGET();
             }
-            res = PyStackRef_FromPyObjectSteal(res_o);
             #else
             if (index < 0 || index >= PyList_GET_SIZE(list)) {
                 UOP_STAT_INC(uopcode, miss);
