@@ -188,15 +188,22 @@ def _handle_existing_loggers(existing, child_loggers, disable_existing):
     disabled if disable_existing is false.
     """
     root = logging.root
+    cache_dirty = False
     for log in existing:
         logger = root.manager.loggerDict[log]
         if log in child_loggers:
             if not isinstance(logger, logging.PlaceHolder):
-                logger.setLevel(logging.NOTSET)
+                # Inline of setLevel() so we can defer the manager-wide
+                # cache clear to a single call after the loop, instead of
+                # paying O(N) cache scans for every preserved child.
+                logger.level = logging.NOTSET
                 logger.handlers = []
                 logger.propagate = True
+                cache_dirty = True
         else:
             logger.disabled = disable_existing
+    if cache_dirty:
+        root.manager._clear_cache()
 
 def _discard_existing_logger(name, existing, existing_set, child_loggers):
     """Discard a configured logger and record its existing children."""
