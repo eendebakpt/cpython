@@ -647,7 +647,17 @@ _PyJIT_Compile(_PyExecutorObject *executor, const _PyUOpInstruction trace[], siz
     // Loop once to find the total compiled size:
     size_t code_size = 0;
     size_t data_size = 0;
-    jit_state state = {0};
+    // Zero only the small symbol_state members that are OR-accumulated below.
+    // instruction_starts[] is fully written before being read (per uop in the
+    // sizing loop, then per uop in the offset-fixup loop) so leaving it
+    // uninitialized saves a ~20 KB memset per compile.
+    jit_state state;
+    state.trampolines.mem = NULL;
+    memset(state.trampolines.mask, 0, sizeof(state.trampolines.mask));
+    state.trampolines.size = 0;
+    state.got_symbols.mem = NULL;
+    memset(state.got_symbols.mask, 0, sizeof(state.got_symbols.mask));
+    state.got_symbols.size = 0;
     for (size_t i = 0; i < length; i++) {
         const _PyUOpInstruction *instruction = &trace[i];
         group = &stencil_groups[instruction->opcode];
