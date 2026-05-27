@@ -2503,28 +2503,71 @@ _PyType_NewManagedObject(PyTypeObject *type)
     return obj;
 }
 
-PyObject *
-_PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
+// Allocator path for types with Py_TPFLAGS_INLINE_VALUES. These are the
+// dominant case for Python-defined classes. INLINE_VALUES implies
+// tp_itemsize == 0 (so nitems is irrelevant; callers always pass 0),
+// Py_TPFLAGS_MANAGED_DICT, Py_TPFLAGS_HEAPTYPE, and GC-tracking.
+static PyObject *
+alloc_inline_values_instance(PyTypeObject *type)
 {
-    PyObject *obj;
+    assert(type->tp_itemsize == 0);
+    assert(type->tp_flags & Py_TPFLAGS_INLINE_VALUES);
+    assert(type->tp_flags & Py_TPFLAGS_MANAGED_DICT);
+    assert(type->tp_flags & Py_TPFLAGS_HEAPTYPE);
+    assert(PyType_IS_GC(type));
+
+    const size_t basicsize = (size_t)type->tp_basicsize;
+    const size_t presize = _PyType_PreHeaderSize(type);
+    assert(presize != 0);  // MANAGED_DICT implies a pre-header
+    const size_t size = basicsize + _PyInlineValuesSize(type);
+
+    char *alloc = _PyObject_MallocWithType(type, size + presize);
+    if (alloc == NULL) {
+        return PyErr_NoMemory();
+    }
+    PyObject *obj = (PyObject *)(alloc + presize);
+
+    // MANAGED_DICT / MANAGED_WEAKREF slots, initialized to NULL.
+    ((PyObject **)alloc)[0] = NULL;
+    ((PyObject **)alloc)[1] = NULL;
+
+    _PyObject_GC_Link(obj);
+
+    // Most user classes have no __slots__ so basicsize == sizeof(PyObject)
+    // and there is nothing to zero here. _PyObject_InitInlineValues() (below)
+    // handles the inline-values area itself.
+    if (basicsize > sizeof(PyObject)) {
+        memset((char *)obj + sizeof(PyObject), 0,
+               basicsize - sizeof(PyObject));
+    }
+
+    _PyObject_Init(obj, type);
+    _PyObject_InitInlineValues(obj, type);
+    return obj;
+}
+
+// Allocator path for types WITHOUT Py_TPFLAGS_INLINE_VALUES. Handles both
+// fixed-size types (tp_itemsize == 0, e.g. __slots__ classes) and
+// variable-size types (tp_itemsize > 0, e.g. subclasses of tuple/bytes).
+static PyObject *
+alloc_non_inline_values_instance(PyTypeObject *type, Py_ssize_t nitems)
+{
+    assert(!(type->tp_flags & Py_TPFLAGS_INLINE_VALUES));
+
     /* The +1 on nitems is needed for most types but not all. We could save a
      * bit of space by allocating one less item in certain cases, depending on
      * the type. However, given the extra complexity (e.g. an additional type
      * flag to indicate when that is safe) it does not seem worth the memory
      * savings. An example type that doesn't need the +1 is a subclass of
      * tuple. See GH-100659 and GH-81381. */
-    size_t size = _PyObject_VAR_SIZE(type, nitems+1);
-
+    const size_t size = _PyObject_VAR_SIZE(type, nitems + 1);
     const size_t presize = _PyType_PreHeaderSize(type);
-    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
-        assert(type->tp_itemsize == 0);
-        size += _PyInlineValuesSize(type);
-    }
+
     char *alloc = _PyObject_MallocWithType(type, size + presize);
-    if (alloc  == NULL) {
+    if (alloc == NULL) {
         return PyErr_NoMemory();
     }
-    obj = (PyObject *)(alloc + presize);
+    PyObject *obj = (PyObject *)(alloc + presize);
     if (presize) {
         ((PyObject **)alloc)[0] = NULL;
         ((PyObject **)alloc)[1] = NULL;
@@ -2532,8 +2575,6 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
     if (PyType_IS_GC(type)) {
         _PyObject_GC_Link(obj);
     }
-    // Zero out the object after the PyObject header. The header fields are
-    // initialized by _PyObject_Init[Var]().
     memset((char *)obj + sizeof(PyObject), 0, size - sizeof(PyObject));
 
     if (type->tp_itemsize == 0) {
@@ -2542,10 +2583,17 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
     else {
         _PyObject_InitVar((PyVarObject *)obj, type, nitems);
     }
-    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
-        _PyObject_InitInlineValues(obj, type);
-    }
     return obj;
+}
+
+PyObject *
+_PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
+{
+    if (type->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
+        assert(nitems == 0);
+        return alloc_inline_values_instance(type);
+    }
+    return alloc_non_inline_values_instance(type, nitems);
 }
 
 PyObject *
