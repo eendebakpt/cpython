@@ -26,6 +26,16 @@ Configurations to measure (set via CONFIGS list below):
                     A4 + single function with one consolidated
                     `if (INLINE_VALUES)` at the top. Smaller diff than helper.
 
+  6. bytecode_direct -- branch `feature/alloc-direct-from-bytecode`.
+                    Builds on split_two. Adds an exported wrapper
+                    `_PyType_AllocInlineValuesAndTrack(type)` and calls it
+                    directly from the bytecode interpreter's _ALLOCATE_OBJECT
+                    uop, bypassing both the _PyType_AllocNoTrack dispatcher
+                    AND the PyType_GenericAlloc runtime IS_GC check. The
+                    INLINE_VALUES branch in _ALLOCATE_OBJECT is predictable
+                    per call site. Hits the hot user-class-instantiation
+                    path (CALL_ALLOC_AND_ENTER_INIT specialization).
+
   5. split_two   -- branch `feature/alloc-split-two-fns`.
                     Both code paths factored into named static helpers:
                     `alloc_inline_values_instance(type)` and
@@ -85,6 +95,8 @@ CONFIGS = [
      "A4 + single function; one INLINE_VALUES branch at top"),
     ("split_two", "feature/alloc-split-two-fns",
      "two named static helpers (inline-values + non-inline-values); thin dispatcher"),
+    ("bytecode_direct", "feature/alloc-direct-from-bytecode",
+     "split_two + _ALLOCATE_OBJECT calls _PyType_AllocInlineValuesAndTrack directly"),
 ]
 
 REPEATS_PER_CONFIG = 3
