@@ -874,6 +874,11 @@ static inline int _PyType_SUPPORTS_WEAKREFS(PyTypeObject *type) {
 }
 
 extern PyObject* _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems);
+// Allocate + GC-track an instance of an inline-values type. Caller must
+// guarantee Py_TPFLAGS_INLINE_VALUES (and the implied MANAGED_DICT /
+// HEAPTYPE / IS_GC / tp_itemsize == 0). Used by the bytecode interpreter's
+// _ALLOCATE_OBJECT uop in the CALL_ALLOC_AND_ENTER_INIT specialization.
+PyAPI_FUNC(PyObject *) _PyType_AllocInlineValuesAndTrack(PyTypeObject *type);
 PyAPI_FUNC(PyObject *) _PyType_NewManagedObject(PyTypeObject *type);
 
 extern PyTypeObject* _PyType_CalculateMetaclass(PyTypeObject *, PyObject *);

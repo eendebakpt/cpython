@@ -2596,6 +2596,21 @@ _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems)
     return alloc_non_inline_values_instance(type, nitems);
 }
 
+// Fast-path entry point for the bytecode interpreter's _ALLOCATE_OBJECT uop.
+// Bypasses the _PyType_AllocNoTrack dispatcher and the PyType_GenericAlloc
+// runtime IS_GC check; the caller is expected to have verified the type
+// satisfies the invariants of `alloc_inline_values_instance` via a guard.
+PyObject *
+_PyType_AllocInlineValuesAndTrack(PyTypeObject *type)
+{
+    PyObject *obj = alloc_inline_values_instance(type);
+    if (obj == NULL) {
+        return NULL;
+    }
+    _PyObject_GC_TRACK(obj);
+    return obj;
+}
+
 PyObject *
 PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 {

@@ -1951,9 +1951,17 @@
                     JUMP_TO_PREDICTED(CALL);
                 }
                 STAT_INC(CALL, hit);
-                _PyFrame_SetStackPointer(frame, stack_pointer);
-                PyObject *self_o = PyType_GenericAlloc(tp, 0);
-                stack_pointer = _PyFrame_GetStackPointer(frame);
+                PyObject *self_o;
+                if (tp->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    self_o = _PyType_AllocInlineValuesAndTrack(tp);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                }
+                else {
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    self_o = PyType_GenericAlloc(tp, 0);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                }
                 if (self_o == NULL) {
                     JUMP_TO_LABEL(error);
                 }
