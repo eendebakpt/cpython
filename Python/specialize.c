@@ -1620,6 +1620,13 @@ get_init_for_simple_managed_python_class(PyTypeObject *tp, unsigned int *tp_vers
         SPECIALIZATION_FAIL(CALL, SPEC_FAIL_EXPECTED_ERROR);
         return NULL;
     }
+    if (!(tp_flags & Py_TPFLAGS_HAVE_GC)) {
+        /* _ALLOCATE_OBJECT (both the INLINE_VALUES and the non-INLINE_VALUES
+         * fast paths) GC-tracks unconditionally; refuse to specialize for the
+         * (rare) non-GC heap type to keep that invariant safe. */
+        SPECIALIZATION_FAIL(CALL, SPEC_FAIL_OTHER);
+        return NULL;
+    }
     PyObject *init = _PyType_LookupRefAndVersion(tp, &_Py_ID(__init__), tp_version);
     if (init == NULL || !PyFunction_Check(init)) {
         SPECIALIZATION_FAIL(CALL, SPEC_FAIL_CALL_INIT_NOT_PYTHON);

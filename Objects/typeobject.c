@@ -2611,6 +2611,24 @@ _PyType_AllocInlineValuesAndTrack(PyTypeObject *type)
     return obj;
 }
 
+// Slow-path entry point for the bytecode interpreter's _ALLOCATE_OBJECT uop:
+// non-INLINE_VALUES heap types (e.g. `__slots__` classes, var-itemsize
+// subclasses). Bypasses PyType_GenericAlloc's runtime IS_GC check by
+// requiring the caller (specialization in specialize_class_call) to have
+// already enforced Py_TPFLAGS_HAVE_GC.
+PyObject *
+_PyType_AllocNonInlineValuesAndTrack(PyTypeObject *type, Py_ssize_t nitems)
+{
+    assert(!(type->tp_flags & Py_TPFLAGS_INLINE_VALUES));
+    assert(_PyType_IS_GC(type));
+    PyObject *obj = alloc_non_inline_values_instance(type, nitems);
+    if (obj == NULL) {
+        return NULL;
+    }
+    _PyObject_GC_TRACK(obj);
+    return obj;
+}
+
 PyObject *
 PyType_GenericAlloc(PyTypeObject *type, Py_ssize_t nitems)
 {

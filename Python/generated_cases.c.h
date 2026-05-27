@@ -1959,7 +1959,7 @@
                 }
                 else {
                     _PyFrame_SetStackPointer(frame, stack_pointer);
-                    self_o = PyType_GenericAlloc(tp, 0);
+                    self_o = _PyType_AllocNonInlineValuesAndTrack(tp, 0);
                     stack_pointer = _PyFrame_GetStackPointer(frame);
                 }
                 if (self_o == NULL) {

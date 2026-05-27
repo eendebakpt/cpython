@@ -879,6 +879,11 @@ extern PyObject* _PyType_AllocNoTrack(PyTypeObject *type, Py_ssize_t nitems);
 // HEAPTYPE / IS_GC / tp_itemsize == 0). Used by the bytecode interpreter's
 // _ALLOCATE_OBJECT uop in the CALL_ALLOC_AND_ENTER_INIT specialization.
 PyAPI_FUNC(PyObject *) _PyType_AllocInlineValuesAndTrack(PyTypeObject *type);
+// Allocate + GC-track an instance of a non-inline-values heap type. Caller
+// must guarantee !Py_TPFLAGS_INLINE_VALUES and Py_TPFLAGS_HAVE_GC (the
+// _ALLOCATE_OBJECT specialization enforces both via its guards).
+PyAPI_FUNC(PyObject *) _PyType_AllocNonInlineValuesAndTrack(PyTypeObject *type,
+                                                            Py_ssize_t nitems);
 PyAPI_FUNC(PyObject *) _PyType_NewManagedObject(PyTypeObject *type);
 
 extern PyTypeObject* _PyType_CalculateMetaclass(PyTypeObject *, PyObject *);

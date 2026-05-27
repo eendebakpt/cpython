@@ -4812,13 +4812,15 @@ dummy_func(
             // The dominant case for user-defined classes: take a direct path
             // that skips both _PyType_AllocNoTrack's runtime dispatch and
             // PyType_GenericAlloc's runtime IS_GC check. The branch on
-            // INLINE_VALUES is predictable per call site.
+            // INLINE_VALUES is predictable per call site. The
+            // non-INLINE_VALUES helper relies on the specializer's HAVE_GC
+            // guard (specialize_class_call) to GC-track unconditionally.
             PyObject *self_o;
             if (tp->tp_flags & Py_TPFLAGS_INLINE_VALUES) {
                 self_o = _PyType_AllocInlineValuesAndTrack(tp);
             }
             else {
-                self_o = PyType_GenericAlloc(tp, 0);
+                self_o = _PyType_AllocNonInlineValuesAndTrack(tp, 0);
             }
             if (self_o == NULL) {
                 ERROR_NO_POP();
