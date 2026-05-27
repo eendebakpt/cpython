@@ -26,8 +26,17 @@ Configurations to measure (set via CONFIGS list below):
                     A4 + single function with one consolidated
                     `if (INLINE_VALUES)` at the top. Smaller diff than helper.
 
-`memset_init` touches a different file than `helper`/`reduced` and can
-combine with either. A "combined" config could be added later.
+  5. split_two   -- branch `feature/alloc-split-two-fns`.
+                    Both code paths factored into named static helpers:
+                    `alloc_inline_values_instance(type)` and
+                    `alloc_non_inline_values_instance(type, nitems)`. The
+                    top-level `_PyType_AllocNoTrack` is a 4-line dispatcher.
+                    Symmetric structure; same asserts as `helper` /
+                    `reduced` on the fast path; each helper has just one
+                    caller so the compiler should inline both back.
+
+`memset_init` touches a different file than the typeobject.c variants and
+can combine with any of them. A "combined" config could be added later.
 
 The runner:
   1. Records starting branch + HEAD so it can restore at the end.
@@ -74,6 +83,8 @@ CONFIGS = [
      "A4 + static-inline helper; no INLINE_VALUES re-checks"),
     ("reduced", "feature/alloc-fast-path",
      "A4 + single function; one INLINE_VALUES branch at top"),
+    ("split_two", "feature/alloc-split-two-fns",
+     "two named static helpers (inline-values + non-inline-values); thin dispatcher"),
 ]
 
 REPEATS_PER_CONFIG = 3
