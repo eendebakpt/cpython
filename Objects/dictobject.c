@@ -7154,9 +7154,11 @@ _PyObject_InitInlineValues(PyObject *obj, PyTypeObject *tp)
     values->size = 0;
     values->embedded = 1;
     values->valid = 1;
-    for (size_t i = 0; i < size; i++) {
-        values->values[i] = NULL;
-    }
+    // _PyObject_GC_New() (the other caller, besides _PyType_AllocNoTrack)
+    // does not memset the body, so the values must be zeroed here.
+    // memset is preferable to a manual loop because the compiler can
+    // lower it to vector stores.
+    memset(values->values, 0, size * sizeof(PyObject *));
     _PyObject_ManagedDictPointer(obj)->dict = NULL;
 }
 
