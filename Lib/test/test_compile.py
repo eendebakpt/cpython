@@ -2218,7 +2218,9 @@ class TestSourcePositions(unittest.TestCase):
         compiled_code, _ = self.check_positions_against_ast(snippet)
         self.assertOpcodeSourcePositionIs(compiled_code, 'MATCH_MAPPING',
             line=2, end_line=2, column=9, end_column=26, occurrence=1)
-        self.assertOpcodeSourcePositionIs(compiled_code, 'MATCH_KEYS',
+        # Mapping patterns with only distinct literal keys and no double-star
+        # target are lowered to one MATCH_KEY per key (gh-93714).
+        self.assertOpcodeSourcePositionIs(compiled_code, 'MATCH_KEY',
             line=2, end_line=2, column=9, end_column=26, occurrence=1)
         self.assertOpcodeSourcePositionIs(compiled_code, 'STORE_NAME',
             line=2, end_line=2, column=9, end_column=26, occurrence=1)

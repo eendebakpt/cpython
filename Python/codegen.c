@@ -6263,6 +6263,63 @@ codegen_pattern_mapping(compiler *c, pattern_ty p,
     if (INT_MAX < size - 1) {
         return _PyCompile_Error(c, LOC(p), "too many sub-patterns in mapping pattern");
     }
+    // If every key is a distinct literal and there is no double-star target,
+    // lower the match to one MATCH_KEY per key instead of the monolithic
+    // MATCH_KEYS. Each MATCH_KEY is independently specializable, no keys/values
+    // tuples are built, and no runtime duplicate check is needed (the literal
+    // keys are checked for duplicates here, at compile time).
+    int lowered = (star_target == NULL);
+    for (Py_ssize_t i = 0; lowered && i < size; i++) {
+        expr_ty key = asdl_seq_GET(keys, i);
+        if (key == NULL || key->kind != Constant_kind) {
+            lowered = 0;
+        }
+    }
+    if (lowered) {
+        PyObject *seen = PySet_New(NULL);
+        if (seen == NULL) {
+            return ERROR;
+        }
+        for (Py_ssize_t i = 0; i < size; i++) {
+            expr_ty key = asdl_seq_GET(keys, i);
+            int in_seen = PySet_Contains(seen, key->v.Constant.value);
+            if (in_seen < 0) {
+                Py_DECREF(seen);
+                return ERROR;
+            }
+            if (in_seen) {
+                Py_DECREF(seen);
+                return _PyCompile_Error(c, LOC(p),
+                    "mapping pattern checks duplicate key (%R)",
+                    key->v.Constant.value);
+            }
+            if (PySet_Add(seen, key->v.Constant.value) < 0) {
+                Py_DECREF(seen);
+                return ERROR;
+            }
+        }
+        Py_DECREF(seen);
+        // Match keys back-to-front so value[0] ends up on top of the stack,
+        // the order codegen_pattern_subpattern expects (as after UNPACK_SEQUENCE).
+        for (Py_ssize_t m = 0; m < size; m++) {
+            Py_ssize_t i = size - 1 - m;
+            expr_ty key = asdl_seq_GET(keys, i);
+            ADDOP_I(c, LOC(p), COPY, m + 1);   // copy subject (m values above it)
+            VISIT(c, expr, key);               // load the key
+            ADDOP(c, LOC(p), MATCH_KEY);       // (subject, key -- value, present)
+            pc->on_top++;                      // `value` persists; `present` is tested
+            RETURN_IF_ERROR(jump_to_fail_pop(c, LOC(p), pc, POP_JUMP_IF_FALSE));
+        }
+        // Stack: subject, value[size-1], ..., value[0]   (value[0] on top)
+        for (Py_ssize_t i = 0; i < size; i++) {
+            pc->on_top--;
+            pattern_ty pattern = asdl_seq_GET(patterns, i);
+            RETURN_IF_ERROR(codegen_pattern_subpattern(c, pattern, pc));
+        }
+        pc->on_top--;
+        ADDOP(c, LOC(p), POP_TOP);  // Subject.
+        return SUCCESS;
+    }
     // Collect all of the keys into a tuple for MATCH_KEYS and
     // **rest. They can either be dotted names or literals:
 

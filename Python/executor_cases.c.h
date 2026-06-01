@@ -14246,6 +14246,90 @@
             break;
         }
 
+        case _MATCH_KEY_r22: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            _PyStackRef key;
+            _PyStackRef subject;
+            _PyStackRef value;
+            _PyStackRef present;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            key = _stack_item_1;
+            subject = _stack_item_0;
+            PyObject *subj = PyStackRef_AsPyObjectBorrow(subject);
+            PyObject *k = PyStackRef_AsPyObjectBorrow(key);
+            PyObject *val = NULL;
+            int found;
+            if (PyDict_CheckExact(subj)) {
+                stack_pointer[0] = subject;
+                stack_pointer[1] = key;
+                stack_pointer += 2;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                found = PyDict_GetItemRef(subj, k, &val);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+            }
+            else {
+                stack_pointer[0] = subject;
+                stack_pointer[1] = key;
+                stack_pointer += 2;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                PyObject *sentinel = _PyObject_CallNoArgs((PyObject *)&PyBaseObject_Type);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+                if (sentinel == NULL) {
+                    found = -1;
+                }
+                else {
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    PyObject *got = PyObject_CallMethodObjArgs(
+                        subj, &_Py_ID(get), k, sentinel, NULL);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                    if (got == NULL) {
+                        found = -1;
+                    }
+                    else if (got == sentinel) {
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        Py_DECREF(got);
+                        stack_pointer = _PyFrame_GetStackPointer(frame);
+                        found = 0;
+                    }
+                    else {
+                        val = got;
+                        found = 1;
+                    }
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    Py_DECREF(sentinel);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                }
+            }
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyStackRef tmp = key;
+            key = PyStackRef_NULL;
+            stack_pointer[-1] = key;
+            PyStackRef_CLOSE(tmp);
+            tmp = subject;
+            subject = PyStackRef_NULL;
+            stack_pointer[-2] = subject;
+            PyStackRef_CLOSE(tmp);
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            if (found < 0) {
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            value = found ? PyStackRef_FromPyObjectSteal(val) : PyStackRef_None;
+            present = found ? PyStackRef_True : PyStackRef_False;
+            _tos_cache1 = present;
+            _tos_cache0 = value;
+            _tos_cache2 = PyStackRef_ZERO_BITS;
+            SET_CURRENT_CACHED_VALUES(2);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            break;
+        }
+
         case _GET_ITER_r12: {
             CHECK_CURRENT_CACHED_VALUES(1);
             assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());

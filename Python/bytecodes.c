@@ -3748,6 +3748,49 @@ dummy_func(
             values_or_none = PyStackRef_FromPyObjectSteal(values_or_none_o);
         }
 
+        // Look up a single key in a mapping subject for the lowered mapping
+        // pattern (gh-93714): pushes (value, present). present is True and value
+        // is the looked-up value if the key is in the mapping, else present is
+        // False and value is None. Uses .get(key, sentinel) for non-exact maps
+        // so __missing__ is not triggered (matching _PyEval_MatchKeys). The
+        // codegen emits this only for patterns with distinct literal keys and no
+        // double-star target, so no runtime duplicate check is needed here.
+        inst(MATCH_KEY, (subject, key -- value, present)) {
+            PyObject *subj = PyStackRef_AsPyObjectBorrow(subject);
+            PyObject *k = PyStackRef_AsPyObjectBorrow(key);
+            PyObject *val = NULL;
+            int found;
+            if (PyDict_CheckExact(subj)) {
+                found = PyDict_GetItemRef(subj, k, &val);
+            }
+            else {
+                PyObject *sentinel = _PyObject_CallNoArgs((PyObject *)&PyBaseObject_Type);
+                if (sentinel == NULL) {
+                    found = -1;
+                }
+                else {
+                    PyObject *got = PyObject_CallMethodObjArgs(
+                        subj, &_Py_ID(get), k, sentinel, NULL);
+                    if (got == NULL) {
+                        found = -1;
+                    }
+                    else if (got == sentinel) {
+                        Py_DECREF(got);
+                        found = 0;
+                    }
+                    else {
+                        val = got;
+                        found = 1;
+                    }
+                    Py_DECREF(sentinel);
+                }
+            }
+            DECREF_INPUTS();
+            ERROR_IF(found < 0);
+            value = found ? PyStackRef_FromPyObjectSteal(val) : PyStackRef_None;
+            present = found ? PyStackRef_True : PyStackRef_False;
+        }
+
         family(GET_ITER, INLINE_CACHE_ENTRIES_GET_ITER) = {
             GET_ITER_SELF,
             GET_ITER_VIRTUAL,

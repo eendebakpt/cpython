@@ -261,6 +261,7 @@ const uint32_t _PyUop_Flags[MAX_UOP_ID+1] = {
     [_MATCH_MAPPING] = 0,
     [_MATCH_SEQUENCE] = 0,
     [_MATCH_KEYS] = HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
+    [_MATCH_KEY] = HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
     [_GET_ITER] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
     [_GUARD_ITERATOR] = HAS_EXIT_FLAG,
     [_GUARD_ITER_VIRTUAL] = HAS_EXIT_FLAG,
@@ -2483,6 +2484,15 @@ const _PyUopCachingInfo _PyUop_Caching[MAX_UOP_ID+1] = {
             { -1, -1, -1 },
         },
     },
+    [_MATCH_KEY] = {
+        .best = { 2, 2, 2, 2 },
+        .entries = {
+            { -1, -1, -1 },
+            { -1, -1, -1 },
+            { 2, 2, _MATCH_KEY_r22 },
+            { -1, -1, -1 },
+        },
+    },
     [_GET_ITER] = {
         .best = { 1, 1, 1, 1 },
         .entries = {
@@ -4471,6 +4481,7 @@ const uint16_t _PyUop_Uncached[MAX_UOP_REGS_ID+1] = {
     [_MATCH_SEQUENCE_r12] = _MATCH_SEQUENCE,
     [_MATCH_SEQUENCE_r23] = _MATCH_SEQUENCE,
     [_MATCH_KEYS_r23] = _MATCH_KEYS,
+    [_MATCH_KEY_r22] = _MATCH_KEY,
     [_GET_ITER_r12] = _GET_ITER,
     [_GUARD_ITERATOR_r01] = _GUARD_ITERATOR,
     [_GUARD_ITERATOR_r11] = _GUARD_ITERATOR,
@@ -5931,6 +5942,8 @@ const char *const _PyOpcode_uop_name[MAX_UOP_REGS_ID+1] = {
     [_MAP_ADD_r20] = "_MAP_ADD_r20",
     [_MATCH_CLASS] = "_MATCH_CLASS",
     [_MATCH_CLASS_r33] = "_MATCH_CLASS_r33",
+    [_MATCH_KEY] = "_MATCH_KEY",
+    [_MATCH_KEY_r22] = "_MATCH_KEY_r22",
     [_MATCH_KEYS] = "_MATCH_KEYS",
     [_MATCH_KEYS_r23] = "_MATCH_KEYS_r23",
     [_MATCH_MAPPING] = "_MATCH_MAPPING",
@@ -6676,6 +6689,8 @@ int _PyUop_num_popped(int opcode, int oparg)
             return 0;
         case _MATCH_KEYS:
             return 0;
+        case _MATCH_KEY:
+            return 2;
         case _GET_ITER:
             return 1;
         case _GUARD_ITERATOR:

@@ -10417,6 +10417,83 @@
             DISPATCH();
         }
 
+        TARGET(MATCH_KEY) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = MATCH_KEY;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(MATCH_KEY);
+            _PyStackRef subject;
+            _PyStackRef key;
+            _PyStackRef value;
+            _PyStackRef present;
+            key = stack_pointer[-1];
+            subject = stack_pointer[-2];
+            PyObject *subj = PyStackRef_AsPyObjectBorrow(subject);
+            PyObject *k = PyStackRef_AsPyObjectBorrow(key);
+            PyObject *val = NULL;
+            int found;
+            if (PyDict_CheckExact(subj)) {
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                found = PyDict_GetItemRef(subj, k, &val);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+            }
+            else {
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                PyObject *sentinel = _PyObject_CallNoArgs((PyObject *)&PyBaseObject_Type);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+                if (sentinel == NULL) {
+                    found = -1;
+                }
+                else {
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    PyObject *got = PyObject_CallMethodObjArgs(
+                        subj, &_Py_ID(get), k, sentinel, NULL);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                    if (got == NULL) {
+                        found = -1;
+                    }
+                    else if (got == sentinel) {
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        Py_DECREF(got);
+                        stack_pointer = _PyFrame_GetStackPointer(frame);
+                        found = 0;
+                    }
+                    else {
+                        val = got;
+                        found = 1;
+                    }
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    Py_DECREF(sentinel);
+                    stack_pointer = _PyFrame_GetStackPointer(frame);
+                }
+            }
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyStackRef tmp = key;
+            key = PyStackRef_NULL;
+            stack_pointer[-1] = key;
+            PyStackRef_CLOSE(tmp);
+            tmp = subject;
+            subject = PyStackRef_NULL;
+            stack_pointer[-2] = subject;
+            PyStackRef_CLOSE(tmp);
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            if (found < 0) {
+                JUMP_TO_LABEL(error);
+            }
+            value = found ? PyStackRef_FromPyObjectSteal(val) : PyStackRef_None;
+            present = found ? PyStackRef_True : PyStackRef_False;
+            stack_pointer[0] = value;
+            stack_pointer[1] = present;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
         TARGET(MATCH_KEYS) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = MATCH_KEYS;

@@ -3571,6 +3571,16 @@
             break;
         }
 
+        case _MATCH_KEY: {
+            JitOptRef value;
+            JitOptRef present;
+            value = sym_new_not_null(ctx);
+            present = sym_new_not_null(ctx);
+            stack_pointer[-2] = value;
+            stack_pointer[-1] = present;
+            break;
+        }
+
         case _GET_ITER: {
             JitOptRef iterable;
             JitOptRef iter;
