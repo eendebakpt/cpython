@@ -14246,6 +14246,39 @@
             break;
         }
 
+        case _MATCH_KEYS_UNIQUE_r23: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            _PyStackRef keys;
+            _PyStackRef subject;
+            _PyStackRef values_or_none;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            keys = _stack_item_1;
+            subject = _stack_item_0;
+            stack_pointer[0] = subject;
+            stack_pointer[1] = keys;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            PyObject *values_or_none_o = _PyEval_MatchKeysUnique(tstate,
+                PyStackRef_AsPyObjectBorrow(subject), PyStackRef_AsPyObjectBorrow(keys));
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            if (values_or_none_o == NULL) {
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            values_or_none = PyStackRef_FromPyObjectSteal(values_or_none_o);
+            _tos_cache2 = values_or_none;
+            _tos_cache1 = keys;
+            _tos_cache0 = subject;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            break;
+        }
+
         case _GET_ITER_r12: {
             CHECK_CURRENT_CACHED_VALUES(1);
             assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());

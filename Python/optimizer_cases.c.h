@@ -3562,6 +3562,57 @@
         }
 
         case _MATCH_KEYS: {
+            JitOptRef keys;
+            JitOptRef values_or_none;
+            keys = stack_pointer[-1];
+            values_or_none = sym_new_not_null(ctx);
+            Py_ssize_t len = sym_tuple_length(keys);
+            if (len >= 1) {
+                int all_const = 1;
+                for (Py_ssize_t i = 0; i < len; i++) {
+                    if (!sym_is_const(ctx, sym_tuple_getitem(ctx, keys, i))) {
+                        all_const = 0;
+                        break;
+                    }
+                }
+                if (all_const) {
+                    CHECK_STACK_BOUNDS(1);
+                    stack_pointer[0] = values_or_none;
+                    stack_pointer += 1;
+                    ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                    PyObject *seen = PySet_New(NULL);
+                    if (seen == NULL) {
+                        PyErr_Clear();
+                    }
+                    else {
+                        int unique = 1;
+                        for (Py_ssize_t i = 0; i < len; i++) {
+                            PyObject *k = sym_get_const(ctx, sym_tuple_getitem(ctx, keys, i));
+                            int rc = PySet_Contains(seen, k);
+                            if (rc != 0 || PySet_Add(seen, k) < 0) {
+                                if (rc < 0 || PyErr_Occurred()) {
+                                    PyErr_Clear();
+                                }
+                                unique = 0;
+                                break;
+                            }
+                        }
+                        Py_DECREF(seen);
+                        if (unique) {
+                            REPLACE_OP(this_instr, _MATCH_KEYS_UNIQUE, 0, 0);
+                        }
+                    }
+                    stack_pointer += -1;
+                }
+            }
+            CHECK_STACK_BOUNDS(1);
+            stack_pointer[0] = values_or_none;
+            stack_pointer += 1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
+        case _MATCH_KEYS_UNIQUE: {
             JitOptRef values_or_none;
             values_or_none = sym_new_not_null(ctx);
             CHECK_STACK_BOUNDS(1);

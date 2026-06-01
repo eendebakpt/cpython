@@ -3748,6 +3748,16 @@ dummy_func(
             values_or_none = PyStackRef_FromPyObjectSteal(values_or_none_o);
         }
 
+        // Tier-2-only replacement for _MATCH_KEYS, emitted by the optimizer when
+        // the keys are a constant tuple of distinct values, so the runtime
+        // duplicate-key check can be skipped.
+        tier2 op(_MATCH_KEYS_UNIQUE, (subject, keys -- subject, keys, values_or_none)) {
+            PyObject *values_or_none_o = _PyEval_MatchKeysUnique(tstate,
+                PyStackRef_AsPyObjectBorrow(subject), PyStackRef_AsPyObjectBorrow(keys));
+            ERROR_IF(values_or_none_o == NULL);
+            values_or_none = PyStackRef_FromPyObjectSteal(values_or_none_o);
+        }
+
         family(GET_ITER, INLINE_CACHE_ENTRIES_GET_ITER) = {
             GET_ITER_SELF,
             GET_ITER_VIRTUAL,

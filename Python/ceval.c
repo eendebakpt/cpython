@@ -420,15 +420,65 @@ const size_t _Py_FunctionAttributeOffsets[] = {
 
 
 // Return a tuple of values corresponding to keys, with error checks for
-// duplicate/missing keys.
-PyObject *
-_PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)
+// duplicate/missing keys. When check_dups is false, the caller has already
+// proven the keys are distinct (e.g. the tier-2 optimizer saw a constant tuple
+// of distinct literals), so the duplicate-detection set is skipped entirely.
+static PyObject *
+match_keys(PyThreadState *tstate, PyObject *map, PyObject *keys, int check_dups)
 {
     assert(PyTuple_CheckExact(keys));
     Py_ssize_t nkeys = PyTuple_GET_SIZE(keys);
     if (!nkeys) {
         // No keys means no items.
         return PyTuple_New(0);
+    }
+    if (PyDict_CheckExact(map)) {
+        // Fast path for the common case of an exact dict subject: skip the
+        // map.get() method lookup, the dummy sentinel object, and a per-key
+        // vectorcall (see gh-93714 / GH-93752). Uses PyDict_GetItemRef so it
+        // stays correct under free-threading (returns a new strong ref).
+        PyObject *fast_seen = NULL;
+        if (check_dups) {
+            fast_seen = PySet_New(NULL);
+            if (fast_seen == NULL) {
+                return NULL;
+            }
+        }
+        PyObject *fast_values = PyTuple_New(nkeys);
+        if (fast_values == NULL) {
+            Py_XDECREF(fast_seen);
+            return NULL;
+        }
+        for (Py_ssize_t i = 0; i < nkeys; i++) {
+            PyObject *key = PyTuple_GET_ITEM(keys, i);
+            if (check_dups &&
+                (PySet_Contains(fast_seen, key) || PySet_Add(fast_seen, key))) {
+                if (!_PyErr_Occurred(tstate)) {
+                    // Seen it before!
+                    _PyErr_Format(tstate, PyExc_ValueError,
+                                  "mapping pattern checks duplicate key (%R)", key);
+                }
+                Py_DECREF(fast_seen);
+                Py_DECREF(fast_values);
+                return NULL;
+            }
+            PyObject *value;
+            int found = PyDict_GetItemRef(map, key, &value);
+            if (found < 0) {
+                Py_XDECREF(fast_seen);
+                Py_DECREF(fast_values);
+                return NULL;
+            }
+            if (found == 0) {
+                // Key not in map; the whole match fails. Return None.
+                Py_XDECREF(fast_seen);
+                Py_DECREF(fast_values);
+                return Py_NewRef(Py_None);
+            }
+            PyTuple_SET_ITEM(fast_values, i, value);  // steals the new ref
+        }
+        Py_XDECREF(fast_seen);
+        return fast_values;
     }
     PyObject *seen = NULL;
     PyObject *dummy = NULL;
@@ -446,9 +496,11 @@ _PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)
         goto fail;
     }
     PyObject *get = PyStackRef_AsPyObjectBorrow(method.ref);
-    seen = PySet_New(NULL);
-    if (seen == NULL) {
-        goto fail;
+    if (check_dups) {
+        seen = PySet_New(NULL);
+        if (seen == NULL) {
+            goto fail;
+        }
     }
     // dummy = object()
     dummy = _PyObject_CallNoArgs((PyObject *)&PyBaseObject_Type);
@@ -461,7 +513,8 @@ _PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)
     }
     for (Py_ssize_t i = 0; i < nkeys; i++) {
         PyObject *key = PyTuple_GET_ITEM(keys, i);
-        if (PySet_Contains(seen, key) || PySet_Add(seen, key)) {
+        if (check_dups &&
+            (PySet_Contains(seen, key) || PySet_Add(seen, key))) {
             if (!_PyErr_Occurred(tstate)) {
                 // Seen it before!
                 _PyErr_Format(tstate, PyExc_ValueError,
@@ -495,7 +548,7 @@ _PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)
 done:
     _PyThreadState_PopCStackRef(tstate, &method);
     _PyThreadState_PopCStackRef(tstate, &self);
-    Py_DECREF(seen);
+    Py_XDECREF(seen);
     Py_DECREF(dummy);
     return values;
 fail:
@@ -505,6 +558,21 @@ fail:
     Py_XDECREF(dummy);
     Py_XDECREF(values);
     return NULL;
+}
+
+PyObject *
+_PyEval_MatchKeys(PyThreadState *tstate, PyObject *map, PyObject *keys)
+{
+    return match_keys(tstate, map, keys, 1);
+}
+
+// Variant used by the tier-2 _MATCH_KEYS_UNIQUE uop, which the optimizer emits
+// only when it has proven the keys are a constant tuple of distinct values, so
+// the runtime duplicate-key check can be skipped.
+PyObject *
+_PyEval_MatchKeysUnique(PyThreadState *tstate, PyObject *map, PyObject *keys)
+{
+    return match_keys(tstate, map, keys, 0);
 }
 
 // Extract a named attribute from the subject, with additional bookkeeping to
