@@ -1317,6 +1317,13 @@
             break;
         }
 
+        case _STORE_SUBSCR_LIST_SLICE: {
+            CHECK_STACK_BOUNDS(-3);
+            stack_pointer += -3;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
         case _BINARY_OP_SUBSCR_LIST_INT: {
             JitOptRef sub_st;
             JitOptRef list_st;
@@ -1713,6 +1720,17 @@
         }
 
         case _STORE_SUBSCR: {
+            JitOptRef sub;
+            JitOptRef container;
+            JitOptRef v;
+            sub = stack_pointer[-1];
+            container = stack_pointer[-2];
+            v = stack_pointer[-3];
+            (void)v;
+            if (sym_matches_type(container, &PyList_Type) &&
+                sym_matches_type(sub, &PySlice_Type)) {
+                REPLACE_OP(this_instr, _STORE_SUBSCR_LIST_SLICE, 0, 0);
+            }
             CHECK_STACK_BOUNDS(-3);
             stack_pointer += -3;
             ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);

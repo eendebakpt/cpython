@@ -5362,6 +5362,25 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertEqual(count_ops(ex, "_POP_TOP"), 2)
         self.assertEqual(count_ops(ex, "_POP_TOP_NOP"), 4)
 
+    def test_store_subscr_list_slice_specialization(self):
+        # A constant slice gets folded to LOAD_CONST slice + STORE_SUBSCR.
+        # _STORE_SUBSCR_LIST_SLICE fires once an earlier op has proven the
+        # container is a list and the subscript is known to be a slice.
+        def f(n):
+            lst = list(range(8))
+            src = [9, 8, 7]
+            for _ in range(n):
+                _ = lst[0]
+                lst[1:4] = src
+            return lst
+
+        res, ex = self._run_with_optimizer(f, TIER2_THRESHOLD)
+        self.assertIsNotNone(ex)
+        self.assertEqual(res, [0, 9, 8, 7, 4, 5, 6, 7])
+        uops = get_opnames(ex)
+        self.assertIn("_STORE_SUBSCR_LIST_SLICE", uops)
+        self.assertNotIn("_STORE_SUBSCR", uops)
+
     def test_is_op(self):
         def test_is_false(n):
             a = object()

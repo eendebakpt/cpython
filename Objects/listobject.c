@@ -3909,6 +3909,15 @@ list_ass_subscript(PyObject *self, PyObject *item, PyObject *value)
     return res;
 }
 
+int
+_PyList_StoreSliceSubscript(PyObject *self, PyObject *item, PyObject *value)
+{
+    assert(PyList_CheckExact(self));
+    assert(PySlice_Check(item));
+    assert(value != NULL);
+    return list_ass_subscript(self, item, value);
+}
+
 static _PyObjectIndexPair
 list_iteritem(PyObject *obj, Py_ssize_t index)
 {

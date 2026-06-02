@@ -1130,6 +1130,17 @@ dummy_func(
             ERROR_IF(err);
         }
 
+        tier2 op(_STORE_SUBSCR_LIST_SLICE, (v, list_st, sub_st -- )) {
+            PyObject *list_o = PyStackRef_AsPyObjectBorrow(list_st);
+            PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub_st);
+            PyObject *v_o = PyStackRef_AsPyObjectBorrow(v);
+            assert(PyList_CheckExact(list_o));
+            assert(PySlice_Check(sub_o));
+            int err = _PyList_StoreSliceSubscript(list_o, sub_o, v_o);
+            DECREF_INPUTS();
+            ERROR_IF(err);
+        }
+
         macro(STORE_SLICE) = _SPECIALIZE_STORE_SLICE + _STORE_SLICE;
 
         macro(BINARY_OP_SUBSCR_LIST_INT) =

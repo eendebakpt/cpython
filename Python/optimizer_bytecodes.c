@@ -185,6 +185,14 @@ dummy_func(void) {
         ss = sub_st;
     }
 
+    op(_STORE_SUBSCR, (v, container, sub -- )) {
+        (void)v;
+        if (sym_matches_type(container, &PyList_Type) &&
+            sym_matches_type(sub, &PySlice_Type)) {
+            REPLACE_OP(this_instr, _STORE_SUBSCR_LIST_SLICE, 0, 0);
+        }
+    }
+
     op(_STORE_ATTR_SLOT, (index/1, value, owner -- o)) {
         (void)index;
         (void)value;

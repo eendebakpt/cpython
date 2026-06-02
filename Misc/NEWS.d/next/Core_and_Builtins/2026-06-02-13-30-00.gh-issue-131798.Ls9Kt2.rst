@@ -1,0 +1,4 @@
+Add a tier 2 (JIT) specialization for slice assignment to a list
+(``some_list[a:b] = ...``), avoiding the generic ``PyObject_SetItem`` dispatch
+when the optimizer has proven the container is an exact :class:`list` and the
+subscript is a :class:`slice`.
