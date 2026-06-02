@@ -785,15 +785,36 @@ nfd_nfkd(PyObject *self, PyObject *input, int k)
 static int
 find_nfc_index(const struct reindex* nfc, Py_UCS4 code)
 {
-    unsigned int index;
-    for (index = 0; nfc[index].start; index++) {
-        unsigned int start = nfc[index].start;
-        if (code < start)
-            return -1;
-        if (code <= start + nfc[index].count) {
-            unsigned int delta = code - start;
-            return nfc[index].index + delta;
-        }
+    /* The table is sorted by .start in ascending order, with disjoint
+       [start, start + count] ranges.  nfc_len excludes the trailing
+       {0, 0, 0} sentinel, whose start would break the ordering.
+
+       Galloping search: exponentially expand a bracket from the front, then
+       binary-search it.  This stays cheap when `code` is a low codepoint near
+       the start of the table (e.g. Latin letters, the common case) while
+       remaining logarithmic for codepoints deep in the table. */
+    Py_ssize_t nfc_len = (nfc == nfc_first ? Py_ARRAY_LENGTH(nfc_first)
+                                           : Py_ARRAY_LENGTH(nfc_last)) - 1;
+    Py_ssize_t bound = 1;
+    while (bound < nfc_len && (Py_UCS4)nfc[bound].start <= code) {
+        bound *= 2;
+    }
+    Py_ssize_t lo = bound / 2;
+    Py_ssize_t hi = bound < nfc_len ? bound : nfc_len;
+    while (lo < hi) {
+        Py_ssize_t mid = lo + (hi - lo) / 2;
+        if (code < (Py_UCS4)nfc[mid].start)
+            hi = mid;
+        else
+            lo = mid + 1;
+    }
+    /* lo is the first index with start > code; the candidate is lo - 1. */
+    if (lo == 0)
+        return -1;
+    unsigned int start = nfc[lo - 1].start;
+    if (code <= start + nfc[lo - 1].count) {
+        unsigned int delta = code - start;
+        return nfc[lo - 1].index + delta;
     }
     return -1;
 }
