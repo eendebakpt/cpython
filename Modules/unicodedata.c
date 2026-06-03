@@ -782,17 +782,37 @@ nfd_nfkd(PyObject *self, PyObject *input, int k)
     return result;
 }
 
-static int
+/* Bucket LUT generated from nfc_first / nfc_last (jump-starts the scan). */
+#include "unicodedata_nfc_lut.h"
+
+static inline int
 find_nfc_index(const struct reindex* nfc, Py_UCS4 code)
 {
-    unsigned int index;
-    for (index = 0; nfc[index].start; index++) {
-        unsigned int start = nfc[index].start;
-        if (code < start)
+    /* LUT VARIANT (for benchmarking): index a small fixed table by
+       code >> NFC_LUT_SHIFT to jump straight to the first reindex entry whose
+       range could contain `code`, then linear-scan from there (only a couple
+       of entries, since each bucket spans few ranges). */
+    const unsigned char *lut;
+    Py_ssize_t lut_size;
+    if (nfc == nfc_first) {
+        lut = nfc_first_lut;
+        lut_size = NFC_FIRST_LUT_SIZE;
+    }
+    else {
+        lut = nfc_last_lut;
+        lut_size = NFC_LAST_LUT_SIZE;
+    }
+    Py_ssize_t b = code >> NFC_LUT_SHIFT;
+    if (b >= lut_size) {
+        b = lut_size - 1;
+    }
+    for (Py_ssize_t i = lut[b]; nfc[i].start != 0; i++) {
+        unsigned int start = nfc[i].start;
+        if (code < start) {
             return -1;
-        if (code <= start + nfc[index].count) {
-            unsigned int delta = code - start;
-            return nfc[index].index + delta;
+        }
+        if (code <= start + nfc[i].count) {
+            return nfc[i].index + (code - start);
         }
     }
     return -1;
