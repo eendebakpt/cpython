@@ -782,20 +782,58 @@ nfd_nfkd(PyObject *self, PyObject *input, int k)
     return result;
 }
 
+/* Galloping (exponential + binary) search of the table tail, for codepoints
+   that lie past the inline prefix in find_nfc_index().  Kept out of line so the
+   hot prefix stays small enough to inline into the composition loop. */
 static int
-find_nfc_index(const struct reindex* nfc, Py_UCS4 code)
+find_nfc_index_tail(const struct reindex* nfc, Py_ssize_t nfc_len, Py_UCS4 code)
 {
-    unsigned int index;
-    for (index = 0; nfc[index].start; index++) {
-        unsigned int start = nfc[index].start;
-        if (code < start)
-            return -1;
-        if (code <= start + nfc[index].count) {
-            unsigned int delta = code - start;
-            return nfc[index].index + delta;
-        }
+    Py_ssize_t bound = 5;
+    while (bound < nfc_len && (Py_UCS4)nfc[bound].start <= code) {
+        bound *= 2;
+    }
+    Py_ssize_t lo = bound / 2;
+    Py_ssize_t hi = bound < nfc_len ? bound : nfc_len;
+    while (lo < hi) {
+        Py_ssize_t mid = lo + (hi - lo) / 2;
+        if (code < (Py_UCS4)nfc[mid].start)
+            hi = mid;
+        else
+            lo = mid + 1;
+    }
+    /* lo is the first index with start > code; the candidate is lo - 1. */
+    unsigned int start = nfc[lo - 1].start;
+    if (code <= start + nfc[lo - 1].count) {
+        return nfc[lo - 1].index + (code - start);
     }
     return -1;
+}
+
+static inline int
+find_nfc_index(const struct reindex* nfc, Py_UCS4 code)
+{
+    /* The table is sorted by .start in ascending order, with disjoint
+       [start, start + count] ranges, and ends with a {0, 0, 0} sentinel.
+
+       The ASCII composition-first characters all sit in the first few entries
+       (entries 0..4 cover U+003C..U+007A) and codepoints below the table
+       resolve at entry 0, so scan that short prefix inline -- both reindex
+       tables have far more than 5 real entries.  Test the cheap
+       code <= start+count first so a non-matching entry costs one comparison.
+       Deeper codepoints fall back to the out-of-line galloping tail (the
+       length it needs is only computed once we get past the prefix). */
+    for (Py_ssize_t i = 0; i < 5; i++) {
+        unsigned int start = nfc[i].start;
+        if (code <= start + nfc[i].count) {
+            if (code < start) {
+                return -1;
+            }
+            return nfc[i].index + (code - start);
+        }
+    }
+    Py_ssize_t nfc_len = (nfc == nfc_first ? Py_ARRAY_LENGTH(nfc_first)
+                                           : Py_ARRAY_LENGTH(nfc_last)) - 1;
+    return find_nfc_index_tail(nfc, nfc_len, code);
 }
 
 static PyObject*
