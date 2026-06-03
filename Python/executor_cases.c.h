@@ -13070,8 +13070,10 @@
             char *addr = (char *)owner_o + index;
             STAT_INC(STORE_ATTR, hit);
             #ifdef Py_GIL_DISABLED
-            PyObject *old_value = _Py_atomic_exchange_ptr(
-                (void **)addr, PyStackRef_AsPyObjectSteal(value));
+            PyObject *new_value = PyStackRef_AsPyObjectSteal(value);
+            _PyObject_SetMaybeWeakref(new_value);
+            PyObject *old_value = _Py_atomic_exchange_ptr((void **)addr,
+                new_value);
             #else
             PyObject *old_value = *(PyObject **)addr;
             *(PyObject **)addr = PyStackRef_AsPyObjectSteal(value);

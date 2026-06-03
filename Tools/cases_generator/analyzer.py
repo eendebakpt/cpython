@@ -698,6 +698,7 @@ NON_ESCAPING_FUNCTIONS = (
     "_Py_NewRef",
     "_Py_SINGLETON",
     "_Py_STR",
+    "_PyObject_SetMaybeWeakref",
     "_Py_TryIncrefCompare",
     "_Py_TryIncrefCompareStackRef",
     "_Py_atomic_compare_exchange_uint8",

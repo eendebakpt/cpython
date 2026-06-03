@@ -318,9 +318,16 @@ PyMember_SetOne(char *addr, PyMemberDef *l, PyObject *v)
     }
     case _Py_T_OBJECT:
     case Py_T_OBJECT_EX: {
-        // Lock-free atomic exchange; matches _STORE_ATTR_SLOT.
+        // Lock-free atomic exchange; matches _STORE_ATTR_SLOT. The
+        // maybe-weakref flag is required so concurrent readers using
+        // _Py_XGetRef / _Py_TryIncrefCompare on what will later become the
+        // evicted "old" value can safely incref-via-shared without racing
+        // the owner's dealloc.
         PyObject *new_v = Py_XNewRef(v);
 #ifdef Py_GIL_DISABLED
+        if (new_v != NULL) {
+            _PyObject_SetMaybeWeakref(new_v);
+        }
         oldv = (PyObject *)_Py_atomic_exchange_ptr((void **)addr, new_v);
 #else
         oldv = *(PyObject **)addr;

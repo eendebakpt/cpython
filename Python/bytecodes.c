@@ -3231,10 +3231,16 @@ dummy_func(
             // Atomic exchange of the slot pointer. Each concurrent writer
             // observes a unique old value, so Py_XDECREF below cannot
             // double-free. Concurrent readers (_LOAD_ATTR_SLOT,
-            // PyMember_GetOne) cope via _Py_TryIncrefCompare.
+            // PyMember_GetOne) cope via _Py_TryIncrefCompare, which requires
+            // the maybe-weakref flag on the published value -- otherwise, once
+            // this value is itself the evicted "old" pointer of a later store,
+            // the owning thread could free it while a reader still holds a
+            // borrowed pointer mid-incref.
 #ifdef Py_GIL_DISABLED
-            PyObject *old_value = _Py_atomic_exchange_ptr(
-                (void **)addr, PyStackRef_AsPyObjectSteal(value));
+            PyObject *new_value = PyStackRef_AsPyObjectSteal(value);
+            _PyObject_SetMaybeWeakref(new_value);
+            PyObject *old_value = _Py_atomic_exchange_ptr((void **)addr,
+                                                          new_value);
 #else
             PyObject *old_value = *(PyObject **)addr;
             *(PyObject **)addr = PyStackRef_AsPyObjectSteal(value);
