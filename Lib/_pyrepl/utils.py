@@ -8,6 +8,7 @@ import tokenize
 import unicodedata
 import _colorize
 
+from bisect import bisect_right
 from collections import deque
 from dataclasses import dataclass
 from io import StringIO
@@ -241,6 +242,119 @@ def gen_colors_from_token_stream(
                 ):
                     span = Span.from_token(token, line_lengths)
                     yield ColorSpan(span, "builtin")
+
+
+def gen_colors_with_boundaries(buffer: str) -> tuple[list[ColorSpan], list[int]]:
+    """Tokenize ``buffer`` once, returning the color spans plus the character
+    offsets at which tokenization may safely restart.
+
+    A safe restart offset is the start of a *top-level* logical line (a line at
+    bracket depth 0 and indentation 0, i.e. right after a NEWLINE token and not
+    indented), plus the start of the buffer.  From such an offset the indent
+    stack is empty, so the rest of the buffer is a valid standalone Python code
+    block and re-tokenizes identically.  (An indented restart is unsafe: a later
+    line dedenting below it raises "unindent does not match".)  Used by
+    ``IncrementalColorizer`` to avoid re-tokenizing the unchanged prefix on every
+    keystroke.  The returned spans are identical to ``list(gen_colors(buffer))``.
+    """
+    sio = StringIO(buffer)
+    line_lengths = [0] + [len(line) for line in sio.readlines()]
+    for i in range(1, len(line_lengths)):
+        line_lengths[i] += line_lengths[i - 1]
+
+    sio.seek(0)
+    gen = tokenize.generate_tokens(sio.readline)
+    boundaries = [0]
+
+    def tap() -> Iterator[TI]:
+        # Record safe restart offsets as a side effect while the colorizer
+        # consumes the token stream.  A NEWLINE ends a logical line at bracket
+        # depth 0; the next line start is a safe restart only if it is also at
+        # indentation 0 (top level), otherwise a later dedent would not match.
+        for tok in gen:
+            if tok.type == tokenize.NEWLINE:
+                b = line_lengths[tok.end[0] - 1] + tok.end[1]
+                if b >= len(buffer) or buffer[b] not in (" ", "\t"):
+                    boundaries.append(b)
+            yield tok
+
+    spans: list[ColorSpan] = []
+    last_emitted: ColorSpan | None = None
+    try:
+        for color in gen_colors_from_token_stream(tap(), line_lengths):
+            spans.append(color)
+            last_emitted = color
+    except SyntaxError:
+        pass
+    except tokenize.TokenError as te:
+        spans.extend(
+            recover_unterminated_string(te, line_lengths, last_emitted, buffer)
+        )
+    return spans, boundaries
+
+
+def _common_prefix_len(a: str, b: str) -> int:
+    """Length of the longest common prefix of ``a`` and ``b``."""
+    hi = min(len(a), len(b))
+    if a[:hi] == b[:hi]:
+        return hi
+    # Binary search the largest k with a[:k] == b[:k]; slice compares are at
+    # C speed, so this costs O(log n) comparisons rather than a Python loop.
+    lo = 0
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if a[:mid] == b[:mid]:
+            lo = mid
+        else:
+            hi = mid - 1
+    return lo
+
+
+class IncrementalColorizer:
+    """Caches syntax-highlight spans and recomputes only the changed suffix.
+
+    On each ``colorize(buffer)`` the spans for the unchanged prefix are reused
+    and only the suffix from the nearest safe logical-line boundary at/before
+    the first changed character is re-tokenized.  The per-call cost is therefore
+    proportional to the size of the edited region rather than the whole buffer.
+    The result is always equal to ``list(gen_colors(buffer))``.
+    """
+
+    def __init__(self) -> None:
+        self._buffer: str = ""
+        self._spans: list[ColorSpan] = []
+        self._boundaries: list[int] = [0]
+
+    def colorize(self, buffer: str) -> list[ColorSpan]:
+        if buffer != self._buffer:
+            self._recompute(buffer)
+        # iter_display_chars() consumes the list in place, so hand out a copy.
+        return list(self._spans)
+
+    def _recompute(self, buffer: str) -> None:
+        common = _common_prefix_len(self._buffer, buffer)
+        # nearest safe restart boundary at or before the first changed character
+        restart = self._boundaries[bisect_right(self._boundaries, common) - 1]
+
+        sub_spans, sub_boundaries = gen_colors_with_boundaries(buffer[restart:])
+        if restart:
+            # Reuse spans wholly inside the unchanged prefix.  No token straddles
+            # a depth-0 boundary, so ``start < restart`` implies the span ends
+            # before it too.
+            spans = [s for s in self._spans if s.span.start < restart]
+            spans += [
+                ColorSpan(Span(s.span.start + restart, s.span.end + restart), s.tag)
+                for s in sub_spans
+            ]
+            boundaries = self._boundaries[: bisect_right(self._boundaries, common)]
+            boundaries += [b + restart for b in sub_boundaries[1:]]
+        else:
+            spans = sub_spans
+            boundaries = sub_boundaries
+
+        self._buffer = buffer
+        self._spans = spans
+        self._boundaries = boundaries
 
 
 keyword_first_sets_match = frozenset({"False", "None", "True", "await", "lambda", "not"})

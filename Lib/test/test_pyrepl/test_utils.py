@@ -1,6 +1,36 @@
 from unittest import TestCase
 
-from _pyrepl.utils import str_width, wlen, prev_next_window, gen_colors
+from _pyrepl.utils import (
+    str_width,
+    wlen,
+    prev_next_window,
+    gen_colors,
+    gen_colors_with_boundaries,
+    IncrementalColorizer,
+    ColorSpan,
+    Span,
+)
+
+
+# A spread of inputs exercising strings, brackets, comments, soft keywords,
+# multi-line constructs and unterminated literals.
+COLOR_SAMPLES = [
+    "",
+    "x = 1",
+    "# just a comment\n",
+    "result = sorted([x for x in range(100)], key=lambda v: (v % 7, -v))",
+    "def fib(n):\n    a, b = 0, 1\n    for _ in range(n):\n"
+    "        a, b = b, a + b\n    return a\n",
+    "match command.split():\n    case [action]:\n        pass\n"
+    "    case [action, obj]:\n        go(obj)\n",
+    's = """a\nmultiline\nstring with def class for"""\nx = 1\n',
+    "d = {\n  'a': 1,\n  'b': [1,2,\n        3],\n}\n",
+    "type Alias = list[int]\nclass C:\n    def m(self): return 'hi'  # c\n",
+    "f'{x!r:>{width}}' + b'bytes' + 0x1F + 3.14e2",
+    'unterminated = "oops',
+    "lazy import foo\nfrom bar import baz\n",
+    "def f():\n    x = 1\ndef g():\n    y = 2\n",
+]
 
 
 class TestUtils(TestCase):
@@ -135,3 +165,64 @@ class TestUtils(TestCase):
                     span_text = code[color.span.start:color.span.end + 1]
                     actual_highlights.append((span_text, color.tag))
                 self.assertEqual(actual_highlights, expected_highlights)
+
+    def test_gen_colors_with_boundaries_matches_gen_colors(self):
+        # The spans must be identical to gen_colors(); the boundaries must be
+        # valid restart points (re-tokenizing from a boundary, shifted back,
+        # reproduces the tail of the full highlighting).
+        for code in COLOR_SAMPLES:
+            with self.subTest(code=code):
+                ref = list(gen_colors(code))
+                spans, boundaries = gen_colors_with_boundaries(code)
+                self.assertEqual(spans, ref)
+                self.assertIn(0, boundaries)
+                self.assertEqual(boundaries, sorted(boundaries))
+                for b in boundaries:
+                    # a boundary is the start of a top-level (column 0) line
+                    self.assertTrue(b >= len(code) or code[b] not in " \t")
+                    shifted = [
+                        ColorSpan(Span(s.span.start + b, s.span.end + b), s.tag)
+                        for s in gen_colors(code[b:])
+                    ]
+                    tail = [s for s in ref if s.span.start >= b]
+                    self.assertEqual(shifted, tail)
+
+    def test_incremental_colorizer_matches_full(self):
+        # Typing each sample character by character must, at every prefix, give
+        # exactly the same spans as a full gen_colors() of that prefix.
+        for code in COLOR_SAMPLES:
+            with self.subTest(code=code):
+                colorizer = IncrementalColorizer()
+                for i in range(len(code) + 1):
+                    prefix = code[:i]
+                    self.assertEqual(
+                        colorizer.colorize(prefix), list(gen_colors(prefix))
+                    )
+
+    def test_incremental_colorizer_edits(self):
+        # Inserting, deleting and replacing the whole buffer must all keep the
+        # cached result equal to a fresh full highlight.
+        colorizer = IncrementalColorizer()
+        buffer = "def f():\n    return 1\ndef g():\n    return 2\n"
+        edits = [
+            buffer,
+            buffer + "x = ",          # append (typing a new top-level line)
+            buffer + "x = [1, 2]",
+            buffer[:10] + "pass\n" + buffer[10:],   # insert in the middle
+            "y = 1",                  # replace whole buffer (e.g. history nav)
+            "",                       # clear
+            's = """multi\nline\nstr"""\n',
+        ]
+        for buf in edits:
+            with self.subTest(buf=buf):
+                self.assertEqual(colorizer.colorize(buf), list(gen_colors(buf)))
+
+    def test_incremental_colorizer_exact_cache_hit(self):
+        # Re-colorizing the same buffer returns an equal but independent list
+        # (callers consume it in place).
+        colorizer = IncrementalColorizer()
+        buf = "x = [1, 2, 3]"
+        first = colorizer.colorize(buf)
+        second = colorizer.colorize(buf)
+        self.assertEqual(first, second)
+        self.assertIsNot(first, second)

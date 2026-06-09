@@ -38,7 +38,15 @@ from .content import (
 )
 from .layout import LayoutMap, LayoutResult, LayoutRow, WrappedRow, layout_content_lines
 from .render import RenderCell, RenderLine, RenderedScreen, ScreenOverlay
-from .utils import ANSI_ESCAPE_SEQUENCE, ColorSpan, THEME, StyleRef, wlen, gen_colors
+from .utils import (
+    ANSI_ESCAPE_SEQUENCE,
+    ColorSpan,
+    IncrementalColorizer,
+    THEME,
+    StyleRef,
+    wlen,
+    gen_colors,
+)
 from .trace import trace
 
 
@@ -306,6 +314,7 @@ class Reader:
     scheduled_commands: list[CommandName] = field(default_factory=list)
     can_colorize: bool = False
     gen_colors: Callable[[str], Iterator[ColorSpan]] = gen_colors
+    _colorizer: IncrementalColorizer = field(default_factory=IncrementalColorizer)
     threading_hook: Callback | None = None
     invalidation: RefreshInvalidation = field(init=False)
 
@@ -536,7 +545,12 @@ class Reader:
         prompt_from_cache: bool,
     ) -> tuple[ContentLine, ...]:
         if self.can_colorize:
-            colors = list(self.gen_colors(self.get_unicode()))
+            if self.gen_colors is gen_colors:
+                # Fast path: incremental highlighter re-tokenizes only the
+                # edited suffix and caches the rest across keystrokes.
+                colors = self._colorizer.colorize(self.get_unicode())
+            else:
+                colors = list(self.gen_colors(self.get_unicode()))
         else:
             colors = None
         trace("colors = {colors}", colors=colors)
