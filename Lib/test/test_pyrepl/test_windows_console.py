@@ -49,7 +49,9 @@ class WindowsConsoleTests(TestCase):
         console = WindowsConsole()
         console.get_event = MagicMock(side_effect=events)
         console.getpending = MagicMock(return_value=Event("key", ""))
-        console.wait = MagicMock()
+        # No input pending between events: these tests assert the per-command
+        # byte output, so the reader's repaint coalescing must not defer.
+        console.wait = MagicMock(return_value=False)
         console._scroll = MagicMock()
         console._hide_cursor = MagicMock()
         console._show_cursor = MagicMock()

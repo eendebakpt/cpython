@@ -929,7 +929,12 @@ class Reader:
             and not self.invalidation.is_cursor_only
         ):
             self.invalidate_cursor()
-        self.update_screen()
+        # Coalesce repaints: when more input is already waiting, defer the paint
+        # so a fast burst of keystrokes renders once the input catches up rather
+        # than once per key.  The deferred paint is flushed by handle1() as soon
+        # as the input stalls.  Always paint when the command finishes the line.
+        if command.finish or not self.console.wait(0):
+            self.update_screen()
 
         if command_type is not commands.digit_arg:
             self.last_command = command_type
@@ -972,6 +977,9 @@ class Reader:
             self.console.wait(100)
             event = self.console.get_event(block=False)
             if not event:
+                # Input has stalled: flush any paint deferred by do_cmd() to
+                # coalesce a burst of keystrokes.
+                self.update_screen()
                 if block:
                     continue
                 return False

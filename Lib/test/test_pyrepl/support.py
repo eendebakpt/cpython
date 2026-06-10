@@ -96,6 +96,8 @@ def prepare_console(events: Iterable[Event], **kwargs) -> MagicMock | Console:
     console.height = 100
     console.width = 80
     console.getheightwidth = MagicMock(side_effect=lambda: (console.height, console.width))
+    # No input pending (events arrive via get_event); paint every command.
+    console.wait = MagicMock(return_value=False)
 
     for key, val in kwargs.items():
         setattr(console, key, val)
@@ -176,7 +178,9 @@ class FakeConsole(Console):
         pass
 
     def wait(self, timeout: float | None = None) -> bool:
-        return True
+        # Events are delivered via get_event(), not wait(); report "no input
+        # pending" so the reader's repaint coalescing paints every command.
+        return False
 
     def repaint(self) -> None:
         pass
