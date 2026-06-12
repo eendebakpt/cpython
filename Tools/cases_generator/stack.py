@@ -9,6 +9,12 @@ UNUSED = {"unused"}
 # Set this to true for voluminous output showing state of stack and locals
 PRINT_STACKS = False
 
+# When true (tier 1 only), the reload of stack_pointer after an escaping
+# call is elided: escaping calls may not change frame->stackpointer, so the
+# local stack_pointer remains valid (gh-150516). Redundant re-saves of an
+# already saved stack pointer are skipped as well, tracked via Stack.saved_sp.
+ELIDE_SPILL_RELOAD = False
+
 def maybe_parenthesize(sym: str) -> str:
     """Add parentheses around a string if it contains an operator
        and is not already parenthesized.
@@ -222,6 +228,9 @@ class Stack:
         self.logical_sp = PointerOffset.zero()
         self.variables: list[Local] = []
         self.check_stack_bounds = check_stack_bounds
+        # The logical offset frame->stackpointer is known to hold, or None.
+        # Only used when ELIDE_SPILL_RELOAD is set.
+        self.saved_sp: PointerOffset | None = None
 
     def push_cache(self, cached_items:list[str], out: CWriter) -> None:
         for i, name in enumerate(cached_items):
@@ -364,6 +373,7 @@ class Stack:
         other.logical_sp = self.logical_sp
         other.variables = [var.copy() for var in self.variables]
         other.check_stack_bounds = self.check_stack_bounds
+        other.saved_sp = self.saved_sp
         return other
 
     def __eq__(self, other: object) -> bool:
@@ -387,6 +397,8 @@ class Stack:
         self.physical_sp = other.physical_sp
 
     def merge(self, other: "Stack", out: CWriter) -> None:
+        if self.saved_sp != other.saved_sp:
+            self.saved_sp = None
         if len(self.variables) != len(other.variables):
             raise StackError("Cannot merge stacks: differing variables")
         for self_var, other_var in zip(self.variables, other.variables):
@@ -521,11 +533,19 @@ class Storage:
         self._push_defined_outputs()
         self.stack.flush(out)
 
+    def _emit_spill(self, out: CWriter) -> None:
+        if ELIDE_SPILL_RELOAD:
+            if self.stack.saved_sp == self.stack.physical_sp:
+                # frame->stackpointer already holds the correct value
+                return
+            self.stack.saved_sp = self.stack.physical_sp
+        out.start_line()
+        out.emit_spill()
+
     def save(self, out: CWriter) -> None:
         assert self.spilled >= 0
         if self.spilled == 0:
-            out.start_line()
-            out.emit_spill()
+            self._emit_spill(out)
         self.spilled += 1
 
     def save_inputs(self, out: CWriter) -> None:
@@ -533,18 +553,24 @@ class Storage:
         if self.spilled == 0:
             self.clear_dead_inputs()
             self.stack.flush(out)
-            out.start_line()
-            out.emit_spill()
+            self._emit_spill(out)
         self.spilled += 1
 
-    def reload(self, out: CWriter) -> None:
+    def reload(self, out: CWriter, genuine: bool = False) -> None:
         if self.spilled == 0:
             raise StackError("Cannot reload stack as it hasn't been saved")
         assert self.spilled > 0
         self.spilled -= 1
         if self.spilled == 0:
+            if ELIDE_SPILL_RELOAD and not genuine:
+                # Escaping calls cannot change frame->stackpointer, so the
+                # local stack_pointer is still valid; no reload needed.
+                return
             out.start_line()
             out.emit_reload()
+            # The frame may have changed (and debug builds NULL the saved
+            # pointer on reload), so the saved value is no longer known.
+            self.stack.saved_sp = None
 
     @staticmethod
     def for_uop(stack: Stack, uop: Uop, out: CWriter, check_liveness: bool = True) -> "Storage":

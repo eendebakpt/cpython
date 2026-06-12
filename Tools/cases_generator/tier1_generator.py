@@ -31,6 +31,7 @@ from generators_common import (
 from cwriter import CWriter
 from typing import TextIO
 from lexer import Token
+import stack as stack_module
 from stack import Local, Stack, StackError, get_stack_effect, Storage
 
 DEFAULT_OUTPUT = ROOT / "Python/generated_cases.c.h"
@@ -149,6 +150,9 @@ JUMP_TO_LABEL(error);
 def generate_tier1(
     filenames: list[str], analysis: Analysis, outfile: TextIO, lines: bool
 ) -> None:
+    # Tier 1 elides redundant stack pointer reloads after escaping calls
+    # (gh-150516).
+    stack_module.ELIDE_SPILL_RELOAD = True
     write_header(__file__, filenames, outfile)
     outfile.write("""
 #ifdef TIER_TWO

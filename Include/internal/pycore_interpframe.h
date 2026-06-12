@@ -243,10 +243,9 @@ _PyFrame_GetStackPointer(_PyInterpreterFrame *frame)
 static inline void
 _PyFrame_SetStackPointer(_PyInterpreterFrame *frame, _PyStackRef *stack_pointer)
 {
-/* Avoid bloating the JIT code */
-#ifndef _Py_JIT
-    assert(frame->stackpointer == NULL);
-#endif
+    /* No assert(frame->stackpointer == NULL): tier 1 elides the reload
+     * after escaping calls (gh-150516), so on debug builds saves are no
+     * longer always paired with the NULL-ing reloads. */
     frame->stackpointer = stack_pointer;
 }
 

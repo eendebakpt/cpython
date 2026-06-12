@@ -103,6 +103,27 @@ NON_ESCAPING_DEALLOCS = {
     "_PyUnicode_ExactDealloc",
 }
 
+# Identifiers that (may) change frame->stackpointer or the frame itself when
+# they appear directly in instruction code, invalidating Stack.saved_sp.
+FRAME_SP_MANIPULATORS = {
+    "_PyFrame_SetStackPointer",
+    "_PyFrame_GetStackPointer",
+    "LOAD_SP",
+    "SAVE_SP",
+    "frame",
+}
+
+
+def may_mutate_stackpointer(func_name: str) -> bool:
+    """Can an escaping call change the current frame's stackpointer?
+
+    Instrumentation and monitoring calls can invoke a trace function,
+    which may assign f_lineno; frame_setlineno() then pops/pushes the
+    current frame's value stack. The reload after such calls is genuine
+    and must not be elided.
+    """
+    return "instrumentation" in func_name or "monitor" in func_name.lower()
+
 class Emitter:
     out: CWriter
     labels: dict[str, Label]
@@ -491,8 +512,8 @@ class Emitter:
         self.emit_save(storage)
         return True
 
-    def emit_reload(self, storage: Storage) -> None:
-        storage.reload(self.out)
+    def emit_reload(self, storage: Storage, genuine: bool = False) -> None:
+        storage.reload(self.out, genuine)
 
     def reload_stack(
         self,
@@ -505,7 +526,9 @@ class Emitter:
         next(tkn_iter)
         next(tkn_iter)
         next(tkn_iter)
-        self.emit_reload(storage)
+        # An explicit RELOAD_STACK() may reload a different frame's stack
+        # pointer (e.g. after a frame push/pop), so it is never elided.
+        self.emit_reload(storage, genuine=True)
         return True
 
     def instruction_size(self,
@@ -551,11 +574,13 @@ class Emitter:
         local_stores = set(uop.local_stores)
         reachable = True
         tkn = stmt.contents[-1]
+        genuine_reload = False
         try:
             if stmt in uop.properties.escaping_calls and not self.cannot_escape:
                 escape = uop.properties.escaping_calls[stmt]
                 if escape.kills is not None:
                     self.stackref_kill(escape.kills, storage, True)
+                genuine_reload = may_mutate_stackpointer(escape.call.text)
                 self.emit_save(storage)
             tkn_iter = TokenIterator(stmt.contents)
             for tkn in tkn_iter:
@@ -590,7 +615,12 @@ class Emitter:
                 else:
                     self.out.emit(tkn)
             if stmt in uop.properties.escaping_calls and not self.cannot_escape:
-                self.emit_reload(storage)
+                self.emit_reload(storage, genuine=genuine_reload)
+            # Code that manipulates the frame stack pointer directly (e.g.
+            # _PUSH_FRAME) invalidates our knowledge of frame->stackpointer.
+            if any(t.kind == "IDENTIFIER" and t.text in FRAME_SP_MANIPULATORS
+                   for t in stmt.contents):
+                storage.stack.saved_sp = None
             return reachable, None, storage
         except StackError as ex:
             raise analysis_error(ex.args[0], tkn) #from None
