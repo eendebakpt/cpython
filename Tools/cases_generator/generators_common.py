@@ -741,7 +741,13 @@ class Emitter:
         self.out.emit(stmt.for_)
         for tkn in stmt.header:
             self.out.emit(tkn)
-        return self._emit_stmt(stmt.body, uop, storage, inst)
+        # A loop body executes zero or more times, so knowledge of
+        # frame->stackpointer holds neither on entry to the body
+        # (back edge) nor after the loop (zero iterations).
+        storage.stack.saved_sp = None
+        reachable, tkn, storage = self._emit_stmt(stmt.body, uop, storage, inst)
+        storage.stack.saved_sp = None
+        return reachable, tkn, storage
 
     def emit_WhileStmt(
         self,
@@ -754,7 +760,11 @@ class Emitter:
         self.out.emit(stmt.while_)
         for tkn in stmt.condition:
             self.out.emit(tkn)
-        return self._emit_stmt(stmt.body, uop, storage, inst)
+        # See emit_ForStmt: saved_sp is only valid for straight-line code.
+        storage.stack.saved_sp = None
+        reachable, tkn, storage = self._emit_stmt(stmt.body, uop, storage, inst)
+        storage.stack.saved_sp = None
+        return reachable, tkn, storage
 
 
     def emit_tokens(

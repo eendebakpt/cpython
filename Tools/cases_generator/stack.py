@@ -228,7 +228,7 @@ class Stack:
         self.logical_sp = PointerOffset.zero()
         self.variables: list[Local] = []
         self.check_stack_bounds = check_stack_bounds
-        # The logical offset frame->stackpointer is known to hold, or None.
+        # The physical offset frame->stackpointer is known to hold, or None.
         # Only used when ELIDE_SPILL_RELOAD is set.
         self.saved_sp: PointerOffset | None = None
 
@@ -563,8 +563,10 @@ class Storage:
         self.spilled -= 1
         if self.spilled == 0:
             if ELIDE_SPILL_RELOAD and not genuine:
-                # Escaping calls cannot change frame->stackpointer, so the
-                # local stack_pointer is still valid; no reload needed.
+                # The callee does not change frame->stackpointer (callers
+                # pass genuine=True when it may, e.g. frame switches and
+                # instrumentation), so the local stack_pointer is still
+                # valid; no reload needed.
                 return
             out.start_line()
             out.emit_reload()

@@ -151,8 +151,19 @@ def generate_tier1(
     filenames: list[str], analysis: Analysis, outfile: TextIO, lines: bool
 ) -> None:
     # Tier 1 elides redundant stack pointer reloads after escaping calls
-    # (gh-150516).
+    # (gh-150516). Restore the flag afterwards so in-process callers
+    # (e.g. test_generated_cases) don't leak it into other generators.
+    saved_flag = stack_module.ELIDE_SPILL_RELOAD
     stack_module.ELIDE_SPILL_RELOAD = True
+    try:
+        _generate_tier1(filenames, analysis, outfile, lines)
+    finally:
+        stack_module.ELIDE_SPILL_RELOAD = saved_flag
+
+
+def _generate_tier1(
+    filenames: list[str], analysis: Analysis, outfile: TextIO, lines: bool
+) -> None:
     write_header(__file__, filenames, outfile)
     outfile.write("""
 #ifdef TIER_TWO
