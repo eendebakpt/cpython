@@ -237,12 +237,19 @@ def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
         expansions: list[tuple[str, str, int]] = []  # [(name, size, offset), ...]
         if inst.is_super():
             pieces = inst.name.split("_")
-            assert len(pieces) % 2 == 0, f"{inst.name} doesn't look like a super-instr"
-            parts_per_piece = int(len(pieces) / 2)
-            name1 = "_".join(pieces[:parts_per_piece])
-            name2 = "_".join(pieces[parts_per_piece:])
-            assert name1 in analysis.instructions, f"{name1} doesn't match any instr"
-            assert name2 in analysis.instructions, f"{name2} doesn't match any instr"
+            # The two fused component instructions need not have the same
+            # number of underscore-separated parts (e.g.
+            # LOAD_FAST_BORROW_LOAD_CONST = LOAD_FAST_BORROW + LOAD_CONST), so
+            # try every split point and pick the one where both halves are
+            # valid instruction names.
+            name1 = name2 = None
+            for split in range(1, len(pieces)):
+                cand1 = "_".join(pieces[:split])
+                cand2 = "_".join(pieces[split:])
+                if cand1 in analysis.instructions and cand2 in analysis.instructions:
+                    name1, name2 = cand1, cand2
+                    break
+            assert name1 is not None, f"{inst.name} doesn't look like a super-instr"
             instr1 = analysis.instructions[name1]
             instr2 = analysis.instructions[name2]
             for part in instr1.parts:

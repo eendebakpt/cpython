@@ -1,4 +1,5 @@
 import contextlib
+import io
 import os
 import sys
 import tempfile
@@ -35,6 +36,7 @@ with test_tools.imports_under_tool("cases_generator"):
     from stack import Local, Stack
     import tier1_generator
     import optimizer_generator
+    import opcode_metadata_generator
     import record_function_generator
 
 
@@ -3172,6 +3174,83 @@ class TestGeneratedAbstractCases(unittest.TestCase):
         }
         """
         self.run_cases_test(input, input2, output)
+
+class TestExpansionTable(unittest.TestCase):
+    # See generate_expansion_table() in opcode_metadata_generator.py
+
+    def expand(self, src):
+        # Analyze ``src`` and return the macro-expansion table text.
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".c", delete=False
+        ) as temp_input:
+            temp_input.write(parser.BEGIN_MARKER)
+            temp_input.write(src)
+            temp_input.write(parser.END_MARKER)
+            name = temp_input.name
+        try:
+            with handle_stderr():
+                analysis = analyze_files([name])
+        finally:
+            os.remove(name)
+        buf = io.StringIO()
+        out = CWriter(buf, 0, False)
+        opcode_metadata_generator.generate_expansion_table(analysis, out)
+        return buf.getvalue()
+
+    def test_super_instruction_uneven_component_names(self):
+        # gh-issue: the two fused halves of a super-instruction need not have
+        # the same number of underscore-separated parts. Here OP_A_B (3 parts)
+        # is fused with OP_C (2 parts); the expansion-table generator must
+        # still split the name into the correct component instructions rather
+        # than assuming an even split at the midpoint.
+        src = """
+        inst(OP_A_B, ( -- val)) {
+            val = PyStackRef_NULL;
+        }
+        inst(OP_C, ( -- val)) {
+            val = PyStackRef_NULL;
+        }
+        inst(OP_A_B_OP_C, ( -- val1, val2)) {
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            val1 = PyStackRef_NULL;
+            val2 = PyStackRef_NULL;
+            (void)oparg1;
+            (void)oparg2;
+        }
+        """
+        text = self.expand(src)
+        # The super-instruction expands to its first component (top oparg
+        # nibble) followed by its second component (bottom oparg nibble).
+        self.assertIn(
+            "[OP_A_B_OP_C] = { .nuops = 2, .uops = "
+            "{ { _OP_A_B, OPARG_TOP, 0 }, { _OP_C, OPARG_BOTTOM, 0 } } }",
+            text,
+        )
+
+    def test_super_instruction_even_component_names(self):
+        # The classic even-split case (both halves have the same number of
+        # underscore parts) must keep working.
+        src = """
+        inst(OP_X, ( -- val)) {
+            val = PyStackRef_NULL;
+        }
+        inst(OP_X_OP_X, ( -- val1, val2)) {
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            val1 = PyStackRef_NULL;
+            val2 = PyStackRef_NULL;
+            (void)oparg1;
+            (void)oparg2;
+        }
+        """
+        text = self.expand(src)
+        self.assertIn(
+            "[OP_X_OP_X] = { .nuops = 2, .uops = "
+            "{ { _OP_X, OPARG_TOP, 0 }, { _OP_X, OPARG_BOTTOM, 0 } } }",
+            text,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
