@@ -320,6 +320,40 @@ dummy_func(
             value = PyStackRef_FromPyObjectBorrow(obj);
         }
 
+        inst(LOAD_FAST_LOAD_CONST, ( -- value1, value2)) {
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            value1 = PyStackRef_DUP(GETLOCAL(oparg1));
+            PyObject *obj = GETITEM(FRAME_CO_CONSTS, oparg2);
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
+        }
+
+        inst(LOAD_FAST_BORROW_LOAD_CONST, ( -- value1, value2)) {
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            value1 = PyStackRef_Borrow(GETLOCAL(oparg1));
+            PyObject *obj = GETITEM(FRAME_CO_CONSTS, oparg2);
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
+        }
+
+        inst(LOAD_FAST_LOAD_SMALL_INT, ( -- value1, value2)) {
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            assert(oparg2 < _PY_NSMALLPOSINTS);
+            value1 = PyStackRef_DUP(GETLOCAL(oparg1));
+            PyObject *obj = (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + oparg2];
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
+        }
+
+        inst(LOAD_FAST_BORROW_LOAD_SMALL_INT, ( -- value1, value2)) {
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            assert(oparg2 < _PY_NSMALLPOSINTS);
+            value1 = PyStackRef_Borrow(GETLOCAL(oparg1));
+            PyObject *obj = (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + oparg2];
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
+        }
+
         macro(STORE_FAST) = _SWAP_FAST + POP_TOP;
 
         replicate(8) op(_SWAP_FAST, (value -- trash)) {

@@ -9394,6 +9394,28 @@
             DISPATCH();
         }
 
+        TARGET(LOAD_FAST_BORROW_LOAD_CONST) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = LOAD_FAST_BORROW_LOAD_CONST;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(LOAD_FAST_BORROW_LOAD_CONST);
+            _PyStackRef value1;
+            _PyStackRef value2;
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            value1 = PyStackRef_Borrow(GETLOCAL(oparg1));
+            PyObject *obj = GETITEM(FRAME_CO_CONSTS, oparg2);
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
+            stack_pointer[0] = value1;
+            stack_pointer[1] = value2;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
         TARGET(LOAD_FAST_BORROW_LOAD_FAST_BORROW) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = LOAD_FAST_BORROW_LOAD_FAST_BORROW;
@@ -9408,6 +9430,29 @@
             uint32_t oparg2 = oparg & 15;
             value1 = PyStackRef_Borrow(GETLOCAL(oparg1));
             value2 = PyStackRef_Borrow(GETLOCAL(oparg2));
+            stack_pointer[0] = value1;
+            stack_pointer[1] = value2;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
+        TARGET(LOAD_FAST_BORROW_LOAD_SMALL_INT) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = LOAD_FAST_BORROW_LOAD_SMALL_INT;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(LOAD_FAST_BORROW_LOAD_SMALL_INT);
+            _PyStackRef value1;
+            _PyStackRef value2;
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            assert(oparg2 < _PY_NSMALLPOSINTS);
+            value1 = PyStackRef_Borrow(GETLOCAL(oparg1));
+            PyObject *obj = (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + oparg2];
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
             stack_pointer[0] = value1;
             stack_pointer[1] = value2;
             stack_pointer += 2;
@@ -9441,6 +9486,28 @@
             DISPATCH();
         }
 
+        TARGET(LOAD_FAST_LOAD_CONST) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = LOAD_FAST_LOAD_CONST;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(LOAD_FAST_LOAD_CONST);
+            _PyStackRef value1;
+            _PyStackRef value2;
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            value1 = PyStackRef_DUP(GETLOCAL(oparg1));
+            PyObject *obj = GETITEM(FRAME_CO_CONSTS, oparg2);
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
+            stack_pointer[0] = value1;
+            stack_pointer[1] = value2;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
         TARGET(LOAD_FAST_LOAD_FAST) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = LOAD_FAST_LOAD_FAST;
@@ -9455,6 +9522,29 @@
             uint32_t oparg2 = oparg & 15;
             value1 = PyStackRef_DUP(GETLOCAL(oparg1));
             value2 = PyStackRef_DUP(GETLOCAL(oparg2));
+            stack_pointer[0] = value1;
+            stack_pointer[1] = value2;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
+        TARGET(LOAD_FAST_LOAD_SMALL_INT) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = LOAD_FAST_LOAD_SMALL_INT;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(LOAD_FAST_LOAD_SMALL_INT);
+            _PyStackRef value1;
+            _PyStackRef value2;
+            uint32_t oparg1 = oparg >> 4;
+            uint32_t oparg2 = oparg & 15;
+            assert(oparg2 < _PY_NSMALLPOSINTS);
+            value1 = PyStackRef_DUP(GETLOCAL(oparg1));
+            PyObject *obj = (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + oparg2];
+            value2 = PyStackRef_FromPyObjectBorrow(obj);
             stack_pointer[0] = value1;
             stack_pointer[1] = value2;
             stack_pointer += 2;

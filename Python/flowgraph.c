@@ -2681,8 +2681,16 @@ insert_superinstructions(cfg_builder *g)
             int nextop = i+1 < b->b_iused ? b->b_instr[i+1].i_opcode : 0;
             switch(inst->i_opcode) {
                 case LOAD_FAST:
-                    if (nextop == LOAD_FAST) {
-                        make_super_instruction(inst, &b->b_instr[i + 1], LOAD_FAST_LOAD_FAST);
+                    switch (nextop) {
+                        case LOAD_FAST:
+                            make_super_instruction(inst, &b->b_instr[i + 1], LOAD_FAST_LOAD_FAST);
+                            break;
+                        case LOAD_CONST:
+                            make_super_instruction(inst, &b->b_instr[i + 1], LOAD_FAST_LOAD_CONST);
+                            break;
+                        case LOAD_SMALL_INT:
+                            make_super_instruction(inst, &b->b_instr[i + 1], LOAD_FAST_LOAD_SMALL_INT);
+                            break;
                     }
                     break;
                 case STORE_FAST:
@@ -2938,6 +2946,14 @@ optimize_load_fast(cfg_builder *g)
                     break;
                 }
 
+                case LOAD_FAST_LOAD_CONST:
+                case LOAD_FAST_LOAD_SMALL_INT: {
+                    // LOAD_FAST (high nibble) then a borrowed const/small int.
+                    PUSH_REF(i, oparg >> 4);
+                    PUSH_REF(i, NOT_LOCAL);
+                    break;
+                }
+
                 case STORE_FAST: {
                     ref r = ref_stack_pop(&refs);
                     store_local(instr_flags, &refs, oparg, r);
@@ -3131,6 +3147,12 @@ optimize_load_fast(cfg_builder *g)
                         break;
                     case LOAD_FAST_LOAD_FAST:
                         instr->i_opcode = LOAD_FAST_BORROW_LOAD_FAST_BORROW;
+                        break;
+                    case LOAD_FAST_LOAD_CONST:
+                        instr->i_opcode = LOAD_FAST_BORROW_LOAD_CONST;
+                        break;
+                    case LOAD_FAST_LOAD_SMALL_INT:
+                        instr->i_opcode = LOAD_FAST_BORROW_LOAD_SMALL_INT;
                         break;
                     default:
                         break;

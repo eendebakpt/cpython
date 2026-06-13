@@ -52,6 +52,11 @@ LOAD_FAST_LOAD_FAST = opmap['LOAD_FAST_LOAD_FAST']
 LOAD_FAST_BORROW_LOAD_FAST_BORROW = opmap['LOAD_FAST_BORROW_LOAD_FAST_BORROW']
 STORE_FAST_LOAD_FAST = opmap['STORE_FAST_LOAD_FAST']
 STORE_FAST_STORE_FAST = opmap['STORE_FAST_STORE_FAST']
+LOAD_CONST = opmap['LOAD_CONST']
+LOAD_FAST_LOAD_CONST = opmap['LOAD_FAST_LOAD_CONST']
+LOAD_FAST_BORROW_LOAD_CONST = opmap['LOAD_FAST_BORROW_LOAD_CONST']
+LOAD_FAST_LOAD_SMALL_INT = opmap['LOAD_FAST_LOAD_SMALL_INT']
+LOAD_FAST_BORROW_LOAD_SMALL_INT = opmap['LOAD_FAST_BORROW_LOAD_SMALL_INT']
 IS_OP = opmap['IS_OP']
 CONTAINS_OP = opmap['CONTAINS_OP']
 END_ASYNC_FOR = opmap['END_ASYNC_FOR']
@@ -591,7 +596,20 @@ class ArgResolver:
             #    _disassemble_bytes needs the string repr of the
             #    raw name index for LOAD_GLOBAL, LOAD_CONST, etc.
             argval = arg
-            if deop in hasconst:
+            if deop in (LOAD_FAST_LOAD_CONST, LOAD_FAST_BORROW_LOAD_CONST):
+                arg1 = arg >> 4
+                arg2 = arg & 15
+                val1, argrepr1 = _get_name_info(arg1, self.varname_from_oparg)
+                val2, argrepr2 = _get_const_info(LOAD_CONST, arg2, self.co_consts)
+                argrepr = f"{argrepr1}, {argrepr2}" if argrepr1 else ''
+                argval = val1, val2
+            elif deop in (LOAD_FAST_LOAD_SMALL_INT, LOAD_FAST_BORROW_LOAD_SMALL_INT):
+                arg1 = arg >> 4
+                arg2 = arg & 15
+                val1, argrepr1 = _get_name_info(arg1, self.varname_from_oparg)
+                argrepr = f"{argrepr1}, {arg2}" if argrepr1 else ''
+                argval = val1, arg2
+            elif deop in hasconst:
                 argval, argrepr = _get_const_info(deop, arg, self.co_consts)
             elif deop in hasname:
                 if deop == LOAD_GLOBAL:
