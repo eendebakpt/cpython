@@ -348,6 +348,8 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 0;
         case LOAD_FAST:
             return 0;
+        case LOAD_FAST_ADD_STORE_FAST:
+            return 0;
         case LOAD_FAST_AND_CLEAR:
             return 0;
         case LOAD_FAST_BORROW:
@@ -849,6 +851,8 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 1;
         case LOAD_FAST:
             return 1;
+        case LOAD_FAST_ADD_STORE_FAST:
+            return 0;
         case LOAD_FAST_AND_CLEAR:
             return 1;
         case LOAD_FAST_BORROW:
@@ -1262,6 +1266,7 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [LOAD_CONST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_CONST_FLAG },
     [LOAD_DEREF] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [LOAD_FAST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_PURE_FLAG },
+    [LOAD_FAST_ADD_STORE_FAST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_ESCAPES_FLAG },
     [LOAD_FAST_AND_CLEAR] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG },
     [LOAD_FAST_BORROW] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_PURE_FLAG },
     [LOAD_FAST_BORROW_LOAD_FAST_BORROW] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG },
@@ -1725,6 +1730,7 @@ const char *_PyOpcode_OpName[267] = {
     [LOAD_CONST] = "LOAD_CONST",
     [LOAD_DEREF] = "LOAD_DEREF",
     [LOAD_FAST] = "LOAD_FAST",
+    [LOAD_FAST_ADD_STORE_FAST] = "LOAD_FAST_ADD_STORE_FAST",
     [LOAD_FAST_AND_CLEAR] = "LOAD_FAST_AND_CLEAR",
     [LOAD_FAST_BORROW] = "LOAD_FAST_BORROW",
     [LOAD_FAST_BORROW_LOAD_FAST_BORROW] = "LOAD_FAST_BORROW_LOAD_FAST_BORROW",
@@ -1848,7 +1854,6 @@ const uint8_t _PyOpcode_Caches[256] = {
 PyAPI_DATA(const uint8_t) _PyOpcode_Deopt[256];
 #ifdef NEED_OPCODE_METADATA
 const uint8_t _PyOpcode_Deopt[256] = {
-    [120] = 120,
     [121] = 121,
     [122] = 122,
     [123] = 123,
@@ -2020,6 +2025,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [LOAD_CONST] = LOAD_CONST,
     [LOAD_DEREF] = LOAD_DEREF,
     [LOAD_FAST] = LOAD_FAST,
+    [LOAD_FAST_ADD_STORE_FAST] = LOAD_FAST_ADD_STORE_FAST,
     [LOAD_FAST_AND_CLEAR] = LOAD_FAST_AND_CLEAR,
     [LOAD_FAST_BORROW] = LOAD_FAST_BORROW,
     [LOAD_FAST_BORROW_LOAD_FAST_BORROW] = LOAD_FAST_BORROW_LOAD_FAST_BORROW,
@@ -2109,7 +2115,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
 #endif // NEED_OPCODE_METADATA
 
 #define EXTRA_CASES \
-    case 120: \
     case 121: \
     case 122: \
     case 123: \

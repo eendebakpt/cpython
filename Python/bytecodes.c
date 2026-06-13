@@ -320,6 +320,36 @@ dummy_func(
             value = PyStackRef_FromPyObjectBorrow(obj);
         }
 
+        // TOS-stack-cache measurement spike (gh perf task #4):
+        // Fuses LOAD_FAST_BORROW(a) LOAD_FAST_BORROW(b) BINARY_OP(+) STORE_FAST(a)
+        // i.e. the canonical `a = a + b` (dest == first source). Operands and
+        // result are threaded entirely through C locals (registers); the value
+        // stack is never touched, modelling the ceiling of a top-of-stack
+        // register cache for this hot pattern. Falls back to a general add via
+        // an escaping call for non-compact-int operands, still register-only.
+        tier1 inst(LOAD_FAST_ADD_STORE_FAST, ( -- )) {
+            uint32_t dst = oparg >> 4;   /* a: first source and destination */
+            uint32_t src = oparg & 15;   /* b: second source */
+            PyObject *a_o = PyStackRef_AsPyObjectBorrow(GETLOCAL(dst));
+            PyObject *b_o = PyStackRef_AsPyObjectBorrow(GETLOCAL(src));
+            _PyStackRef res = PyStackRef_NULL;
+            if (_PyLong_CheckExactAndCompact(a_o) &&
+                _PyLong_CheckExactAndCompact(b_o)) {
+                res = _PyCompactLong_Add((PyLongObject *)a_o, (PyLongObject *)b_o);
+            }
+            if (PyStackRef_IsNull(res)) {
+                /* non-int operands or compact-add overflow: general path */
+                PyObject *r = PyNumber_Add(a_o, b_o);
+                if (r == NULL) {
+                    JUMP_TO_LABEL(error);
+                }
+                res = PyStackRef_FromPyObjectSteal(r);
+            }
+            _PyStackRef old = GETLOCAL(dst);
+            GETLOCAL(dst) = res;
+            PyStackRef_XCLOSE(old);
+        }
+
         macro(STORE_FAST) = _SWAP_FAST + POP_TOP;
 
         replicate(8) op(_SWAP_FAST, (value -- trash)) {

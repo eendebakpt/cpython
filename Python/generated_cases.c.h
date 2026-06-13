@@ -9360,6 +9360,40 @@
             DISPATCH();
         }
 
+        TARGET(LOAD_FAST_ADD_STORE_FAST) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = LOAD_FAST_ADD_STORE_FAST;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(LOAD_FAST_ADD_STORE_FAST);
+            uint32_t dst = oparg >> 4;
+            uint32_t src = oparg & 15;
+            PyObject *a_o = PyStackRef_AsPyObjectBorrow(GETLOCAL(dst));
+            PyObject *b_o = PyStackRef_AsPyObjectBorrow(GETLOCAL(src));
+            _PyStackRef res = PyStackRef_NULL;
+            if (_PyLong_CheckExactAndCompact(a_o) &&
+                _PyLong_CheckExactAndCompact(b_o)) {
+                res = _PyCompactLong_Add((PyLongObject *)a_o, (PyLongObject *)b_o);
+            }
+            if (PyStackRef_IsNull(res)) {
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                PyObject *r = PyNumber_Add(a_o, b_o);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+                if (r == NULL) {
+                    JUMP_TO_LABEL(error);
+                }
+                res = PyStackRef_FromPyObjectSteal(r);
+            }
+            _PyStackRef old = GETLOCAL(dst);
+            GETLOCAL(dst) = res;
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            PyStackRef_XCLOSE(old);
+            stack_pointer = _PyFrame_GetStackPointer(frame);
+            DISPATCH();
+        }
+
         TARGET(LOAD_FAST_AND_CLEAR) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = LOAD_FAST_AND_CLEAR;

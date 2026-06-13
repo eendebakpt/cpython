@@ -2703,6 +2703,45 @@ insert_superinstructions(cfg_builder *g)
     return res;
 }
 
+/* TOS-stack-cache measurement spike (perf task #4).
+ * Fuse the canonical in-place add `a = a + b` (where the destination local is
+ * the first source operand) into LOAD_FAST_ADD_STORE_FAST, which performs the
+ * whole operation through C locals (registers) without touching the value
+ * stack -- modelling the ceiling of a top-of-stack register cache.
+ * Must run AFTER optimize_load_fast, which produces the
+ * LOAD_FAST_BORROW_LOAD_FAST_BORROW form this matches. The fused op preserves
+ * the borrow semantics of its inputs, so it is safe to run here. */
+static int
+insert_tos_cache_fusion(cfg_builder *g)
+{
+    for (basicblock *b = g->g_entryblock; b != NULL; b = b->b_next) {
+        for (int i = 0; i + 2 < b->b_iused; i++) {
+            cfg_instr *load = &b->b_instr[i];
+            if (load->i_opcode != LOAD_FAST_BORROW_LOAD_FAST_BORROW) {
+                continue;
+            }
+            cfg_instr *binop = &b->b_instr[i + 1];
+            cfg_instr *store = &b->b_instr[i + 2];
+            int a = load->i_oparg >> 4;   /* first source local */
+            if (binop->i_opcode == BINARY_OP &&
+                binop->i_oparg == NB_ADD &&
+                store->i_opcode == STORE_FAST &&
+                store->i_oparg == a &&
+                (load->i_loc.lineno < 0 || binop->i_loc.lineno < 0 ||
+                 load->i_loc.lineno == binop->i_loc.lineno) &&
+                (load->i_loc.lineno < 0 || store->i_loc.lineno < 0 ||
+                 load->i_loc.lineno == store->i_loc.lineno)) {
+                INSTR_SET_OP1(load, LOAD_FAST_ADD_STORE_FAST, load->i_oparg);
+                INSTR_SET_OP0(binop, NOP);
+                INSTR_SET_OP0(store, NOP);
+            }
+        }
+    }
+    int res = remove_redundant_nops(g);
+    assert(no_redundant_nops(g));
+    return res;
+}
+
 #define NOT_LOCAL -1
 #define DUMMY_INSTR -1
 
@@ -4127,6 +4166,9 @@ _PyCfg_OptimizedCfgToInstructionSequence(cfg_builder *g,
      * borrowed references.
      */
     RETURN_IF_ERROR(optimize_load_fast(g));
+
+    /* TOS-stack-cache spike: fuse `a = a + b` into a register-only op. */
+    RETURN_IF_ERROR(insert_tos_cache_fusion(g));
 
     /* Can't modify the bytecode after computing jump offsets. */
     if (_PyCfg_ToInstructionSequence(g, seq) < 0) {
