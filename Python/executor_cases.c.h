@@ -10501,9 +10501,7 @@
             _PyStackRef value;
             oparg = CURRENT_OPARG();
             PyCellObject *cell = (PyCellObject *)PyStackRef_AsPyObjectBorrow(GETLOCAL(oparg));
-            _PyFrame_SetStackPointer(frame, stack_pointer);
             value = _PyCell_GetStackRef(cell);
-            stack_pointer = _PyFrame_GetStackPointer(frame);
             if (PyStackRef_IsNull(value)) {
                 stack_pointer[0] = value;
                 stack_pointer += 1;
@@ -10515,9 +10513,62 @@
                 JUMP_TO_ERROR();
             }
             _tos_cache0 = value;
-            _tos_cache1 = PyStackRef_ZERO_BITS;
-            _tos_cache2 = PyStackRef_ZERO_BITS;
             SET_CURRENT_CACHED_VALUES(1);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _LOAD_DEREF_r12: {
+            CHECK_CURRENT_CACHED_VALUES(1);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef value;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            oparg = CURRENT_OPARG();
+            PyCellObject *cell = (PyCellObject *)PyStackRef_AsPyObjectBorrow(GETLOCAL(oparg));
+            value = _PyCell_GetStackRef(cell);
+            if (PyStackRef_IsNull(value)) {
+                stack_pointer[0] = _stack_item_0;
+                stack_pointer[1] = value;
+                stack_pointer += 2;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                _PyEval_FormatExcUnbound(tstate, _PyFrame_GetCode(frame), oparg);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            _tos_cache1 = value;
+            _tos_cache0 = _stack_item_0;
+            SET_CURRENT_CACHED_VALUES(2);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _LOAD_DEREF_r23: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef value;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            oparg = CURRENT_OPARG();
+            PyCellObject *cell = (PyCellObject *)PyStackRef_AsPyObjectBorrow(GETLOCAL(oparg));
+            value = _PyCell_GetStackRef(cell);
+            if (PyStackRef_IsNull(value)) {
+                stack_pointer[0] = _stack_item_0;
+                stack_pointer[1] = _stack_item_1;
+                stack_pointer[2] = value;
+                stack_pointer += 3;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                _PyEval_FormatExcUnbound(tstate, _PyFrame_GetCode(frame), oparg);
+                stack_pointer = _PyFrame_GetStackPointer(frame);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            _tos_cache2 = value;
+            _tos_cache1 = _stack_item_1;
+            _tos_cache0 = _stack_item_0;
+            SET_CURRENT_CACHED_VALUES(3);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
             break;
         }
@@ -15191,6 +15242,78 @@
 
         /* _ITER_NEXT_LIST is not a viable micro-op for tier 2 because it is replaced */
 
+        case _ITER_NEXT_LIST_TIER_TWO_r03: {
+            CHECK_CURRENT_CACHED_VALUES(0);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef null_or_index;
+            _PyStackRef iter;
+            _PyStackRef next;
+            null_or_index = stack_pointer[-1];
+            iter = stack_pointer[-2];
+            PyObject *list_o = PyStackRef_AsPyObjectBorrow(iter);
+            assert(PyList_CheckExact(list_o));
+            #ifdef Py_GIL_DISABLED
+            assert(_Py_IsOwnedByCurrentThread((PyObject *)list_o) ||
+                  _PyObject_GC_IS_SHARED(list_o));
+            STAT_INC(FOR_ITER, hit);
+            int result = _PyList_GetItemRefNoLock((PyListObject *)list_o, PyStackRef_UntagInt(null_or_index), &next);
+            if (result <= 0) {
+                UOP_STAT_INC(uopcode, miss);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_JUMP_TARGET();
+            }
+            #else
+            assert(PyStackRef_UntagInt(null_or_index) < PyList_GET_SIZE(list_o));
+            next = PyStackRef_FromPyObjectNew(PyList_GET_ITEM(list_o, PyStackRef_UntagInt(null_or_index)));
+            #endif
+            null_or_index = PyStackRef_IncrementTaggedIntNoOverflow(null_or_index);
+            _tos_cache2 = next;
+            _tos_cache1 = null_or_index;
+            _tos_cache0 = iter;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _ITER_NEXT_LIST_TIER_TWO_r13: {
+            CHECK_CURRENT_CACHED_VALUES(1);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef null_or_index;
+            _PyStackRef iter;
+            _PyStackRef next;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            null_or_index = _stack_item_0;
+            iter = stack_pointer[-1];
+            PyObject *list_o = PyStackRef_AsPyObjectBorrow(iter);
+            assert(PyList_CheckExact(list_o));
+            #ifdef Py_GIL_DISABLED
+            assert(_Py_IsOwnedByCurrentThread((PyObject *)list_o) ||
+                  _PyObject_GC_IS_SHARED(list_o));
+            STAT_INC(FOR_ITER, hit);
+            int result = _PyList_GetItemRefNoLock((PyListObject *)list_o, PyStackRef_UntagInt(null_or_index), &next);
+            if (result <= 0) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache0 = null_or_index;
+                SET_CURRENT_CACHED_VALUES(1);
+                JUMP_TO_JUMP_TARGET();
+            }
+            #else
+            assert(PyStackRef_UntagInt(null_or_index) < PyList_GET_SIZE(list_o));
+            next = PyStackRef_FromPyObjectNew(PyList_GET_ITEM(list_o, PyStackRef_UntagInt(null_or_index)));
+            #endif
+            null_or_index = PyStackRef_IncrementTaggedIntNoOverflow(null_or_index);
+            _tos_cache2 = next;
+            _tos_cache1 = null_or_index;
+            _tos_cache0 = iter;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
         case _ITER_NEXT_LIST_TIER_TWO_r23: {
             CHECK_CURRENT_CACHED_VALUES(2);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
@@ -15207,34 +15330,23 @@
             assert(_Py_IsOwnedByCurrentThread((PyObject *)list_o) ||
                   _PyObject_GC_IS_SHARED(list_o));
             STAT_INC(FOR_ITER, hit);
-            stack_pointer[0] = iter;
-            stack_pointer[1] = null_or_index;
-            stack_pointer += 2;
-            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-            _PyFrame_SetStackPointer(frame, stack_pointer);
             int result = _PyList_GetItemRefNoLock((PyListObject *)list_o, PyStackRef_UntagInt(null_or_index), &next);
-            stack_pointer = _PyFrame_GetStackPointer(frame);
             if (result <= 0) {
                 UOP_STAT_INC(uopcode, miss);
                 _tos_cache1 = null_or_index;
                 _tos_cache0 = iter;
                 SET_CURRENT_CACHED_VALUES(2);
-                stack_pointer += -2;
-                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
                 JUMP_TO_JUMP_TARGET();
             }
             #else
             assert(PyStackRef_UntagInt(null_or_index) < PyList_GET_SIZE(list_o));
             next = PyStackRef_FromPyObjectNew(PyList_GET_ITEM(list_o, PyStackRef_UntagInt(null_or_index)));
-            stack_pointer += 2;
             #endif
             null_or_index = PyStackRef_IncrementTaggedIntNoOverflow(null_or_index);
             _tos_cache2 = next;
             _tos_cache1 = null_or_index;
             _tos_cache0 = iter;
             SET_CURRENT_CACHED_VALUES(3);
-            stack_pointer += -2;
-            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
             break;
         }

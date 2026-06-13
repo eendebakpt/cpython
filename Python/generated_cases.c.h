@@ -6244,9 +6244,7 @@
                 assert(_Py_IsOwnedByCurrentThread(list_o) ||
                   _PyObject_GC_IS_SHARED(list_o));
                 STAT_INC(FOR_ITER, hit);
-                _PyFrame_SetStackPointer(frame, stack_pointer);
                 int result = _PyList_GetItemRefNoLock((PyListObject *)list_o, PyStackRef_UntagInt(null_or_index), &next);
-                stack_pointer = _PyFrame_GetStackPointer(frame);
                 if (result < 0) {
                     UPDATE_MISS_STATS(FOR_ITER);
                     assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
@@ -9325,9 +9323,7 @@
             INSTRUCTION_STATS(LOAD_DEREF);
             _PyStackRef value;
             PyCellObject *cell = (PyCellObject *)PyStackRef_AsPyObjectBorrow(GETLOCAL(oparg));
-            _PyFrame_SetStackPointer(frame, stack_pointer);
             value = _PyCell_GetStackRef(cell);
-            stack_pointer = _PyFrame_GetStackPointer(frame);
             if (PyStackRef_IsNull(value)) {
                 stack_pointer[0] = value;
                 stack_pointer += 1;
