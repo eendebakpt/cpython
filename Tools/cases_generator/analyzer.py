@@ -724,7 +724,6 @@ NON_ESCAPING_FUNCTIONS = (
     "_PyExecutor_FromExit",
     "_PyJit_TryInitializeTracing",
     "_Py_unset_eval_breaker_bit",
-    "_Py_set_eval_breaker_bit",
     "trigger_backoff_counter",
     "_PyThreadState_PopCStackRefSteal",
     "doesnt_escape",

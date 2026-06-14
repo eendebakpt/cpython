@@ -29,7 +29,7 @@ skip_if_different_mount_drives()
 
 test_tools.skip_if_missing("cases_generator")
 with test_tools.imports_under_tool("cases_generator"):
-    from analyzer import StackItem, analyze_files
+    from analyzer import NON_ESCAPING_FUNCTIONS, StackItem, analyze_files
     from cwriter import CWriter
     import parser
     from stack import Local, Stack
@@ -3172,6 +3172,82 @@ class TestGeneratedAbstractCases(unittest.TestCase):
         }
         """
         self.run_cases_test(input, input2, output)
+
+
+class TestEscapeAnalysis(unittest.TestCase):
+    # The cases generator brackets every "escaping" call (one that may reenter
+    # the interpreter, run Python, trigger GC, release the GIL, or raise) with
+    # _PyFrame_SetStackPointer()/_PyFrame_GetStackPointer() so the evaluation
+    # stack is consistent across the call.  A call is treated as non-escaping
+    # only if it matches a name heuristic (ALL_CAPS macro, *Check/*CheckExact,
+    # Py_Is*, a cast, ...) or is listed in analyzer.NON_ESCAPING_FUNCTIONS.
+    # These tests pin that classification so the spill is emitted exactly where
+    # expected -- a dropped or mistyped whitelist entry is otherwise invisible.
+
+    SPILL = "_PyFrame_SetStackPointer(frame, stack_pointer)"
+
+    def tier1(self, body):
+        # Generate the tier-1 case for a single ``inst(OP, (--)) { body }`` and
+        # return the generated C text.
+        src = "inst(OP, (--)) {\n" + body + "\n}\n"
+        with tempfile.NamedTemporaryFile(
+            "w", suffix=".c", delete=False
+        ) as temp_input:
+            temp_input.write(parser.BEGIN_MARKER)
+            temp_input.write("\n")
+            temp_input.write(src)
+            temp_input.write(parser.END_MARKER)
+            in_name = temp_input.name
+        out_name = in_name + ".out"
+        try:
+            with handle_stderr():
+                tier1_generator.generate_tier1_from_files(
+                    [in_name], out_name, False
+                )
+            with open(out_name) as f:
+                return f.read()
+        finally:
+            for name in (in_name, out_name):
+                try:
+                    os.remove(name)
+                except OSError:
+                    pass
+
+    def test_unknown_call_escapes(self):
+        # A plain function call not covered by any heuristic or the whitelist
+        # is escaping and must be spilled.
+        self.assertIn(self.SPILL, self.tier1("spam_eggs(1);"))
+
+    def test_whitelisted_call_does_not_escape(self):
+        # A call listed in NON_ESCAPING_FUNCTIONS must NOT be spilled.
+        self.assertNotIn(self.SPILL, self.tier1("Py_INCREF(NULL);"))
+        self.assertNotIn(self.SPILL, self.tier1("(void)_PyLong_IsZero(NULL);"))
+
+    def test_name_heuristics_do_not_escape(self):
+        # ALL_CAPS macro, *Check / *CheckExact, and Py_Is* are non-escaping by
+        # name, with no whitelist entry needed.
+        for body in (
+            "SOME_MACRO(1);",
+            "(void)PyFoo_Check(NULL);",
+            "(void)PyFoo_CheckExact(NULL);",
+            "(void)Py_IsFoo(NULL);",
+        ):
+            with self.subTest(body=body):
+                self.assertNotIn(self.SPILL, self.tier1(body))
+
+    def test_whitelist_has_no_duplicates(self):
+        # A duplicated entry is dead weight and a sign of a botched merge.
+        seen = set()
+        dupes = sorted({n for n in NON_ESCAPING_FUNCTIONS
+                        if n in seen or seen.add(n)})
+        self.assertEqual(dupes, [], f"duplicate NON_ESCAPING_FUNCTIONS: {dupes}")
+
+    def test_whitelist_entries_are_identifiers(self):
+        # Catch stray typos / punctuation in the hand-maintained list.
+        for name in NON_ESCAPING_FUNCTIONS:
+            with self.subTest(name=name):
+                self.assertTrue(name.isidentifier(), name)
+
 
 if __name__ == "__main__":
     unittest.main()
