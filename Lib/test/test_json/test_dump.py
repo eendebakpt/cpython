@@ -130,6 +130,114 @@ class TestDump:
         self.assertEqual(self.dumps({'key': obj}),
                          '{"key": "nonascii:\\u00e9"}')
 
+    # The tests below exercise JSONEncoder.iterencode() -- the streaming
+    # encoder.  dumps()/encode() use a separate one-shot code path, so these
+    # behaviours are not covered by the dumps()-based tests above.
+
+    def test_iterencode_streams_in_chunks(self):
+        # A non-trivial structure is yielded as several chunks, not buffered
+        # into a single string.
+        obj = {"key": list(range(10))}
+        chunks = list(self.json.JSONEncoder().iterencode(obj))
+        self.assertGreater(len(chunks), 1)
+        self.assertEqual("".join(chunks), self.dumps(obj))
+
+    def test_iterencode_matches_encode(self):
+        # The streaming iterator must produce exactly the same output as the
+        # one-shot encoder for representative inputs and options.  This cross
+        # checks the streaming path without duplicating the encoder tests.
+        cases = [
+            None, True, False, 0, -1, 2.5, "txt", "esc\"\n\t\\",
+            [], {}, [1, [2, [3, []]]], {"a": {"b": {"c": 1}}},
+            {"nums": [1, 2.0, 3], "nested": {"x": [True, None]}},
+            list(range(50)), {str(i): i for i in range(20)},
+        ]
+        for kw in ({}, {"indent": 2}, {"sort_keys": True},
+                   {"separators": (",", ":")}):
+            enc = self.json.JSONEncoder(**kw)
+            for obj in cases:
+                with self.subTest(obj=obj, options=kw):
+                    streamed = "".join(enc.iterencode(obj))
+                    self.assertEqual(streamed, enc.encode(obj))
+
+    def test_iterencode_default_streams_container(self):
+        # A container returned by default() is streamed chunk-by-chunk, not
+        # buffered into a single chunk.
+        class Wrapped:
+            def __init__(self, data):
+                self.data = data
+        def default(o):
+            if isinstance(o, Wrapped):
+                return o.data
+            raise TypeError
+        obj = Wrapped({"a": list(range(10)), "b": Wrapped([1, 2, 3])})
+        enc = self.json.JSONEncoder(default=default)
+        chunks = list(enc.iterencode(obj))
+        self.assertGreater(len(chunks), 1)
+        self.assertEqual("".join(chunks), enc.encode(obj))
+
+    def test_iterencode_circular_via_default(self):
+        # A default() result that refers back to the object passed to
+        # default() must be reported as a circular reference.
+        class Wrapped:
+            pass
+        w = Wrapped()
+        def default(o):
+            return [w]
+        enc = self.json.JSONEncoder(default=default)
+        with self.assertRaisesRegex(ValueError, "Circular reference"):
+            list(enc.iterencode(w))
+
+    def test_iterencode_dict_mutated_during_streaming(self):
+        # Mutating a dict mid-stream must not crash the interpreter.  The C
+        # iterator snapshots the dict's items; the Python iterator raises
+        # RuntimeError.  Either outcome is acceptable.
+        d = {"k%d" % i: i for i in range(10)}
+        it = self.json.JSONEncoder().iterencode(d)
+        head = next(it)
+        d.clear()
+        d["late"] = 1
+        try:
+            result = head + "".join(it)
+        except RuntimeError:
+            return  # Python backend: dict changed size during iteration
+        # C backend: encodes the snapshot taken before the mutation.
+        self.assertTrue(result.startswith("{") and result.endswith("}"))
+
+    def test_iterencode_mapping_items_mutated_during_streaming(self):
+        # gh-142831: a dict subclass whose items() returns a list the mapping
+        # retains -- shrunk mid-stream by a default() callback -- must not
+        # crash.  The encoder must snapshot into a list it owns exclusively.
+        sentinel = object()
+
+        class Evil(dict):
+            backing = None
+            def items(self):
+                Evil.backing = list(dict.items(self))
+                return Evil.backing
+
+        def default(o):
+            if o is sentinel:
+                Evil.backing.clear()  # invalidate the items list mid-stream
+                return None
+            raise TypeError
+
+        d = Evil()
+        d["bad"] = sentinel  # first item, so default() fires before the rest
+        for i in range(30):
+            d["k%d" % i] = i
+        result = "".join(self.json.JSONEncoder(default=default).iterencode(d))
+        self.assertTrue(result.startswith("{") and result.endswith("}"))
+
+    def test_iterencode_mapping_non_2_tuple_items(self):
+        # A mapping whose items() does not yield 2-tuples must raise rather
+        # than crash.
+        class Weird(dict):
+            def items(self):
+                return [(1, 2, 3)]
+        with self.assertRaises((ValueError, TypeError)):
+            "".join(self.json.JSONEncoder().iterencode(Weird({"a": 1})))
+
 
 class TestPyDump(TestDump, PyTest): pass
 

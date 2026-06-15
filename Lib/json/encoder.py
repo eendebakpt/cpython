@@ -250,16 +250,20 @@ class JSONEncoder(object):
             indent = self.indent
         else:
             indent = ' ' * self.indent
-        if _one_shot and c_make_encoder is not None:
-            _iterencode = c_make_encoder(
+        if c_make_encoder is not None:
+            _encoder = c_make_encoder(
                 markers, self.default, _encoder, indent,
                 self.key_separator, self.item_separator, self.sort_keys,
                 self.skipkeys, self.allow_nan)
-        else:
-            _iterencode = _make_iterencode(
-                markers, self.default, _encoder, indent, floatstr,
-                self.key_separator, self.item_separator, self.sort_keys,
-                self.skipkeys, _one_shot)
+            if _one_shot:
+                return _encoder(o, 0)
+            # Streaming C implementation: yield the encoding as str chunks.
+            return _encoder._iterencode(o, 0)
+
+        _iterencode = _make_iterencode(
+            markers, self.default, _encoder, indent, floatstr,
+            self.key_separator, self.item_separator, self.sort_keys,
+            self.skipkeys, _one_shot)
         return _iterencode(o, 0)
 
 def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
