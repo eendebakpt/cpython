@@ -1487,6 +1487,34 @@ encoder_call(PyObject *op, PyObject *args, PyObject *kwds)
 }
 
 static PyObject *
+encoder_encode(PyObject *op, PyObject *obj)
+{
+    /* Encode obj and return a str directly (no tuple wrapper). */
+    PyEncoderObject *self = PyEncoderObject_CAST(op);
+
+    PyUnicodeWriter *writer = PyUnicodeWriter_Create(0);
+    if (writer == NULL) {
+        return NULL;
+    }
+
+    PyObject *indent_cache = NULL;
+    if (self->indent != Py_None) {
+        indent_cache = create_indent_cache(self, 0);
+        if (indent_cache == NULL) {
+            PyUnicodeWriter_Discard(writer);
+            return NULL;
+        }
+    }
+    if (encoder_listencode_obj(self, writer, obj, 0, indent_cache)) {
+        PyUnicodeWriter_Discard(writer);
+        Py_XDECREF(indent_cache);
+        return NULL;
+    }
+    Py_XDECREF(indent_cache);
+    return PyUnicodeWriter_Finish(writer);
+}
+
+static PyObject *
 _encoded_const(PyObject *obj)
 {
     /* Return the JSON string representation of None, True, False */
@@ -2031,6 +2059,12 @@ encoder_clear(PyObject *op)
 
 PyDoc_STRVAR(encoder_doc, "Encoder(markers, default, encoder, indent, key_separator, item_separator, sort_keys, skipkeys, allow_nan)");
 
+static PyMethodDef encoder_methods[] = {
+    {"_encode", encoder_encode, METH_O,
+     "_encode(obj)\n--\n\nEncode obj and return the JSON string directly."},
+    {NULL, NULL}
+};
+
 static PyType_Slot PyEncoderType_slots[] = {
     {Py_tp_doc, (void *)encoder_doc},
     {Py_tp_dealloc, encoder_dealloc},
@@ -2038,6 +2072,7 @@ static PyType_Slot PyEncoderType_slots[] = {
     {Py_tp_traverse, encoder_traverse},
     {Py_tp_clear, encoder_clear},
     {Py_tp_members, encoder_members},
+    {Py_tp_methods, encoder_methods},
     {Py_tp_new, encoder_new},
     {0, 0}
 };

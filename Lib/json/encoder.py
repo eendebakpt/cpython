@@ -196,6 +196,25 @@ class JSONEncoder(object):
                 return encode_basestring_ascii(o)
             else:
                 return encode_basestring(o)
+        if c_make_encoder is not None:
+            # Encode directly in C and return the string in one shot.
+            if self.check_circular:
+                markers = {}
+            else:
+                markers = None
+            if self.ensure_ascii:
+                _encoder = encode_basestring_ascii
+            else:
+                _encoder = encode_basestring
+            if self.indent is None or isinstance(self.indent, str):
+                indent = self.indent
+            else:
+                indent = ' ' * self.indent
+            return c_make_encoder(
+                markers, self.default, _encoder, indent,
+                self.key_separator, self.item_separator, self.sort_keys,
+                self.skipkeys, self.allow_nan)._encode(o)
+        # Pure-Python fallback.
         # This doesn't pass the iterator directly to ''.join() because the
         # exceptions aren't as detailed.  The list call should be roughly
         # equivalent to the PySequence_Fast that ''.join() would do.
