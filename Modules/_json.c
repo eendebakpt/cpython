@@ -282,10 +282,8 @@ ascii_escape_unicode(PyObject *pystr)
     return ascii_escape_unicode_and_size(input, kind, input_chars, output_size);
 }
 
-/* Like ascii_escape_unicode, but with the no-escape fast path that
- * write_escaped_ascii has: when nothing needs escaping, bulk-copy the input
- * instead of running the per-character escape loop.  Used by the streaming
- * iterator, which needs the quoted string as a new object. */
+/* ascii_escape_unicode with write_escaped_ascii's no-escape fast path:
+ * bulk-copy when nothing needs escaping.  Returns the quoted string. */
 static PyObject *
 ascii_escape_unicode_quoted(PyObject *pystr)
 {
@@ -465,10 +463,8 @@ escape_unicode(PyObject *pystr)
     return escape_unicode_and_size(input, kind, maxchar, input_chars, output_size);
 }
 
-/* Like escape_unicode, but with the no-escape fast path that
- * write_escaped_unicode has: when nothing needs escaping, bulk-copy the input
- * instead of running the per-character escape loop.  Used by the streaming
- * iterator, which needs the quoted string as a new object. */
+/* escape_unicode with write_escaped_unicode's no-escape fast path:
+ * bulk-copy when nothing needs escaping.  Returns the quoted string. */
 static PyObject *
 escape_unicode_quoted(PyObject *pystr)
 {
@@ -1623,10 +1619,9 @@ iter_encode_scalar(PyEncoderObject *s, PyObject *obj)
     return NULL;
 }
 
-/* Register obj for circular-reference detection in the markers dict.  On
- * success stores a new marker-key reference in *ident_out (NULL if markers are
- * disabled) and returns 0.  Returns -1 with an exception set on a circular
- * reference or other error. */
+/* Register obj for circular-reference detection.  Stores a new marker key in
+ * *ident_out (NULL if markers are disabled); returns 0, or -1 on a circular
+ * reference or error. */
 static int
 json_marker_enter(PyObject *markers, PyObject *obj, PyObject **ident_out)
 {
@@ -1654,9 +1649,8 @@ json_marker_enter(PyObject *markers, PyObject *obj, PyObject **ident_out)
     return 0;
 }
 
-/* Remove a marker registered by json_marker_enter and release ident (a no-op
- * when ident is NULL).  Returns 0, or -1 with an exception if removal fails;
- * ident is released either way. */
+/* Undo json_marker_enter: drop the marker and release ident (NULL-safe).
+ * Returns 0, or -1 if removal fails; ident is released either way. */
 static int
 json_marker_leave(PyObject *markers, PyObject *ident)
 {
