@@ -465,6 +465,46 @@ escape_unicode(PyObject *pystr)
     return escape_unicode_and_size(input, kind, maxchar, input_chars, output_size);
 }
 
+/* Like escape_unicode, but with the no-escape fast path that
+ * write_escaped_unicode has: when nothing needs escaping, bulk-copy the input
+ * instead of running the per-character escape loop.  Used by the streaming
+ * iterator, which needs the quoted string as a new object. */
+static PyObject *
+escape_unicode_quoted(PyObject *pystr)
+{
+    Py_ssize_t input_chars = PyUnicode_GET_LENGTH(pystr);
+    const void *input = PyUnicode_DATA(pystr);
+    int kind = PyUnicode_KIND(pystr);
+    Py_UCS4 maxchar = PyUnicode_MAX_CHAR_VALUE(pystr);
+
+    Py_ssize_t output_size = escape_size(input, kind, input_chars);
+    if (output_size < 0) {
+        return NULL;
+    }
+
+    if (output_size == input_chars + 2) {
+        /* No need to escape anything: bulk-copy with surrounding quotes. */
+        PyObject *rval = PyUnicode_New(output_size, maxchar);
+        if (rval == NULL) {
+            return NULL;
+        }
+        int rkind = PyUnicode_KIND(rval);
+        void *output = PyUnicode_DATA(rval);
+        PyUnicode_WRITE(rkind, output, 0, '"');
+        if (PyUnicode_CopyCharacters(rval, 1, pystr, 0, input_chars) < 0) {
+            Py_DECREF(rval);
+            return NULL;
+        }
+        PyUnicode_WRITE(rkind, output, input_chars + 1, '"');
+#ifdef Py_DEBUG
+        assert(_PyUnicode_CheckConsistency(rval, 1));
+#endif
+        return rval;
+    }
+
+    return escape_unicode_and_size(input, kind, maxchar, input_chars, output_size);
+}
+
 static int
 write_escaped_unicode(PyUnicodeWriter *writer, PyObject *pystr)
 {
@@ -1543,7 +1583,7 @@ encoder_encode_string(PyEncoderObject *s, PyObject *obj)
         return ascii_escape_unicode_quoted(obj);
     }
     if (s->fast_encode == write_escaped_unicode) {
-        return escape_unicode(obj);
+        return escape_unicode_quoted(obj);
     }
     PyObject *encoded = PyObject_CallOneArg(s->encoder, obj);
     if (encoded == NULL) {
