@@ -1756,6 +1756,46 @@ iter_pop_frame(PyEncoderIterObject *self)
     Py_DECREF(f->container);
 }
 
+/* True if key is an allowed JSON object key type (str, int, float, bool,
+ * None). */
+static inline int
+json_key_type_ok(PyObject *key)
+{
+    return PyUnicode_Check(key) || PyLong_Check(key) || PyFloat_Check(key)
+        || key == Py_True || key == Py_False || key == Py_None;
+}
+
+/* Convert a dict key to the unescaped string to be quoted (str kept as-is;
+ * int/float/bool/None stringified).  Returns a new ref, or NULL: for an
+ * unsupported type *skip is set under skipkeys (no exception), else a
+ * TypeError is raised. */
+static PyObject *
+encoder_key_to_str(PyEncoderObject *s, PyObject *key, int *skip)
+{
+    *skip = 0;
+    if (PyUnicode_Check(key)) {
+        return Py_NewRef(key);
+    }
+    if (PyFloat_Check(key)) {
+        return encoder_encode_float(s, key);
+    }
+    /* Must precede PyLong_Check: True and False are also 1 and 0. */
+    if (key == Py_True || key == Py_False || key == Py_None) {
+        return _encoded_const(key);
+    }
+    if (PyLong_Check(key)) {
+        return PyLong_Type.tp_repr(key);
+    }
+    if (s->skipkeys) {
+        *skip = 1;
+        return NULL;
+    }
+    PyErr_Format(PyExc_TypeError,
+                 "keys must be str, int, float, bool or None, "
+                 "not %.100s", Py_TYPE(key)->tp_name);
+    return NULL;
+}
+
 /* Advance a dict frame to the next pair, setting cur_key/cur_value (borrowed).
  * Returns 1 (pair found), 0 (exhausted) or -1 (error); honours skipkeys. */
 static int
@@ -1776,10 +1816,7 @@ iter_dict_next(PyEncoderIterObject *self, EncoderFrame *f)
         f->cur_key = PyTuple_GET_ITEM(item, 0);
         f->cur_value = PyTuple_GET_ITEM(item, 1);
         /* Check key type; skip if skipkeys. */
-        if (PyUnicode_Check(f->cur_key) || PyLong_Check(f->cur_key) ||
-            PyFloat_Check(f->cur_key) ||
-            f->cur_key == Py_True || f->cur_key == Py_False ||
-            f->cur_key == Py_None) {
+        if (json_key_type_ok(f->cur_key)) {
             return 1;
         }
         if (enc->skipkeys) {
@@ -1793,27 +1830,13 @@ iter_dict_next(PyEncoderIterObject *self, EncoderFrame *f)
     }
 }
 
-/* Encode a dict key to a quoted JSON string.  Non-string keys (int, float,
- * bool, None) are stringified then quoted, like encoder_encode_key_value. */
+/* Encode a dict key to a quoted JSON string.  The key type was already
+ * validated by iter_dict_next(), so *skip is never set here. */
 static PyObject *
 iter_encode_key(PyEncoderObject *enc, PyObject *key)
 {
-    if (PyUnicode_Check(key)) {
-        return encoder_encode_string(enc, key);
-    }
-    PyObject *keystr;
-    if (PyFloat_Check(key)) {
-        keystr = encoder_encode_float(enc, key);
-    }
-    else if (key == Py_True || key == Py_False || key == Py_None) {
-        keystr = _encoded_const(key);
-    }
-    else {
-        /* int, including subclasses; iter_dict_next() admits no other key
-         * types.  Use the base int repr, like encoder_encode_key_value(). */
-        assert(PyLong_Check(key));
-        keystr = PyLong_Type.tp_repr(key);
-    }
+    int skip;
+    PyObject *keystr = encoder_key_to_str(enc, key, &skip);
     if (keystr == NULL) {
         return NULL;
     }
@@ -2494,35 +2517,11 @@ encoder_encode_key_value(PyEncoderObject *s, PyUnicodeWriter *writer, bool *firs
                          Py_ssize_t indent_level, PyObject *indent_cache,
                          PyObject *item_separator)
 {
-    PyObject *keystr = NULL;
-    int rv;
+    int rv, skip;
 
-    if (PyUnicode_Check(key)) {
-        keystr = Py_NewRef(key);
-    }
-    else if (PyFloat_Check(key)) {
-        keystr = encoder_encode_float(s, key);
-    }
-    else if (key == Py_True || key == Py_False || key == Py_None) {
-                    /* This must come before the PyLong_Check because
-                       True and False are also 1 and 0.*/
-        keystr = _encoded_const(key);
-    }
-    else if (PyLong_Check(key)) {
-        keystr = PyLong_Type.tp_repr(key);
-    }
-    else if (s->skipkeys) {
-        return 0;
-    }
-    else {
-        PyErr_Format(PyExc_TypeError,
-                     "keys must be str, int, float, bool or None, "
-                     "not %.100s", Py_TYPE(key)->tp_name);
-        return -1;
-    }
-
+    PyObject *keystr = encoder_key_to_str(s, key, &skip);
     if (keystr == NULL) {
-        return -1;
+        return skip ? 0 : -1;
     }
 
     if (*first) {
