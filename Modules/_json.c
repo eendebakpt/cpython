@@ -282,6 +282,42 @@ ascii_escape_unicode(PyObject *pystr)
     return ascii_escape_unicode_and_size(input, kind, input_chars, output_size);
 }
 
+/* Like ascii_escape_unicode, but with the no-escape fast path that
+ * write_escaped_ascii has: when nothing needs escaping, bulk-copy the input
+ * instead of running the per-character escape loop.  Used by the streaming
+ * iterator, which needs the quoted string as a new object. */
+static PyObject *
+ascii_escape_unicode_quoted(PyObject *pystr)
+{
+    Py_ssize_t input_chars = PyUnicode_GET_LENGTH(pystr);
+    const void *input = PyUnicode_DATA(pystr);
+    int kind = PyUnicode_KIND(pystr);
+
+    Py_ssize_t output_size = ascii_escape_size(input, kind, input_chars);
+    if (output_size < 0) {
+        return NULL;
+    }
+
+    if (output_size == input_chars + 2) {
+        /* No need to escape anything: bulk-copy with surrounding quotes. */
+        assert(PyUnicode_IS_ASCII(pystr));
+        PyObject *rval = PyUnicode_New(output_size, 127);
+        if (rval == NULL) {
+            return NULL;
+        }
+        Py_UCS1 *output = PyUnicode_1BYTE_DATA(rval);
+        output[0] = '"';
+        memcpy(output + 1, input, input_chars);
+        output[input_chars + 1] = '"';
+#ifdef Py_DEBUG
+        assert(_PyUnicode_CheckConsistency(rval, 1));
+#endif
+        return rval;
+    }
+
+    return ascii_escape_unicode_and_size(input, kind, input_chars, output_size);
+}
+
 static int
 write_escaped_ascii(PyUnicodeWriter *writer, PyObject *pystr)
 {
@@ -1504,7 +1540,7 @@ encoder_encode_string(PyEncoderObject *s, PyObject *obj)
 {
     /* Reuse the new-string escapers shared with encode_basestring[_ascii]. */
     if (s->fast_encode == write_escaped_ascii) {
-        return ascii_escape_unicode(obj);
+        return ascii_escape_unicode_quoted(obj);
     }
     if (s->fast_encode == write_escaped_unicode) {
         return escape_unicode(obj);
