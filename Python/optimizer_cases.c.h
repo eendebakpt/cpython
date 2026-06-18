@@ -4033,6 +4033,18 @@
             break;
         }
 
+        case _LOAD_ATTR_METHOD_BOUND: {
+            JitOptRef owner;
+            JitOptRef attr;
+            owner = stack_pointer[-1];
+            PyObject *descr = (PyObject *)this_instr->operand0;
+            (void)descr;
+            (void)owner;
+            attr = sym_new_not_null(ctx);
+            stack_pointer[-1] = attr;
+            break;
+        }
+
         case _MAYBE_EXPAND_METHOD: {
             JitOptRef *args;
             JitOptRef self_or_null;

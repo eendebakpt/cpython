@@ -2855,6 +2855,9 @@ dummy_func(
             LOAD_ATTR_METHOD_WITH_VALUES,
             LOAD_ATTR_METHOD_NO_DICT,
             LOAD_ATTR_METHOD_LAZY_DICT,
+            LOAD_ATTR_METHOD_WITH_VALUES_BOUND,
+            LOAD_ATTR_METHOD_NO_DICT_BOUND,
+            LOAD_ATTR_METHOD_LAZY_DICT_BOUND,
             LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES,
             LOAD_ATTR_NONDESCRIPTOR_NO_DICT,
         };
@@ -4359,6 +4362,45 @@ dummy_func(
             _CHECK_ATTR_METHOD_LAZY_DICT +
             unused/1 +
             _LOAD_ATTR_METHOD_LAZY_DICT;
+
+        // Bare method load (no call follows, oparg & 1 == 0): build the bound
+        // method directly instead of pushing (func, self) for the caller.
+        op(_LOAD_ATTR_METHOD_BOUND, (descr/4, owner -- attr)) {
+            assert((oparg & 1) == 0);
+            STAT_INC(LOAD_ATTR, hit);
+            assert(descr != NULL);
+            assert(_PyType_HasFeature(Py_TYPE(descr), Py_TPFLAGS_METHOD_DESCRIPTOR));
+            /* `descr` is a borrowed function pointer, valid under the
+             * tp_version_tag guard. PyMethod_New takes its own refs to both
+             * func and self. */
+            PyObject *res_o = PyMethod_New(descr, PyStackRef_AsPyObjectBorrow(owner));
+            PyStackRef_CLOSE(owner);
+            ERROR_IF(res_o == NULL);
+            attr = PyStackRef_FromPyObjectSteal(res_o);
+        }
+
+        macro(LOAD_ATTR_METHOD_WITH_VALUES_BOUND) =
+            unused/1 +
+            _RECORD_TOS_TYPE +
+            _GUARD_TYPE_VERSION +
+            _GUARD_DORV_VALUES_INST_ATTR_FROM_DICT +
+            unused/2 +
+            _LOAD_ATTR_METHOD_BOUND;
+
+        macro(LOAD_ATTR_METHOD_NO_DICT_BOUND) =
+            unused/1 +
+            _RECORD_TOS_TYPE +
+            _GUARD_TYPE_VERSION +
+            unused/2 +
+            _LOAD_ATTR_METHOD_BOUND;
+
+        macro(LOAD_ATTR_METHOD_LAZY_DICT_BOUND) =
+            unused/1 +
+            _RECORD_TOS_TYPE +
+            _GUARD_TYPE_VERSION +
+            _CHECK_ATTR_METHOD_LAZY_DICT +
+            unused/1 +
+            _LOAD_ATTR_METHOD_BOUND;
 
         // Cache layout: counter/1, func_version/2
         // CALL_INTRINSIC_1/2, CALL_KW, and CALL_FUNCTION_EX aren't members!

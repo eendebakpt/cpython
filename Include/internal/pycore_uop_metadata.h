@@ -293,6 +293,7 @@ const uint32_t _PyUop_Flags[MAX_UOP_ID+1] = {
     [_LOAD_ATTR_NONDESCRIPTOR_NO_DICT] = HAS_ARG_FLAG | HAS_ESCAPES_FLAG,
     [_CHECK_ATTR_METHOD_LAZY_DICT] = HAS_EXIT_FLAG,
     [_LOAD_ATTR_METHOD_LAZY_DICT] = HAS_ARG_FLAG,
+    [_LOAD_ATTR_METHOD_BOUND] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG,
     [_MAYBE_EXPAND_METHOD] = HAS_ARG_FLAG | HAS_ESCAPES_FLAG,
     [_PY_FRAME_GENERAL] = HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG | HAS_SYNC_SP_FLAG,
     [_CHECK_FUNCTION_VERSION] = HAS_ARG_FLAG | HAS_EXIT_FLAG,
@@ -2770,6 +2771,15 @@ const _PyUopCachingInfo _PyUop_Caching[MAX_UOP_ID+1] = {
             { -1, -1, -1 },
         },
     },
+    [_LOAD_ATTR_METHOD_BOUND] = {
+        .best = { 1, 1, 1, 1 },
+        .entries = {
+            { -1, -1, -1 },
+            { 1, 1, _LOAD_ATTR_METHOD_BOUND_r11 },
+            { -1, -1, -1 },
+            { -1, -1, -1 },
+        },
+    },
     [_MAYBE_EXPAND_METHOD] = {
         .best = { 0, 0, 0, 0 },
         .entries = {
@@ -4548,6 +4558,7 @@ const uint16_t _PyUop_Uncached[MAX_UOP_REGS_ID+1] = {
     [_LOAD_ATTR_METHOD_LAZY_DICT_r02] = _LOAD_ATTR_METHOD_LAZY_DICT,
     [_LOAD_ATTR_METHOD_LAZY_DICT_r12] = _LOAD_ATTR_METHOD_LAZY_DICT,
     [_LOAD_ATTR_METHOD_LAZY_DICT_r23] = _LOAD_ATTR_METHOD_LAZY_DICT,
+    [_LOAD_ATTR_METHOD_BOUND_r11] = _LOAD_ATTR_METHOD_BOUND,
     [_MAYBE_EXPAND_METHOD_r00] = _MAYBE_EXPAND_METHOD,
     [_PY_FRAME_GENERAL_r01] = _PY_FRAME_GENERAL,
     [_CHECK_FUNCTION_VERSION_r00] = _CHECK_FUNCTION_VERSION,
@@ -5718,6 +5729,8 @@ const char *const _PyOpcode_uop_name[MAX_UOP_REGS_ID+1] = {
     [_LOAD_ATTR_INSTANCE_VALUE_r02] = "_LOAD_ATTR_INSTANCE_VALUE_r02",
     [_LOAD_ATTR_INSTANCE_VALUE_r12] = "_LOAD_ATTR_INSTANCE_VALUE_r12",
     [_LOAD_ATTR_INSTANCE_VALUE_r23] = "_LOAD_ATTR_INSTANCE_VALUE_r23",
+    [_LOAD_ATTR_METHOD_BOUND] = "_LOAD_ATTR_METHOD_BOUND",
+    [_LOAD_ATTR_METHOD_BOUND_r11] = "_LOAD_ATTR_METHOD_BOUND_r11",
     [_LOAD_ATTR_METHOD_LAZY_DICT] = "_LOAD_ATTR_METHOD_LAZY_DICT",
     [_LOAD_ATTR_METHOD_LAZY_DICT_r02] = "_LOAD_ATTR_METHOD_LAZY_DICT_r02",
     [_LOAD_ATTR_METHOD_LAZY_DICT_r12] = "_LOAD_ATTR_METHOD_LAZY_DICT_r12",
@@ -6720,6 +6733,8 @@ int _PyUop_num_popped(int opcode, int oparg)
         case _CHECK_ATTR_METHOD_LAZY_DICT:
             return 0;
         case _LOAD_ATTR_METHOD_LAZY_DICT:
+            return 1;
+        case _LOAD_ATTR_METHOD_BOUND:
             return 1;
         case _MAYBE_EXPAND_METHOD:
             return 0;

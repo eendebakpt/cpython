@@ -1,0 +1,5 @@
+Speed up reading a bound method from an instance (for example ``obj.method``
+when it is not immediately called) by specializing ``LOAD_ATTR`` for that
+case.  The bound method is now built directly from the cached function under
+a type-version guard, instead of going through the generic attribute lookup
+on every access.

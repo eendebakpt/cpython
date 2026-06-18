@@ -804,18 +804,14 @@ do_specialize_instance_load_attr(PyObject* owner, _Py_CODEUNIT* instr, PyObject*
             if (shadow) {
                 goto try_instance;
             }
-            if (oparg & 1) {
-                if (specialize_attr_loadclassattr(owner, instr, name, descr,
-                                                  tp_version, kind, true,
-                                                  shared_keys_version)) {
-                    return 0;
-                }
-                else {
-                    return -1;
-                }
+            if (specialize_attr_loadclassattr(owner, instr, name, descr,
+                                              tp_version, kind, true,
+                                              shared_keys_version)) {
+                return 0;
             }
-            SPECIALIZATION_FAIL(LOAD_ATTR, SPEC_FAIL_ATTR_METHOD);
-            return -1;
+            else {
+                return -1;
+            }
         }
         case PROPERTY:
         {
@@ -1268,6 +1264,11 @@ specialize_attr_loadclassattr(PyObject *owner, _Py_CODEUNIT *instr,
     assert(descr != NULL);
     assert((is_method && kind == METHOD) || (!is_method && kind == NON_DESCRIPTOR));
 
+    /* For a method load, oparg & 1 indicates a call follows (push func+self);
+     * otherwise we build the bound method directly via the _BOUND variants. */
+    bool bound = is_method &&
+        ((FT_ATOMIC_LOAD_UINT8_RELAXED(instr->op.arg) & 1) == 0);
+
     #ifdef Py_GIL_DISABLED
     if (!_PyObject_HasDeferredRefcount(descr)) {
         SPECIALIZATION_FAIL(LOAD_ATTR, SPEC_FAIL_ATTR_DESCR_NOT_DEFERRED);
@@ -1285,7 +1286,9 @@ specialize_attr_loadclassattr(PyObject *owner, _Py_CODEUNIT *instr,
             SPECIALIZATION_FAIL(LOAD_ATTR, SPEC_FAIL_OUT_OF_VERSIONS);
             return 0;
         }
-        specialize(instr, is_method ? LOAD_ATTR_METHOD_WITH_VALUES : LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES);
+        specialize(instr, is_method
+                   ? (bound ? LOAD_ATTR_METHOD_WITH_VALUES_BOUND : LOAD_ATTR_METHOD_WITH_VALUES)
+                   : LOAD_ATTR_NONDESCRIPTOR_WITH_VALUES);
     }
     else {
         Py_ssize_t dictoffset;
@@ -1300,7 +1303,9 @@ specialize_attr_loadclassattr(PyObject *owner, _Py_CODEUNIT *instr,
             }
         }
         if (dictoffset == 0) {
-            specialize(instr, is_method ? LOAD_ATTR_METHOD_NO_DICT : LOAD_ATTR_NONDESCRIPTOR_NO_DICT);
+            specialize(instr, is_method
+                       ? (bound ? LOAD_ATTR_METHOD_NO_DICT_BOUND : LOAD_ATTR_METHOD_NO_DICT)
+                       : LOAD_ATTR_NONDESCRIPTOR_NO_DICT);
         }
         else if (is_method) {
             PyObject **addr = (PyObject **)((char *)owner + dictoffset);
@@ -1315,7 +1320,7 @@ specialize_attr_loadclassattr(PyObject *owner, _Py_CODEUNIT *instr,
             dictoffset -= MANAGED_DICT_OFFSET;
             assert(((uint16_t)dictoffset) == dictoffset);
             cache->dict_offset = (uint16_t)dictoffset;
-            specialize(instr, LOAD_ATTR_METHOD_LAZY_DICT);
+            specialize(instr, bound ? LOAD_ATTR_METHOD_LAZY_DICT_BOUND : LOAD_ATTR_METHOD_LAZY_DICT);
         }
         else {
             SPECIALIZATION_FAIL(LOAD_ATTR, SPEC_FAIL_ATTR_CLASS_ATTR_SIMPLE);

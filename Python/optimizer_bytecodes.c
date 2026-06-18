@@ -1063,6 +1063,12 @@ dummy_func(void) {
         self = owner;
     }
 
+    op(_LOAD_ATTR_METHOD_BOUND, (descr/4, owner -- attr)) {
+        (void)descr;
+        (void)owner;
+        attr = sym_new_not_null(ctx);
+    }
+
     op(_GUARD_LOAD_SUPER_ATTR_METHOD, (global_super_st, class_st, unused -- global_super_st, class_st, unused)) {
         if (sym_get_const(ctx, global_super_st) == (PyObject *)&PySuper_Type) {
             PyTypeObject *probable = (PyTypeObject *)sym_get_probable_value(class_st);
