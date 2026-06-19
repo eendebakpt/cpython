@@ -539,6 +539,17 @@ given type object has a specified feature.
 /* Type is abstract and cannot be instantiated */
 #define Py_TPFLAGS_IS_ABSTRACT (1UL << 20)
 
+/* The type's tp_dealloc is trivial: equivalent to PyObject_Free(op).
+ * Instances contain no owned Python references, no finalizer, no weakrefs,
+ * no GC tracking, no managed dict. With this flag set, _Py_Dealloc may skip
+ * the indirect call through tp_dealloc and call PyObject_Free directly.
+ *
+ * MUST NOT be inherited: any subclass that adds members, finalizers, or
+ * Python-reference-holding state invalidates the contract. PyType_Ready
+ * clears this flag on heap subclasses.
+ */
+#define Py_TPFLAGS_TRIVIAL_DEALLOC (1UL << 21)
+
 // This undocumented flag gives certain built-ins their unique pattern-matching
 // behavior, which allows a single positional subpattern to match against the
 // subject itself (rather than a mapped attribute on it):

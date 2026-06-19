@@ -1,0 +1,5 @@
+Add :c:macro:`Py_TPFLAGS_TRIVIAL_DEALLOC` flag for static types whose
+deallocation is equivalent to :c:func:`PyObject_Free`. When set,
+``_Py_Dealloc`` skips the indirect call through ``tp_dealloc`` and frees
+the instance directly. Opted in for :class:`bytes`. Based on
+faster-cpython/ideas#482.

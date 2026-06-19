@@ -3247,6 +3247,7 @@ PyTypeObject PyBytes_Type = {
     &bytes_as_buffer,                           /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE |
         Py_TPFLAGS_BYTES_SUBCLASS |
+        Py_TPFLAGS_TRIVIAL_DEALLOC |
         _Py_TPFLAGS_MATCH_SELF,               /* tp_flags */
     bytes_doc,                                  /* tp_doc */
     0,                                          /* tp_traverse */

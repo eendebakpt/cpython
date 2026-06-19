@@ -124,14 +124,17 @@ PyFloat_GetInfo(void)
 PyObject *
 PyFloat_FromDouble(double fval)
 {
-    PyFloatObject *op = _Py_FREELIST_POP(PyFloatObject, floats);
+    static_assert(_Py_SIZECLASS_INDEX(sizeof(PyFloatObject)) >= 0,
+                  "PyFloatObject does not fit a freelist size class");
+    PyFloatObject *op = _PyObject_SizeClassAllocMem(
+                            _PyObject_SizeClassIndex(sizeof(PyFloatObject)));
     if (op == NULL) {
         op = PyObject_Malloc(sizeof(PyFloatObject));
         if (!op) {
             return PyErr_NoMemory();
         }
-        _PyObject_Init((PyObject*)op, &PyFloat_Type);
     }
+    _PyObject_Init((PyObject*)op, &PyFloat_Type);
     op->ob_fval = fval;
     return (PyObject *) op;
 }
@@ -230,7 +233,10 @@ void
 _PyFloat_ExactDealloc(PyObject *obj)
 {
     assert(PyFloat_CheckExact(obj));
-    _Py_FREELIST_FREE(floats, obj, PyObject_Free);
+    if (!_PyObject_SizeClassFreePush(_PyObject_SizeClassIndex(sizeof(PyFloatObject)),
+                                     obj)) {
+        PyObject_Free(obj);
+    }
 }
 
 static void
@@ -1827,6 +1833,7 @@ PyTypeObject PyFloat_Type = {
     0,                                          /* tp_setattro */
     0,                                          /* tp_as_buffer */
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_TRIVIAL_DEALLOC |
         _Py_TPFLAGS_MATCH_SELF,               /* tp_flags */
     float_new__doc__,                           /* tp_doc */
     0,                                          /* tp_traverse */
@@ -1875,7 +1882,7 @@ _PyFloat_DebugMallocStats(FILE *out)
 {
     _PyDebugAllocatorStats(out,
                            "free PyFloatObject",
-                           _Py_FREELIST_SIZE(floats),
+                           (int)_PyObject_SizeClassFreeListSize(sizeof(PyFloatObject)),
                            sizeof(PyFloatObject));
 }
 

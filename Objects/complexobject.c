@@ -410,16 +410,18 @@ complex_subtype_from_c_complex(PyTypeObject *type, Py_complex cval)
 PyObject *
 PyComplex_FromCComplex(Py_complex cval)
 {
-    PyComplexObject *op = _Py_FREELIST_POP(PyComplexObject, complexes);
-
+    static_assert(_Py_SIZECLASS_INDEX(sizeof(PyComplexObject)) >= 0,
+                  "PyComplexObject does not fit a freelist size class");
+    PyComplexObject *op = _PyObject_SizeClassAllocMem(
+                              _PyObject_SizeClassIndex(sizeof(PyComplexObject)));
     if (op == NULL) {
         /* Inline PyObject_New */
         op = PyObject_Malloc(sizeof(PyComplexObject));
         if (op == NULL) {
             return PyErr_NoMemory();
         }
-        _PyObject_Init((PyObject*)op, &PyComplex_Type);
     }
+    _PyObject_Init((PyObject*)op, &PyComplex_Type);
     op->cval = cval;
     return (PyObject *) op;
 }
@@ -429,7 +431,10 @@ complex_dealloc(PyObject *op)
 {
     assert(PyComplex_Check(op));
     if (PyComplex_CheckExact(op)) {
-        _Py_FREELIST_FREE(complexes, op, PyObject_Free);
+        if (!_PyObject_SizeClassFreePush(
+                _PyObject_SizeClassIndex(sizeof(PyComplexObject)), op)) {
+            PyObject_Free(op);
+        }
     }
     else {
         Py_TYPE(op)->tp_free(op);
@@ -1415,7 +1420,8 @@ PyTypeObject PyComplex_Type = {
     PyObject_GenericGetAttr,                    /* tp_getattro */
     0,                                          /* tp_setattro */
     0,                                          /* tp_as_buffer */
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,   /* tp_flags */
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE |
+        Py_TPFLAGS_TRIVIAL_DEALLOC,             /* tp_flags */
     complex_new__doc__,                         /* tp_doc */
     0,                                          /* tp_traverse */
     0,                                          /* tp_clear */

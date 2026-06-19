@@ -104,6 +104,53 @@ _PyFreeList_PopMem(struct _Py_freelist *fl)
     return op;
 }
 
+/* Generic size-classed freelist for fixed-size Py_TPFLAGS_TRIVIAL_DEALLOC
+ * types (float, complex, range_iterator, ...). A block of a given size class
+ * is interchangeable across types of that size; the allocating type re-inits
+ * the object header via _PyObject_Init() on pop. */
+
+// Map a fixed tp_basicsize to its size-class index, or -1 if it is too small,
+// too large, or not pointer-aligned (and so not eligible for the freelist).
+// Macro form is an integer constant expression (usable in static_assert) when
+// `basicsize` is constant; the inline form is for runtime tp_basicsize.
+#define _Py_SIZECLASS_INDEX(basicsize)                                      \
+    (((basicsize) >= _Py_SIZECLASS_MIN                                      \
+      && ((basicsize) & (sizeof(void *) - 1)) == 0                          \
+      && ((basicsize) - _Py_SIZECLASS_MIN) / sizeof(void *)                 \
+             < (size_t)_Py_SIZECLASS_COUNT)                                 \
+     ? (int)(((basicsize) - _Py_SIZECLASS_MIN) / sizeof(void *))            \
+     : -1)
+
+static inline int
+_PyObject_SizeClassIndex(size_t basicsize)
+{
+    return _Py_SIZECLASS_INDEX(basicsize);
+}
+
+// Push `op` onto the freelist for size-class `index` (caller guarantees
+// index >= 0). Returns 1 on success, 0 if the freelist is full.
+static inline int
+_PyObject_SizeClassFreePush(int index, void *op)
+{
+    return _PyFreeList_Push(&_Py_freelists_GET()->sizeclasses[index], op,
+                            Py_sizeclasses_MAXFREELIST);
+}
+
+// Pop a (still uninitialized) block from size-class `index`, or NULL if empty.
+static inline void *
+_PyObject_SizeClassAllocMem(int index)
+{
+    return _PyFreeList_PopMem(&_Py_freelists_GET()->sizeclasses[index]);
+}
+
+// Current number of cached blocks for the size class of `basicsize` (stats).
+static inline Py_ssize_t
+_PyObject_SizeClassFreeListSize(size_t basicsize)
+{
+    int index = _PyObject_SizeClassIndex(basicsize);
+    return index < 0 ? 0 : _Py_freelists_GET()->sizeclasses[index].size;
+}
+
 extern void _PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization);
 
 #ifdef __cplusplus

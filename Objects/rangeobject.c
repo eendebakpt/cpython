@@ -942,7 +942,10 @@ range_iterator___setstate___impl(_PyRangeIterObject *r, PyObject *state)
 static void
 rangeiter_dealloc(PyObject *self)
 {
-    _Py_FREELIST_FREE(range_iters, (_PyRangeIterObject *)self, PyObject_Free);
+    if (!_PyObject_SizeClassFreePush(
+            _PyObject_SizeClassIndex(sizeof(_PyRangeIterObject)), self)) {
+        PyObject_Free(self);
+    }
 }
 
 static PyMethodDef rangeiter_methods[] = {
@@ -973,7 +976,8 @@ PyTypeObject PyRangeIter_Type = {
         PyObject_GenericGetAttr,                /* tp_getattro */
         0,                                      /* tp_setattro */
         0,                                      /* tp_as_buffer */
-        Py_TPFLAGS_DEFAULT,                     /* tp_flags */
+        Py_TPFLAGS_DEFAULT |
+            Py_TPFLAGS_TRIVIAL_DEALLOC,         /* tp_flags */
         0,                                      /* tp_doc */
         0,                                      /* tp_traverse */
         0,                                      /* tp_clear */
@@ -1019,13 +1023,18 @@ get_len_of_range(long lo, long hi, long step)
 static PyObject *
 fast_range_iter(long start, long stop, long step, long len)
 {
-    _PyRangeIterObject *it = _Py_FREELIST_POP(_PyRangeIterObject, range_iters);
+    static_assert(_Py_SIZECLASS_INDEX(sizeof(_PyRangeIterObject)) >= 0,
+                  "_PyRangeIterObject does not fit a freelist size class");
+    _PyRangeIterObject *it = _PyObject_SizeClassAllocMem(
+                    _PyObject_SizeClassIndex(sizeof(_PyRangeIterObject)));
     if (it == NULL) {
-        it = PyObject_New(_PyRangeIterObject, &PyRangeIter_Type);
+        it = PyObject_Malloc(sizeof(_PyRangeIterObject));
         if (it == NULL) {
+            PyErr_NoMemory();
             return NULL;
         }
     }
+    _PyObject_Init((PyObject *)it, &PyRangeIter_Type);
     assert(Py_IS_TYPE(it, &PyRangeIter_Type));
     it->start = start;
     it->step = step;

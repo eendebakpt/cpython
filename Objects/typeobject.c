@@ -9032,6 +9032,22 @@ type_ready_pre_checks(PyTypeObject *type)
      * Py_TPFLAGS_SEQUENCE and Py_TPFLAGS_MAPPING are mutually exclusive */
     _PyObject_ASSERT((PyObject *)type, (type->tp_flags & COLLECTION_FLAGS) != COLLECTION_FLAGS);
 
+    /* Py_TPFLAGS_TRIVIAL_DEALLOC contract: tp_dealloc must be equivalent to
+     * PyObject_Free. The flag forbids GC tracking, managed dict, managed
+     * weakref, legacy finalizer, and heap allocation (so subclasses cannot
+     * silently inherit it via subtype_dealloc). */
+    if (type->tp_flags & Py_TPFLAGS_TRIVIAL_DEALLOC) {
+        const unsigned long forbidden = (Py_TPFLAGS_HAVE_GC
+                                       | Py_TPFLAGS_MANAGED_DICT
+                                       | Py_TPFLAGS_MANAGED_WEAKREF
+                                       | Py_TPFLAGS_HAVE_FINALIZE
+                                       | Py_TPFLAGS_HEAPTYPE);
+        _PyObject_ASSERT((PyObject *)type,
+                         (type->tp_flags & forbidden) == 0);
+        _PyObject_ASSERT((PyObject *)type, type->tp_finalize == NULL);
+        _PyObject_ASSERT((PyObject *)type, type->tp_weaklistoffset == 0);
+    }
+
     if (type->tp_name == NULL) {
         PyErr_Format(PyExc_SystemError,
                      "Type does not define the tp_name field.");

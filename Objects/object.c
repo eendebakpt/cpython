@@ -927,8 +927,11 @@ _PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)
 {
     // In the free-threaded build, freelists are per-PyThreadState and cleared in PyThreadState_Clear()
     // In the default build, freelists are per-interpreter and cleared in finalize_interp_types()
-    clear_freelist(&freelists->floats, is_finalization, free_object);
-    clear_freelist(&freelists->complexes, is_finalization, free_object);
+    for (int i = 0; i < _Py_SIZECLASS_COUNT; i++) {
+        // Each cached block keeps its (static, immortal) ob_type, so
+        // free_object can route it through the right tp_free.
+        clear_freelist(&freelists->sizeclasses[i], is_finalization, free_object);
+    }
     for (Py_ssize_t i = 0; i < PyTuple_MAXSAVESIZE; i++) {
         clear_freelist(&freelists->tuples[i], is_finalization, free_object);
     }
@@ -939,7 +942,6 @@ _PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)
     clear_freelist(&freelists->dictkeys, is_finalization, PyMem_Free);
     clear_freelist(&freelists->slices, is_finalization, free_object);
     clear_freelist(&freelists->ranges, is_finalization, free_object);
-    clear_freelist(&freelists->range_iters, is_finalization, free_object);
     clear_freelist(&freelists->contexts, is_finalization, free_object);
     clear_freelist(&freelists->async_gens, is_finalization, free_object);
     clear_freelist(&freelists->async_gen_asends, is_finalization, free_object);
@@ -3290,6 +3292,34 @@ void
 _Py_Dealloc(PyObject *op)
 {
     PyTypeObject *type = Py_TYPE(op);
+    /* Fast path: types flagged Py_TPFLAGS_TRIVIAL_DEALLOC have a tp_dealloc
+     * that is equivalent to PyObject_Free (plus, for fixed-size types, an
+     * optional size-class freelist). Skip the function-pointer call and the
+     * trashcan check (no GC, no recursion possible). The reftracer and
+     * debug-mode invariant checks still apply, so fall through to the slow
+     * path in Py_DEBUG / Py_TRACE_REFS builds.
+     *
+     * Fixed-size instances (tp_itemsize == 0) are routed to the shared
+     * size-classed freelist, which is how float/complex/range_iterator
+     * recycle their objects; variable-size ones (e.g. bytes) go straight to
+     * PyObject_Free.
+     *
+     * Note: free-threaded builds use the same fast path; the freelist is
+     * per-thread and PyObject_Free is thread-safe.
+     */
+#if !defined(Py_DEBUG) && !defined(Py_TRACE_REFS)
+    if (type->tp_flags & Py_TPFLAGS_TRIVIAL_DEALLOC) {
+        _PyReftracerTrack(op, PyRefTracer_DESTROY);
+        if (type->tp_itemsize == 0) {
+            int index = _PyObject_SizeClassIndex(type->tp_basicsize);
+            if (index >= 0 && _PyObject_SizeClassFreePush(index, op)) {
+                return;
+            }
+        }
+        PyObject_Free(op);
+        return;
+    }
+#endif
     unsigned long gc_flag = type->tp_flags & Py_TPFLAGS_HAVE_GC;
     destructor dealloc = type->tp_dealloc;
     PyThreadState *tstate = _PyThreadState_GET();

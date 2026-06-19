@@ -15,12 +15,17 @@ extern "C" {
 #  define Py_tuple_iters_MAXFREELIST 10
 #  define Py_dicts_MAXFREELIST 80
 #  define Py_dictkeys_MAXFREELIST 80
-#  define Py_floats_MAXFREELIST 100
-#  define Py_complexes_MAXFREELIST 100
 #  define Py_ints_MAXFREELIST 100
 #  define Py_slices_MAXFREELIST 1
 #  define Py_ranges_MAXFREELIST 6
-#  define Py_range_iters_MAXFREELIST 6
+
+// Generic size-classed freelist shared by all Py_TPFLAGS_TRIVIAL_DEALLOC types
+// whose instances are fixed-size. Class i holds blocks of
+// (2 + i) * sizeof(void*) bytes; see _PyObject_SizeClassIndex(). This replaces
+// the former per-type floats/complexes/range_iters freelists.
+#  define _Py_SIZECLASS_MIN (2 * sizeof(void *))      // smallest PyObject
+#  define _Py_SIZECLASS_COUNT 8                        // up to 10*sizeof(void*)
+#  define Py_sizeclasses_MAXFREELIST 100
 #  define Py_contexts_MAXFREELIST 255
 #  define Py_async_gens_MAXFREELIST 80
 #  define Py_async_gen_asends_MAXFREELIST 80
@@ -44,8 +49,7 @@ struct _Py_freelist {
 };
 
 struct _Py_freelists {
-    struct _Py_freelist floats;
-    struct _Py_freelist complexes;
+    struct _Py_freelist sizeclasses[_Py_SIZECLASS_COUNT];
     struct _Py_freelist ints;
     struct _Py_freelist tuples[PyTuple_MAXSAVESIZE];
     struct _Py_freelist lists;
@@ -55,7 +59,6 @@ struct _Py_freelists {
     struct _Py_freelist dictkeys;
     struct _Py_freelist slices;
     struct _Py_freelist ranges;
-    struct _Py_freelist range_iters;
     struct _Py_freelist contexts;
     struct _Py_freelist async_gens;
     struct _Py_freelist async_gen_asends;
