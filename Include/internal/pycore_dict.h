@@ -329,6 +329,9 @@ get_insertion_order_array(PyDictValues *values)
     return (uint8_t *)&values->values[values->capacity];
 }
 
+/* The insertion order array stores deltas (ix - position) instead of
+   absolute indices.  In the common case (e.g. sequential stores in
+   __init__) the delta is 0. */
 static inline void
 _PyDictValues_AddToInsertionOrder(PyDictValues *values, Py_ssize_t ix)
 {
@@ -337,7 +340,30 @@ _PyDictValues_AddToInsertionOrder(PyDictValues *values, Py_ssize_t ix)
     uint8_t *array = get_insertion_order_array(values);
     assert(size < values->capacity);
     assert(((uint8_t)ix) == ix);
-    array[size] = (uint8_t)ix;
+    array[size] = (uint8_t)(ix - size);
+    values->size = size+1;
+}
+
+/* Variant used by _STORE_ATTR_INSTANCE_VALUE where the caller has
+   already computed the delta (ix - values->size).
+
+   The slots of the insertion order array beyond values->size are kept
+   zero (zeroed when the inline values are allocated, and zeroed again
+   in delete_index_from_values when an entry is removed).  Sequential
+   stores -- the common case in __init__ -- have delta 0, so the write
+   can be skipped: the slot already holds 0. */
+static inline void
+_PyDictValues_AddToInsertionOrderDelta(PyDictValues *values, uint8_t delta)
+{
+    int size = values->size;
+    assert(size < values->capacity);
+    if (delta != 0) {
+        uint8_t *array = get_insertion_order_array(values);
+        array[size] = delta;
+    }
+    else {
+        assert(get_insertion_order_array(values)[size] == 0);
+    }
     values->size = size+1;
 }
 

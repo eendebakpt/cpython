@@ -12863,7 +12863,8 @@
             if (old_value == NULL) {
                 PyDictValues *values = _PyObject_InlineValues(owner_o);
                 Py_ssize_t index = value_ptr - values->values;
-                _PyDictValues_AddToInsertionOrder(values, index);
+                uint8_t delta = (uint8_t)(index - values->size);
+                _PyDictValues_AddToInsertionOrderDelta(values, delta);
             }
             UNLOCK_OBJECT(owner_o);
             o = owner;
@@ -12960,6 +12961,40 @@
             _tos_cache1 = _stack_item_1;
             _tos_cache0 = _stack_item_0;
             SET_CURRENT_CACHED_VALUES(3);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            break;
+        }
+
+        case _STORE_ATTR_INSTANCE_VALUE_NO_ORDER_r21: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
+            _PyStackRef owner;
+            _PyStackRef value;
+            _PyStackRef o;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            oparg = CURRENT_OPARG();
+            owner = _stack_item_1;
+            value = _stack_item_0;
+            uint16_t offset = (uint16_t)CURRENT_OPERAND0_16();
+            PyObject *owner_o = PyStackRef_AsPyObjectBorrow(owner);
+            STAT_INC(STORE_ATTR, hit);
+            assert(_PyObject_GetManagedDict(owner_o) == NULL);
+            PyObject **value_ptr = (PyObject**)(((char *)owner_o) + offset);
+            assert(*value_ptr == NULL);
+            FT_ATOMIC_STORE_PTR_RELEASE(*value_ptr, PyStackRef_AsPyObjectSteal(value));
+            PyDictValues *values = _PyObject_InlineValues(owner_o);
+            assert(oparg >= 1 && oparg <= SHARED_KEYS_MAX_SIZE);
+            assert(values->size == oparg - 1);
+            assert((Py_ssize_t)(value_ptr - values->values) == oparg - 1);
+            assert(get_insertion_order_array(values)[oparg - 1] == 0);
+            values->size = (uint8_t)oparg;
+            UNLOCK_OBJECT(owner_o);
+            o = owner;
+            _tos_cache0 = o;
+            _tos_cache1 = PyStackRef_ZERO_BITS;
+            _tos_cache2 = PyStackRef_ZERO_BITS;
+            SET_CURRENT_CACHED_VALUES(1);
             assert(WITHIN_STACK_BOUNDS_IGNORING_CACHE());
             break;
         }
