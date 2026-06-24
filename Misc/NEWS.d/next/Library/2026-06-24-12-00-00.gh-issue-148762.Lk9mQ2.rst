@@ -1,0 +1,4 @@
+Speed up :func:`re.search` for multiline patterns anchored at the start of a
+line, such as ``re.compile("^foo", re.MULTILINE)``.  The search now skips
+directly from one line start to the next instead of trying to match at every
+position.
