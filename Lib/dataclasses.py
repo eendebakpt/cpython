@@ -435,6 +435,13 @@ class _FuncBuilder:
         self.overwrite_errors = {}
         self.unconditional_adds = {}
         self.method_annotations = {}
+        # When True, the generated methods reference only builtins (besides
+        # `self`, their parameters, and def-time defaults), so they can be
+        # compiled at module level instead of inside a `__create_fn__` wrapper.
+        # That skips compiling (and calling) the wrapper -- see add_fns_to_class.
+        # Set False whenever a method needs a helper at *run* time (frozen
+        # set/delattr, or a default_factory call).
+        self.flat = True
 
     def add_fn(self, name, args, body, *, locals=None, return_type=MISSING,
                overwrite_error=False, unconditional_add=False, decorator=None,
@@ -482,22 +489,37 @@ class _FuncBuilder:
         else:
             return_names  =f'({",".join(self.names)},)'
 
-        # txt is the entire function we're going to execute, including the
-        # bodies of the functions we're defining.  Here's a greatly simplified
-        # version:
-        # def __create_fn__():
-        #  def __init__(self, x, y):
-        #   self.x = x
-        #   self.y = y
-        #  @recursive_repr
-        #  def __repr__(self):
-        #   return f"cls(x={self.x!r},y={self.y!r})"
-        # return __init__,__repr__
-
-        txt = f"def __create_fn__({local_vars}):\n{fns_src}\n return {return_names}"
-        ns = {}
-        exec(txt, self.globals, ns)
-        fns = ns['__create_fn__'](**self.locals)
+        if self.flat:
+            # The methods reference only builtins at run time, so we can define
+            # them directly at module level: their default values and the
+            # recursive-repr decorator are supplied through the exec namespace at
+            # definition time, and `self.globals` becomes their __globals__ --
+            # exactly as if they had been defined inside the wrapper.  This skips
+            # compiling and calling the `__create_fn__` wrapper entirely.
+            #
+            # `self.src` is indented one level (for life inside the wrapper);
+            # strip that single leading space from every line to dedent to the
+            # module level.
+            flat_src = fns_src[1:].replace('\n ', '\n')
+            ns = dict(self.locals)
+            exec(flat_src, self.globals, ns)
+            fns = [ns[name] for name in self.names]
+        else:
+            # txt is the entire function we're going to execute, including the
+            # bodies of the functions we're defining.  Here's a greatly
+            # simplified version:
+            # def __create_fn__():
+            #  def __init__(self, x, y):
+            #   self.x = x
+            #   self.y = y
+            #  @recursive_repr
+            #  def __repr__(self):
+            #   return f"cls(x={self.x!r},y={self.y!r})"
+            # return __init__,__repr__
+            txt = f"def __create_fn__({local_vars}):\n{fns_src}\n return {return_names}"
+            ns = {}
+            exec(txt, self.globals, ns)
+            fns = ns['__create_fn__'](**self.locals)
 
         # Now that we've generated the functions, assign them into cls.
         for name, fn in zip(self.names, fns):
@@ -1141,6 +1163,23 @@ def _process_class(cls, init, repr, eq, order, unsafe_hash, frozen,
      kw_only_init_fields) = _fields_in_init_order(all_init_fields)
 
     func_builder = _FuncBuilder(globals)
+
+    # The flat fast path in add_fns_to_class defines the generated methods at
+    # module level instead of inside the `__create_fn__` wrapper.  It is valid
+    # only when every reference a method makes to a dataclasses helper is
+    # evaluated at definition time (a function default or a decorator), never at
+    # run time.  Three things break that invariant:
+    #   * frozen -- __init__/__setattr__/__delattr__ use object.__setattr__,
+    #     FrozenInstanceError and __class__ at run time;
+    #   * a default_factory -- it is *called* inside __init__;
+    #   * slots together with a non-init field that has a default -- __init__
+    #     assigns that default value (referenced by name) at run time.
+    if (frozen
+            or any(f.default_factory is not MISSING for f in fields.values())
+            or (slots and any(f._field_type is _FIELD and not f.init
+                              and f.default is not MISSING
+                              for f in fields.values()))):
+        func_builder.flat = False
 
     if init:
         # Does this class have a post-init function?
