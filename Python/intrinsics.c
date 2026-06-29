@@ -255,6 +255,24 @@ prep_reraise_star(PyThreadState* unused, PyObject *orig, PyObject *excs)
 }
 
 static PyObject *
+match_class_isinstance(PyThreadState* tstate, PyObject *subject, PyObject *type)
+{
+    // Fast path for a class pattern with no sub-patterns (`case C():`).
+    // Equivalent to the isinstance check performed by _PyEval_MatchClass,
+    // including the same TypeError when the pattern does not name a class.
+    if (!PyType_Check(type)) {
+        _PyErr_SetString(tstate, PyExc_TypeError,
+                         "class pattern must refer to a class");
+        return NULL;
+    }
+    int res = PyObject_IsInstance(subject, type);
+    if (res < 0) {
+        return NULL;
+    }
+    return PyBool_FromLong(res);
+}
+
+static PyObject *
 make_typevar_with_bound(PyThreadState* Py_UNUSED(ignored), PyObject *name,
                         PyObject *evaluate_bound)
 {
@@ -278,6 +296,7 @@ _PyIntrinsics_BinaryFunctions[] = {
     INTRINSIC_FUNC_ENTRY(INTRINSIC_TYPEVAR_WITH_CONSTRAINTS, make_typevar_with_constraints)
     INTRINSIC_FUNC_ENTRY(INTRINSIC_SET_FUNCTION_TYPE_PARAMS, _Py_set_function_type_params)
     INTRINSIC_FUNC_ENTRY(INTRINSIC_SET_TYPEPARAM_DEFAULT, _Py_set_typeparam_default)
+    INTRINSIC_FUNC_ENTRY(INTRINSIC_MATCH_CLASS_ISINSTANCE, match_class_isinstance)
 };
 
 #undef INTRINSIC_FUNC_ENTRY

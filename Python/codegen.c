@@ -6180,6 +6180,17 @@ codegen_pattern_class(compiler *c, pattern_ty p, pattern_context *pc)
         PyObject *name = asdl_seq_GET(kwd_attrs, i);
         PyTuple_SET_ITEM(attr_names, i, Py_NewRef(name));
     }
+    if (nargs + nattrs == 0) {
+        // No sub-patterns (`case C():`). This is just an isinstance check.
+        // Emit it as a CALL_INTRINSIC_2 instead of MATCH_CLASS so we avoid
+        // loading the empty names tuple, building the (empty) attrs tuple and
+        // unpacking it. The class is already on top of the subject. The
+        // intrinsic consumes both and pushes a bool.
+        Py_DECREF(attr_names);
+        ADDOP_I(c, LOC(p), CALL_INTRINSIC_2, INTRINSIC_MATCH_CLASS_ISINSTANCE);
+        RETURN_IF_ERROR(jump_to_fail_pop(c, LOC(p), pc, POP_JUMP_IF_FALSE));
+        return SUCCESS;
+    }
     ADDOP_LOAD_CONST_NEW(c, LOC(p), attr_names);
     ADDOP_I(c, LOC(p), MATCH_CLASS, nargs);
     ADDOP_I(c, LOC(p), COPY, 1);
