@@ -4471,74 +4471,6 @@
             break;
         }
 
-        case _BINARY_OP_ADD_INT_r03: {
-            CHECK_CURRENT_CACHED_VALUES(0);
-            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
-            _PyStackRef right;
-            _PyStackRef left;
-            _PyStackRef res;
-            _PyStackRef l;
-            _PyStackRef r;
-            right = stack_pointer[-1];
-            left = stack_pointer[-2];
-            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
-            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
-            assert(PyLong_CheckExact(left_o));
-            assert(PyLong_CheckExact(right_o));
-            STAT_INC(BINARY_OP, hit);
-            res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-            if (PyStackRef_IsNull(res)) {
-                SET_CURRENT_CACHED_VALUES(0);
-                JUMP_TO_ERROR();
-            }
-            l = left;
-            r = right;
-            _tos_cache2 = r;
-            _tos_cache1 = l;
-            _tos_cache0 = res;
-            SET_CURRENT_CACHED_VALUES(3);
-            stack_pointer += -2;
-            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
-            break;
-        }
-
-        case _BINARY_OP_ADD_INT_r13: {
-            CHECK_CURRENT_CACHED_VALUES(1);
-            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
-            _PyStackRef right;
-            _PyStackRef left;
-            _PyStackRef res;
-            _PyStackRef l;
-            _PyStackRef r;
-            _PyStackRef _stack_item_0 = _tos_cache0;
-            right = _stack_item_0;
-            left = stack_pointer[-1];
-            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
-            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
-            assert(PyLong_CheckExact(left_o));
-            assert(PyLong_CheckExact(right_o));
-            STAT_INC(BINARY_OP, hit);
-            res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-            if (PyStackRef_IsNull(res)) {
-                stack_pointer[0] = right;
-                stack_pointer += 1;
-                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-                SET_CURRENT_CACHED_VALUES(0);
-                JUMP_TO_ERROR();
-            }
-            l = left;
-            r = right;
-            _tos_cache2 = r;
-            _tos_cache1 = l;
-            _tos_cache0 = res;
-            SET_CURRENT_CACHED_VALUES(3);
-            stack_pointer += -1;
-            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
-            break;
-        }
-
         case _BINARY_OP_ADD_INT_r23: {
             CHECK_CURRENT_CACHED_VALUES(2);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
@@ -4556,14 +4488,22 @@
             assert(PyLong_CheckExact(left_o));
             assert(PyLong_CheckExact(right_o));
             STAT_INC(BINARY_OP, hit);
-            res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+            if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
+                res = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+            }
+            else {
+                res = PyStackRef_NULL;
+            }
             if (PyStackRef_IsNull(res)) {
-                stack_pointer[0] = left;
-                stack_pointer[1] = right;
-                stack_pointer += 2;
-                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-                SET_CURRENT_CACHED_VALUES(0);
-                JUMP_TO_ERROR();
+                res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (PyStackRef_IsNull(res)) {
+                    stack_pointer[0] = left;
+                    stack_pointer[1] = right;
+                    stack_pointer += 2;
+                    ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                    SET_CURRENT_CACHED_VALUES(0);
+                    JUMP_TO_ERROR();
+                }
             }
             l = left;
             r = right;

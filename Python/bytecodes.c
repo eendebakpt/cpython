@@ -687,9 +687,19 @@ dummy_func(
             assert(PyLong_CheckExact(right_o));
 
             STAT_INC(BINARY_OP, hit);
-            res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+            if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
+                res = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+            }
+            else {
+                res = PyStackRef_NULL;
+            }
             if (PyStackRef_IsNull(res)) {
-                ERROR_NO_POP();
+                // Non-compact operands, compact overflow, or allocation
+                // failure: use the general path.
+                res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (PyStackRef_IsNull(res)) {
+                    ERROR_NO_POP();
+                }
             }
             l = left;
             r = right;

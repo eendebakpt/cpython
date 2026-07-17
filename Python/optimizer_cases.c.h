@@ -714,9 +714,17 @@
                 assert(PyLong_CheckExact(left_o));
                 assert(PyLong_CheckExact(right_o));
                 STAT_INC(BINARY_OP, hit);
-                res_stackref = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
+                    res_stackref = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                }
+                else {
+                    res_stackref = PyStackRef_NULL;
+                }
                 if (PyStackRef_IsNull(res)) {
-                    JUMP_TO_LABEL(error);
+                    res_stackref = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    if (PyStackRef_IsNull(res)) {
+                        JUMP_TO_LABEL(error);
+                    }
                 }
                 l_stackref = left;
                 r_stackref = right;
