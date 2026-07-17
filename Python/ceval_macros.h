@@ -1,9 +1,5 @@
 // Macros and other things needed by ceval.c, and bytecodes.c
 
-#include "pycore_freelist.h"      // _Py_FREELIST_POP
-#include "pycore_long.h"          // _PY_IS_SMALL_INT
-#include "pycore_object.h"        // _PyObject_Init
-
 /* Computed GOTOs, or
        the-optimization-commonly-but-improperly-known-as-"threaded code"
    using gcc's labels-as-values extension
@@ -620,38 +616,6 @@ gen_try_set_executing(PyGenObject *gen)
         ((PyFloatObject *)PyStackRef_AsPyObjectBorrow(TARGET))           \
             ->ob_fval = _dres;                                           \
     } while (0)
-
-/* Add two compact ints, inlined into the interpreter so the common case
-   pays no function call. Returns PyStackRef_NULL when the result needs
-   more than one digit or allocation fails; the caller must fall back to
-   _PyExactLong_Add, which also raises on allocation failure. */
-static inline _PyStackRef
-_PyCompactLong_AddFast(PyLongObject *a, PyLongObject *b)
-{
-    assert(_PyLong_BothAreCompact(a, b));
-    Py_ssize_t v = _PyLong_CompactValue(a) + _PyLong_CompactValue(b);
-    if (_PY_IS_SMALL_INT(v)) {
-        return PyStackRef_FromPyObjectBorrow(
-            (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + v]);
-    }
-    /* Medium result: must fit in a single digit. */
-    if ((twodigits)((stwodigits)v) + PyLong_MASK
-        >= (twodigits)PyLong_MASK + PyLong_BASE) {
-        return PyStackRef_NULL;
-    }
-    PyLongObject *result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
-    if (result == NULL) {
-        result = PyObject_Malloc(sizeof(PyLongObject));
-        if (result == NULL) {
-            return PyStackRef_NULL;
-        }
-        _PyObject_Init((PyObject *)result, &PyLong_Type);
-        _PyLong_InitTag(result);
-    }
-    _PyLong_SetSignAndDigitCount(result, v < 0 ? -1 : 1, 1);
-    result->long_value.ob_digit[0] = (digit)(v < 0 ? -v : v);
-    return PyStackRef_FromPyObjectStealMortal((PyObject *)result);
-}
 
 // Inplace compact int operation. TARGET is expected to be uniquely
 // referenced at the optimizer level, but at runtime it may be a

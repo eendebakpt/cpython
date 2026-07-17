@@ -217,9 +217,19 @@
                 assert(PyLong_CheckExact(left_o));
                 assert(PyLong_CheckExact(right_o));
                 STAT_INC(BINARY_OP, hit);
-                res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-                if (PyStackRef_IsNull(res)) {
-                    JUMP_TO_LABEL(error);
+                if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
+                    res = _PyCompactLong_AddFast((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    if (PyStackRef_IsNull(res)) {
+                        UPDATE_MISS_STATS(BINARY_OP);
+                        assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                        JUMP_TO_PREDICTED(BINARY_OP);
+                    }
+                }
+                else {
+                    res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    if (PyStackRef_IsNull(res)) {
+                        JUMP_TO_LABEL(error);
+                    }
                 }
                 l = left;
                 r = right;

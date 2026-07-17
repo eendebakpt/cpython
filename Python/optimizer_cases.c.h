@@ -716,11 +716,12 @@
                 STAT_INC(BINARY_OP, hit);
                 if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
                     res_stackref = _PyCompactLong_AddFast((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    if (PyStackRef_IsNull(res_stackref )) {
+                        ctx->done = true;
+                        break;
+                    }
                 }
                 else {
-                    res_stackref = PyStackRef_NULL;
-                }
-                if (PyStackRef_IsNull(res)) {
                     res_stackref = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
                     if (PyStackRef_IsNull(res)) {
                         JUMP_TO_LABEL(error);

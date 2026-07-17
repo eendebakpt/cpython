@@ -9,7 +9,10 @@ extern "C" {
 #endif
 
 #include "pycore_bytesobject.h"   // _PyBytesWriter
+#include "pycore_freelist.h"      // _Py_FREELIST_POP
+#include "pycore_object.h"        // _PyObject_Init
 #include "pycore_runtime.h"       // _Py_SINGLETON()
+#include "pycore_stackref.h"      // _PyStackRef
 
 /*
  * Default int base conversion size limitation: Denial of Service prevention.
@@ -345,6 +348,39 @@ static inline int
 _PyLong_CheckExactAndCompact(PyObject *op)
 {
     return PyLong_CheckExact(op) && _PyLong_IsCompact((const PyLongObject *)op);
+}
+
+/* Add two compact ints. Defined inline in the header so the bytecode
+   interpreter can inline it at the use site, avoiding a function call
+   in the common case. Returns PyStackRef_NULL when the result needs
+   more than one digit or allocation fails; the caller must fall back
+   to a general add, which also raises on allocation failure. */
+static inline _PyStackRef
+_PyCompactLong_AddFast(PyLongObject *a, PyLongObject *b)
+{
+    assert(_PyLong_BothAreCompact(a, b));
+    Py_ssize_t v = _PyLong_CompactValue(a) + _PyLong_CompactValue(b);
+    if (_PY_IS_SMALL_INT(v)) {
+        return PyStackRef_FromPyObjectBorrow(
+            (PyObject *)&_PyLong_SMALL_INTS[_PY_NSMALLNEGINTS + v]);
+    }
+    /* Medium result: must fit in a single digit. */
+    if ((twodigits)((stwodigits)v) + PyLong_MASK
+        >= (twodigits)PyLong_MASK + PyLong_BASE) {
+        return PyStackRef_NULL;
+    }
+    PyLongObject *result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
+    if (result == NULL) {
+        result = PyObject_Malloc(sizeof(PyLongObject));
+        if (result == NULL) {
+            return PyStackRef_NULL;
+        }
+        _PyObject_Init((PyObject *)result, &PyLong_Type);
+        _PyLong_InitTag(result);
+    }
+    _PyLong_SetSignAndDigitCount(result, v < 0 ? -1 : 1, 1);
+    result->long_value.ob_digit[0] = (digit)(v < 0 ? -v : v);
+    return PyStackRef_FromPyObjectStealMortal((PyObject *)result);
 }
 
 #ifdef __cplusplus

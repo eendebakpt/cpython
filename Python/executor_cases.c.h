@@ -4490,11 +4490,15 @@
             STAT_INC(BINARY_OP, hit);
             if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
                 res = _PyCompactLong_AddFast((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (PyStackRef_IsNull(res)) {
+                    UOP_STAT_INC(uopcode, miss);
+                    _tos_cache1 = right;
+                    _tos_cache0 = left;
+                    SET_CURRENT_CACHED_VALUES(2);
+                    JUMP_TO_JUMP_TARGET();
+                }
             }
             else {
-                res = PyStackRef_NULL;
-            }
-            if (PyStackRef_IsNull(res)) {
                 res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
                 if (PyStackRef_IsNull(res)) {
                     stack_pointer[0] = left;

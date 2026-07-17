@@ -219,11 +219,13 @@
                 STAT_INC(BINARY_OP, hit);
                 if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
                     res = _PyCompactLong_AddFast((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    if (PyStackRef_IsNull(res)) {
+                        UPDATE_MISS_STATS(BINARY_OP);
+                        assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                        JUMP_TO_PREDICTED(BINARY_OP);
+                    }
                 }
                 else {
-                    res = PyStackRef_NULL;
-                }
-                if (PyStackRef_IsNull(res)) {
                     res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
                     if (PyStackRef_IsNull(res)) {
                         JUMP_TO_LABEL(error);
