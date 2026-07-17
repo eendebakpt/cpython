@@ -4499,8 +4499,8 @@
                 }
             }
             else {
-                res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-                if (PyStackRef_IsNull(res)) {
+                _PyStackRef wide = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (PyStackRef_IsNull(wide)) {
                     stack_pointer[0] = left;
                     stack_pointer[1] = right;
                     stack_pointer += 2;
@@ -4508,6 +4508,7 @@
                     SET_CURRENT_CACHED_VALUES(0);
                     JUMP_TO_ERROR();
                 }
+                res = wide;
             }
             l = left;
             r = right;

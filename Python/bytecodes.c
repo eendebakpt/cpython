@@ -692,10 +692,11 @@ dummy_func(
                 EXIT_IF(PyStackRef_IsNull(res));
             }
             else {
-                res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-                if (PyStackRef_IsNull(res)) {
+                _PyStackRef wide = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (PyStackRef_IsNull(wide)) {
                     ERROR_NO_POP();
                 }
+                res = wide;
             }
             l = left;
             r = right;

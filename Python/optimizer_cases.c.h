@@ -722,10 +722,11 @@
                     }
                 }
                 else {
-                    res_stackref = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-                    if (PyStackRef_IsNull(res)) {
+                    _PyStackRef wide = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    if (PyStackRef_IsNull(wide)) {
                         JUMP_TO_LABEL(error);
                     }
+                    res_stackref = wide;
                 }
                 l_stackref = left;
                 r_stackref = right;
