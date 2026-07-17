@@ -229,6 +229,20 @@ dummy_func(void) {
         }
     }
 
+    op(_GUARD_TOS_EXACT_INT, (value -- value)) {
+        if (sym_matches_type(value, &PyLong_Type)) {
+            ADD_OP(_NOP, 0, 0);
+        }
+        sym_set_type(value, &PyLong_Type);
+    }
+
+    op(_GUARD_NOS_EXACT_INT, (left, unused -- left, unused)) {
+        if (sym_matches_type(left, &PyLong_Type)) {
+            ADD_OP(_NOP, 0, 0);
+        }
+        sym_set_type(left, &PyLong_Type);
+    }
+
     op(_CHECK_ATTR_CLASS, (type_version/2, owner -- owner)) {
         PyObject *type = sym_get_probable_value(owner);
         if (type != NULL && ((PyTypeObject *)type)->tp_version_tag == type_version) {
@@ -390,9 +404,11 @@ dummy_func(void) {
         else if (PyJitRef_IsUnique(right)) {
             REPLACE_OP(this_instr, _BINARY_OP_ADD_INT_INPLACE_RIGHT, 0, 0);
         }
-        // Result may be a unique compact int or a cached small int
-        // at runtime. Mark as unique; inplace ops verify at runtime.
-        res = PyJitRef_MakeUnique(sym_new_compact_int(ctx));
+        // The operands and the result may be non-compact ints, so the
+        // result is only known to be an exact int. It may be a unique
+        // int or a cached small int at runtime; mark as unique and let
+        // the inplace ops verify at runtime.
+        res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyLong_Type));
         l = left;
         r = right;
         REPLACE_OPCODE_IF_EVALUATES_PURE(left, right, res);

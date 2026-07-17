@@ -635,6 +635,13 @@ gen_try_set_executing(PyGenObject *gen)
         if (_Py_IsImmortal(target_o)) {                                  \
             break;                                                       \
         }                                                                \
+        /* The add guards only check for exact ints, so the operands     \
+           may be non-compact; fall back to FUNC. */                     \
+        if (!_PyLong_BothAreCompact(                                     \
+                (PyLongObject *)PyStackRef_AsPyObjectBorrow(left),       \
+                (PyLongObject *)PyStackRef_AsPyObjectBorrow(right))) {   \
+            break;                                                       \
+        }                                                                \
         assert(_PyObject_IsUniquelyReferenced(target_o));                \
         Py_ssize_t left_val = _PyLong_CompactValue(                      \
             (PyLongObject *)PyStackRef_AsPyObjectBorrow(left));          \

@@ -1,0 +1,3 @@
+Specialize addition of exact :class:`int` operands for all sizes, not only
+compact ones. ``BINARY_OP_ADD_INT`` now uses simpler guards and handles
+non-compact ints and compact overflow inline instead of deoptimizing.

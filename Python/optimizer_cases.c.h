@@ -581,6 +581,26 @@
             break;
         }
 
+        case _GUARD_NOS_EXACT_INT: {
+            JitOptRef left;
+            left = stack_pointer[-2];
+            if (sym_matches_type(left, &PyLong_Type)) {
+                ADD_OP(_NOP, 0, 0);
+            }
+            sym_set_type(left, &PyLong_Type);
+            break;
+        }
+
+        case _GUARD_TOS_EXACT_INT: {
+            JitOptRef value;
+            value = stack_pointer[-1];
+            if (sym_matches_type(value, &PyLong_Type)) {
+                ADD_OP(_NOP, 0, 0);
+            }
+            sym_set_type(value, &PyLong_Type);
+            break;
+        }
+
         case _GUARD_NOS_OVERFLOWED: {
             break;
         }
@@ -674,7 +694,7 @@
             else if (PyJitRef_IsUnique(right)) {
                 REPLACE_OP(this_instr, _BINARY_OP_ADD_INT_INPLACE_RIGHT, 0, 0);
             }
-            res = PyJitRef_MakeUnique(sym_new_compact_int(ctx));
+            res = PyJitRef_MakeUnique(sym_new_type(ctx, &PyLong_Type));
             l = left;
             r = right;
             if (
@@ -693,12 +713,10 @@
                 PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
                 assert(PyLong_CheckExact(left_o));
                 assert(PyLong_CheckExact(right_o));
-                assert(_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o));
                 STAT_INC(BINARY_OP, hit);
-                res_stackref = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-                if (PyStackRef_IsNull(res_stackref )) {
-                    ctx->done = true;
-                    break;
+                res_stackref = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                if (PyStackRef_IsNull(res)) {
+                    JUMP_TO_LABEL(error);
                 }
                 l_stackref = left;
                 r_stackref = right;

@@ -768,9 +768,9 @@ class TestUopsOptimization(unittest.TestCase):
         self.assertEqual(res, 4)
         self.assertIsNotNone(ex)
         uops = get_opnames(ex)
-        self.assertIn("_GUARD_TOS_INT", uops)
-        self.assertNotIn("_GUARD_NOS_INT", uops)
-        guard_tos_count = [opname for opname in iter_opnames(ex) if opname == "_GUARD_TOS_INT"]
+        self.assertIn("_GUARD_TOS_EXACT_INT", uops)
+        self.assertNotIn("_GUARD_NOS_EXACT_INT", uops)
+        guard_tos_count = [opname for opname in iter_opnames(ex) if opname == "_GUARD_TOS_EXACT_INT"]
         self.assertEqual(len(guard_tos_count), 1)
 
     def test_comprehension(self):

@@ -1386,7 +1386,8 @@ class TestSpecializer(TestBase):
                 self.assertEqual(c, 10000000000)
 
         binary_op_int_non_compact()
-        self.assert_no_opcode(binary_op_int_non_compact, "BINARY_OP_ADD_INT")
+        # Addition specializes on all exact ints, including non-compact ones.
+        self.assert_specialized(binary_op_int_non_compact, "BINARY_OP_ADD_INT")
         self.assert_no_opcode(binary_op_int_non_compact, "BINARY_OP_SUBTRACT_INT")
         self.assert_no_opcode(binary_op_int_non_compact, "BINARY_OP_MULTIPLY_INT")
 

@@ -3871,6 +3871,29 @@ _PyCompactLong_Add(PyLongObject *a, PyLongObject *b)
     return medium_from_stwodigits(v);
 }
 
+/* Add two exact ints. Returns PyStackRef_NULL with an exception
+   set on allocation failure. */
+_PyStackRef
+_PyExactLong_Add(PyLongObject *a, PyLongObject *b)
+{
+    assert(PyLong_CheckExact(a));
+    assert(PyLong_CheckExact(b));
+    if (_PyLong_BothAreCompact(a, b)) {
+        stwodigits v = medium_value(a) + medium_value(b);
+        _PyStackRef res = medium_from_stwodigits(v);
+        if (!PyStackRef_IsNull(res)) {
+            return res;
+        }
+        /* The result does not fit in a medium int, or the allocation
+           failed; long_add() handles both. */
+    }
+    PyLongObject *z = long_add(a, b);
+    if (z == NULL) {
+        return PyStackRef_NULL;
+    }
+    return PyStackRef_FromPyObjectSteal((PyObject *)z);
+}
+
 static PyObject *
 long_add_method(PyObject *a, PyObject *b)
 {

@@ -643,6 +643,16 @@ dummy_func(
             EXIT_IF(!_PyLong_CheckExactAndCompact(value_o));
         }
 
+        op(_GUARD_NOS_EXACT_INT, (left, unused -- left, unused)) {
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            EXIT_IF(!PyLong_CheckExact(left_o));
+        }
+
+        op(_GUARD_TOS_EXACT_INT, (value -- value)) {
+            PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+            EXIT_IF(!PyLong_CheckExact(value_o));
+        }
+
         op(_GUARD_NOS_OVERFLOWED, (left, unused -- left, unused)) {
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
             assert(Py_TYPE(left_o) == &PyLong_Type);
@@ -675,11 +685,12 @@ dummy_func(
             PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
             assert(PyLong_CheckExact(left_o));
             assert(PyLong_CheckExact(right_o));
-            assert(_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o));
 
             STAT_INC(BINARY_OP, hit);
-            res = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
-            EXIT_IF(PyStackRef_IsNull(res));
+            res = _PyExactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+            if (PyStackRef_IsNull(res)) {
+                ERROR_NO_POP();
+            }
             l = left;
             r = right;
             INPUTS_DEAD();
@@ -704,7 +715,7 @@ dummy_func(
             _GUARD_TOS_INT + _GUARD_NOS_INT + unused/5 + _BINARY_OP_MULTIPLY_INT + _POP_TOP_INT + _POP_TOP_INT;
 
         macro(BINARY_OP_ADD_INT) =
-            _GUARD_TOS_INT + _GUARD_NOS_INT + unused/5 + _BINARY_OP_ADD_INT + _POP_TOP_INT + _POP_TOP_INT;
+            _GUARD_TOS_EXACT_INT + _GUARD_NOS_EXACT_INT + unused/5 + _BINARY_OP_ADD_INT + _POP_TOP_INT + _POP_TOP_INT;
 
         macro(BINARY_OP_SUBTRACT_INT) =
             _GUARD_TOS_INT + _GUARD_NOS_INT + unused/5 + _BINARY_OP_SUBTRACT_INT + _POP_TOP_INT + _POP_TOP_INT;
@@ -713,8 +724,10 @@ dummy_func(
         // when possible. The op handles decref of TARGET internally so
         // the following _POP_TOP_INT becomes _POP_TOP_NOP. Tier 2 only.
         tier2 op(_BINARY_OP_ADD_INT_INPLACE, (left, right -- res, l, r)) {
-            INT_INPLACE_OP(left, right, left, +, _PyCompactLong_Add);
-            EXIT_IF(PyStackRef_IsNull(_int_inplace_res));
+            INT_INPLACE_OP(left, right, left, +, _PyExactLong_Add);
+            if (PyStackRef_IsNull(_int_inplace_res)) {
+                ERROR_NO_POP();
+            }
             res = _int_inplace_res;
             l = left;
             r = right;
@@ -740,8 +753,10 @@ dummy_func(
         }
 
         tier2 op(_BINARY_OP_ADD_INT_INPLACE_RIGHT, (left, right -- res, l, r)) {
-            INT_INPLACE_OP(left, right, right, +, _PyCompactLong_Add);
-            EXIT_IF(PyStackRef_IsNull(_int_inplace_res));
+            INT_INPLACE_OP(left, right, right, +, _PyExactLong_Add);
+            if (PyStackRef_IsNull(_int_inplace_res)) {
+                ERROR_NO_POP();
+            }
             res = _int_inplace_res;
             l = left;
             r = right;

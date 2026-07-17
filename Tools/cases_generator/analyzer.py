@@ -674,6 +674,7 @@ NON_ESCAPING_FUNCTIONS = (
     "_PyCompactLong_Add",
     "_PyCompactLong_Multiply",
     "_PyCompactLong_Subtract",
+    "_PyExactLong_Add",
     "_PyManagedDictPointer_IsValues",
     "_PyObject_GC_IS_SHARED",
     "_PyObject_GC_IS_TRACKED",
