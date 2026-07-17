@@ -715,7 +715,7 @@
                 assert(PyLong_CheckExact(right_o));
                 STAT_INC(BINARY_OP, hit);
                 if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
-                    res_stackref = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                    res_stackref = _PyCompactLong_AddFast((PyLongObject *)left_o, (PyLongObject *)right_o);
                 }
                 else {
                     res_stackref = PyStackRef_NULL;

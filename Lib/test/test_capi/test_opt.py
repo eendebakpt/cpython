@@ -773,6 +773,46 @@ class TestUopsOptimization(unittest.TestCase):
         guard_tos_count = [opname for opname in iter_opnames(ex) if opname == "_GUARD_TOS_EXACT_INT"]
         self.assertEqual(len(guard_tos_count), 1)
 
+    def test_binary_op_add_int_non_compact(self):
+        # Addition of non-compact ints is specialized and traced; the
+        # guards only check the type, so no deopt or exit is needed.
+        def testfunc(n):
+            a = 10 ** 40
+            b = 10 ** 41
+            c = 0
+            for _ in range(n):
+                c = a + b
+            return c
+
+        res, ex = self._run_with_optimizer(testfunc, TIER2_THRESHOLD)
+        self.assertEqual(res, 10 ** 40 + 10 ** 41)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_BINARY_OP_ADD_INT", uops)
+        self.assertNotIn("_GUARD_TOS_OVERFLOWED", uops)
+        self.assertNotIn("_GUARD_NOS_OVERFLOWED", uops)
+
+    def test_binary_op_add_int_guard_elimination_known_int(self):
+        # len() is known to return an int (of unknown size), which is
+        # all the exact-int guards check for, so both guards of the
+        # following addition are eliminated.
+        def testfunc(n):
+            a = [1, 2, 3, 4]
+            x = 0
+            for _ in range(n):
+                x = len(a) + 1
+            return x
+
+        res, ex = self._run_with_optimizer(testfunc, TIER2_THRESHOLD)
+        self.assertEqual(res, 5)
+        self.assertIsNotNone(ex)
+        uops = get_opnames(ex)
+        self.assertIn("_CALL_LEN", uops)
+        self.assertNotIn("_GUARD_TOS_EXACT_INT", uops)
+        self.assertNotIn("_GUARD_NOS_EXACT_INT", uops)
+        self.assertNotIn("_GUARD_TOS_OVERFLOWED", uops)
+        self.assertNotIn("_GUARD_NOS_OVERFLOWED", uops)
+
     def test_comprehension(self):
         def testfunc(n):
             for _ in range(n):

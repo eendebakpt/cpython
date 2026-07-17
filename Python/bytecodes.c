@@ -688,7 +688,7 @@ dummy_func(
 
             STAT_INC(BINARY_OP, hit);
             if (_PyLong_BothAreCompact((PyLongObject *)left_o, (PyLongObject *)right_o)) {
-                res = _PyCompactLong_Add((PyLongObject *)left_o, (PyLongObject *)right_o);
+                res = _PyCompactLong_AddFast((PyLongObject *)left_o, (PyLongObject *)right_o);
             }
             else {
                 res = PyStackRef_NULL;

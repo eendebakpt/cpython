@@ -672,6 +672,7 @@ NON_ESCAPING_FUNCTIONS = (
     "_PyLong_IsZero",
     "_PyLong_BothAreCompact",
     "_PyCompactLong_Add",
+    "_PyCompactLong_AddFast",
     "_PyCompactLong_Multiply",
     "_PyCompactLong_Subtract",
     "_PyExactLong_Add",
