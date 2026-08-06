@@ -2809,6 +2809,10 @@ class ReTests(unittest.TestCase):
         # the follower can match the character a+ gives back
         (r'a+(?=a)', 'aaa', 0, (0, 2)),
         (r'a+(?>a)', 'aaa', 0, (0, 3)),
+        # a give-back position must satisfy a trailing assertion anew
+        (r'a+(?!b)', 'aab', 0, (0, 1)),
+        # a lazy repeat in the body can extend past the greedy frontier
+        (r'(?:xa+?)*b', 'xaab', 0, (0, 4)),
     ])
     def test_auto_possessification(self, pattern, string, flags, expected):
         m = re.compile(pattern, flags).search(string)
@@ -3092,6 +3096,13 @@ class OptimizerTests(unittest.TestCase):
         (r'(?>ab)+c', 0), (r'a+(?>bc)d', 0),            # atomic groups
         (r'(a+)b', 0), (r'(a+|c)d', 0),                 # across a group
         (r'a+', 0),                                     # end of the pattern
+        # a positive lookahead bounds what can be consumed at its position
+        (r'a+(?=b)', 0), (r'\s+(?=\d|\.\d)', 0),
+        # the follower scan continues into and past a group
+        (r'a+(?:bc)?d', 0), (r'a+(?:_b+)*c', 0),
+        # a unique-parse body: inner repeats go possessive first, so the
+        # give-backs land only on iteration starts
+        (r'(?:_a+)*b', 0), (r'(ab?)+c', 0), (r'(?:a+b+)+c', 0),
         # a fused set-operation charset that excludes the follower
         (r'[a-z--b]+b', 0), (r'[\w--\d]+\d', 0), (r'[\s--\n]+\S', 0),
         (r'[\w--0-5]+\s', 0), (r'[^\d]+\d', 0),
@@ -3137,10 +3148,12 @@ class OptimizerTests(unittest.TestCase):
 
     @subTests('pattern,flags', [
         (r'a+a', 0), (r'.+x', 0),                       # overlapping
-        (r'(ab)+a', 0), (r'(a|ab)+c', 0), (r'(ab?)+c', 0),
+        (r'(ab)+a', 0), (r'(a|ab)+c', 0),               # body/follower overlap
+        (r'(?:xa+?)*b', 0),                             # lazy repeat in the body
         (r'[a\n]+$', re.M), (r'\s+$', re.M),            # $ before a newline
         (r'a+\b', 0), (r'a+\B', 0),                     # word boundary
-        (r'a+(?=a)', 0), (r'a+(?!b)', 0),               # lookaround
+        (r'a+(?=a)', 0), (r'a+(?=ab?)', 0),             # follower in the body
+        (r'a+(?!b)', 0), (r'a+(?<=a)', 0),              # opaque assertions
         (r'(?i:a)+A', 0), (r'a+(?i:A)', 0),             # scoped flags
         # not complement pairs: unicode \w and ascii \W overlap (e.g. é)
         (r'(?a:\w+)\W', 0), (r'\w+(?a:\W)', 0),

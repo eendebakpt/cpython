@@ -669,25 +669,52 @@ def _disjoint(atom, other, flags):
         return not any(_atom_matches(*atom, c, flags) is not False for c in fb)
     return False
 
-def _leading_atom(data):
-    # The leading atom of a rigid body -- a concatenation of single-character
-    # atoms with no internal choice.  A repeat of it gives back only whole
-    # iterations, so its leading atom is all the follower must avoid.
-    lead = None
+def _rigid_lead(data):
+    # (leading_atoms, nullable) for a unique-parse body -- a concatenation of
+    # single-character atoms, possessive repeats, and plain/atomic groups of
+    # the same.  Such a body admits exactly one parse from any start, so a
+    # repeat of it gives back only whole iterations, and its leading atoms
+    # (everything reachable before the first mandatory consumer) are all the
+    # follower must avoid.  None if the body has internal choice.
+    atoms = []
+    consuming = False
     for op, av in data:
+        if op in _POSSESSIFY_UNITS:
+            if not consuming:
+                atoms.append((op, av))
+                consuming = True
+            continue
         if op is SUBPATTERN and not av[1] and not av[2]:
-            a = _leading_atom(av[3].data)
+            sub = _rigid_lead(av[3].data)
         elif op is ATOMIC_GROUP:
-            a = _leading_atom(av.data)
-        elif op in _POSSESSIFY_UNITS:
-            a = (op, av)
+            sub = _rigid_lead(av.data)
+        elif op is POSSESSIVE_REPEAT:
+            sub = _rigid_lead(av[2].data)
+            if sub is not None:
+                sub = (sub[0], sub[1] or av[0] == 0)
         else:
             return None
-        if a is None:
+        if sub is None:
             return None
-        if lead is None:
-            lead = a
-    return lead
+        if not consuming:
+            atoms += sub[0]
+            if len(atoms) > _FOLLOW_LIMIT:
+                return None
+            consuming = not sub[1]
+    return atoms, not consuming
+
+def _lazy(fn):
+    # Memoized zero-arg thunk, used for a follower continuation that is only
+    # needed when the scan runs off the end of the sequence.
+    cell = []
+    def get():
+        if not cell:
+            cell.append(fn())
+        return cell[0]
+    return get
+
+def _resolve(cont):
+    return cont() if callable(cont) else cont
 
 def _first_consumers(seq, i, flags, cont, depth=0):
     # Atoms for every character that could be consumed at position i of seq;
@@ -705,21 +732,18 @@ def _first_consumers(seq, i, flags, cont, depth=0):
         if op is SUBPATTERN:
             if av[1] or av[2]:
                 return None  # flag-scoping group: atoms can't carry their flags
-            after = _first_consumers(seq, i + 1, flags, cont, depth)
-            if after is None:
-                return None
+            after = _lazy(lambda i=i: _first_consumers(seq, i + 1, flags,
+                                                       cont, depth))
             inner = _first_consumers(av[3].data, 0, flags, after, depth)
             return None if inner is None else acc + inner
         if op is ATOMIC_GROUP:
-            after = _first_consumers(seq, i + 1, flags, cont, depth)
-            if after is None:
-                return None
+            after = _lazy(lambda i=i: _first_consumers(seq, i + 1, flags,
+                                                       cont, depth))
             inner = _first_consumers(av.data, 0, flags, after, depth)
             return None if inner is None else acc + inner
         if op is BRANCH:
-            after = _first_consumers(seq, i + 1, flags, cont, depth)
-            if after is None:
-                return None
+            after = _lazy(lambda i=i: _first_consumers(seq, i + 1, flags,
+                                                       cont, depth))
             for alt in av[1]:
                 a = _first_consumers(alt.data, 0, flags, after, depth)
                 if a is None or len(acc) + len(a) > _FOLLOW_LIMIT:
@@ -747,7 +771,20 @@ def _first_consumers(seq, i, flags, cont, depth=0):
             if flags & SRE_FLAG_MULTILINE:
                 return acc + [(LITERAL, 0x0a)]
             return acc
+        if op is ASSERT and av[0] > 0:
+            # positive lookahead: whatever happens next, a match of the
+            # body must start here, so its first consumers are a cover.
+            # This must not fall through past the assertion: a give-back
+            # position must satisfy the assertion anew, which no follower
+            # atoms can express (a+(?!b) can give back an 'a' just to let
+            # the pattern end earlier), so a body without first consumers
+            # -- nullable or unanalyzable -- gives up like any assertion.
+            inner = _first_consumers(av[1].data, 0, flags, None, depth)
+            if inner is None or len(acc) + len(inner) > _FOLLOW_LIMIT:
+                return None
+            return acc + inner
         return None  # assertion, anchor, group reference, ... -> give up
+    cont = _resolve(cont)
     if cont is None or len(acc) + len(cont) > _FOLLOW_LIMIT:
         return None
     return acc + cont
@@ -838,24 +875,45 @@ def _walk(seq, flags, cont):
             items = _fuse_branch(av)
             if items is not None:
                 seq[i] = (IN, items)
+        elif op is MAX_REPEAT:
+            # Inside the body an iteration is followed by the next iteration
+            # (the body's own leading atoms) or by the repeat's followers, so
+            # walk it with that context: inner repeats going possessive is
+            # what makes the body unique-parse below.  Both follower sets are
+            # computed lazily -- most bodies never consult them.
+            body = av[2].data
+            follow = _lazy(lambda i=i: _first_consumers(seq, i + 1,
+                                                        flags, cont))
+            def _body_cont(follow=follow, body=body):
+                f = follow()
+                if f is None:
+                    return None
+                lead = _first_consumers(body, 0, flags, None)
+                if lead is None or len(lead) + len(f) > _FOLLOW_LIMIT:
+                    return None
+                return lead + f
+            _walk(body, flags, _lazy(_body_cont))
+            rigid = _rigid_lead(body)
+            if rigid is not None and rigid[0] and not rigid[1]:
+                f = follow()
+                if f is not None and \
+                        all(_disjoint(a, x, flags)
+                            for a in rigid[0] for x in f):
+                    seq[i] = (POSSESSIVE_REPEAT, av)
         else:
-            # ATOMIC_GROUP / ASSERT(_NOT) / GROUPREF_EXISTS / repeat body have an
-            # opaque boundary -- optimize inside with no follower context.
+            # ATOMIC_GROUP / ASSERT(_NOT) / GROUPREF_EXISTS / MIN_REPEAT body
+            # have an opaque boundary -- optimize inside with no follower
+            # context.
             for sub in _subpatterns(op, av):
                 _walk(sub.data, flags, None)
-            if op is MAX_REPEAT:
-                atom = _leading_atom(av[2].data)
-                if atom is not None:
-                    follow = _first_consumers(seq, i + 1, flags, cont)
-                    if follow is not None and \
-                            all(_disjoint(atom, f, flags) for f in follow):
-                        seq[i] = (POSSESSIVE_REPEAT, av)
     _fuse_difference(seq)
 
 def optimize(pattern, flags):
     """Rewrite a parsed pattern in place and return it."""
     try:
-        _walk(pattern.data, flags, [])
+        # a plain int: the pass tests flags a lot, and RegexFlag.__and__
+        # costs an enum construction per test
+        _walk(pattern.data, int(flags), [])
     except RecursionError:
         # A backstop for _DEPTH_LIMIT; the rewrites already applied are sound.
         pass
