@@ -15,6 +15,8 @@ Optimization passes used by the compiler: character-set optimization
 and the literal/charset prefix info block (:func:`_compile_info`).
 """
 
+import functools
+
 import _sre
 from . import _parser
 from ._casefix import _EXTRA_CASES
@@ -466,6 +468,7 @@ def _tolower(c, flags):
         return _sre.unicode_tolower(c)
     return _sre.ascii_tolower(c)
 
+@functools.lru_cache(512)
 def _fold_set(c, flags):
     # Code points witnessing what LITERAL c matches: tolower() of any match
     # lies here and each element is itself a match (simple tolower plus
@@ -639,8 +642,25 @@ def _as_single_category(op, av):
         return av[0][1]
     return None
 
+# The only flags atom matching depends on; masking the rest keeps the
+# memoized results shared across e.g. VERBOSE and non-VERBOSE compiles.
+_REL_FLAGS = (SRE_FLAG_IGNORECASE | SRE_FLAG_LOCALE | SRE_FLAG_UNICODE |
+              SRE_FLAG_DOTALL)
+
 def _disjoint(atom, other, flags):
     # True only if atom and other provably cannot match a common character.
+    flags &= _REL_FLAGS
+    if atom[0] is LITERAL and other[0] is LITERAL and \
+            not flags & SRE_FLAG_IGNORECASE:
+        return atom[1] != other[1]
+    if atom[0] is IN:
+        atom = (IN, tuple(atom[1]))
+    if other[0] is IN:
+        other = (IN, tuple(other[1]))
+    return _disjoint_cached(atom, other, flags)
+
+@functools.lru_cache(512)
+def _disjoint_cached(atom, other, flags):
     if flags & SRE_FLAG_LOCALE and flags & SRE_FLAG_IGNORECASE:
         # case folding is decided by the runtime locale; prove nothing
         return False
