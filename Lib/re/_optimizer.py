@@ -911,9 +911,7 @@ def _walk(seq, flags, cont):
 def optimize(pattern, flags):
     """Rewrite a parsed pattern in place and return it."""
     try:
-        # a plain int: the pass tests flags a lot, and RegexFlag.__and__
-        # costs an enum construction per test
-        _walk(pattern.data, int(flags), [])
+        _walk(pattern.data, flags, [])
     except RecursionError:
         # A backstop for _DEPTH_LIMIT; the rewrites already applied are sound.
         pass
