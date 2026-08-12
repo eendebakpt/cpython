@@ -45,6 +45,8 @@ struct _Py_global_strings {
         STRUCT_FOR_STR(defaults, ".defaults")
         STRUCT_FOR_STR(dot_locals, ".<locals>")
         STRUCT_FOR_STR(empty, "")
+        STRUCT_FOR_STR(empty_array, "[]")
+        STRUCT_FOR_STR(empty_object, "{}")
         STRUCT_FOR_STR(format, ".format")
         STRUCT_FOR_STR(gc, "<GC>")
         STRUCT_FOR_STR(generic_base, ".generic_base")
