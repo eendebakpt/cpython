@@ -1,0 +1,9 @@
+Add a streaming C implementation of :meth:`json.JSONEncoder.iterencode`,
+speeding up :func:`json.dump` to roughly the speed of :func:`json.dumps`
+while keeping memory use constant in the size of the encoded document.  The
+iterator returned by ``iterencode()`` is no longer a :term:`generator`, but
+still supports ``close()``; the sizes and boundaries of the yielded chunks
+are an implementation detail.  ``dump()`` now encodes list and tuple
+subclasses from their underlying storage, consistent with ``dumps()``.  Set
+``json.encoder.c_make_encoder`` to ``None`` to force the pure-Python
+implementation.  Patch by Pieter Eendebak.

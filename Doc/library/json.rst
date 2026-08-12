@@ -114,8 +114,8 @@ Extending :class:`JSONEncoder`::
     '[2.0, 1.0]'
     >>> ComplexEncoder().encode(2 + 1j)
     '[2.0, 1.0]'
-    >>> list(ComplexEncoder().iterencode(2 + 1j))
-    ['[2.0', ', 1.0', ']']
+    >>> ''.join(ComplexEncoder().iterencode(2 + 1j))
+    '[2.0, 1.0]'
 
 
 Using :mod:`!json` from the shell to validate and pretty-print:
@@ -597,6 +597,14 @@ Encoders and Decoders
 
             for chunk in json.JSONEncoder().iterencode(bigobject):
                 mysocket.write(chunk)
+
+      The sizes and boundaries of the yielded chunks are an implementation
+      detail and may change between Python versions.
+
+      .. versionchanged:: next
+         This method now uses a streaming C implementation when the
+         ``_json`` accelerator module is available.  The returned iterator
+         is no longer a :term:`generator`, but still supports ``close()``.
 
 
 Exceptions

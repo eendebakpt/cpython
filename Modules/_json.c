@@ -68,6 +68,45 @@ typedef struct _PyEncoderObject {
 
 #define PyEncoderObject_CAST(op)    ((PyEncoderObject *)(op))
 
+/* --- Streaming encoder iterator --- */
+
+/* One frame on the encoding stack, representing an in-progress container. */
+typedef enum { FRAME_LIST, FRAME_DICT } FrameKind;
+
+typedef struct {
+    FrameKind kind;
+    PyObject *container;   /* original list/dict (for error notes) */
+    PyObject *items;       /* list frame: the list/tuple itself; dict frame:
+                            * snapshot items list, or NULL when iterating an
+                            * exact dict lazily */
+    Py_ssize_t index;      /* index (or PyDict_Next pos) of the next item */
+    Py_ssize_t length;     /* item count when the frame was created */
+    Py_ssize_t indent_level;
+    bool first;            /* true until the first item separator is emitted */
+    bool need_value;       /* dict: key was emitted, value is next */
+    PyObject *cur_key;     /* dict: current original key (owned), or NULL */
+    PyObject *cur_keystr;  /* dict: current key as a str (owned), or NULL */
+    PyObject *cur_value;   /* dict: current value (owned), or NULL */
+    PyObject *ident;       /* circular reference marker key, or NULL */
+    PyObject *default_idents;  /* marker keys registered while resolving a
+                                * default() chain, or NULL */
+    PyObject *default_sources; /* objects handed to default() to produce this
+                                * container, or NULL; kept for error notes */
+} EncoderFrame;
+
+typedef struct {
+    PyObject_HEAD
+    PyEncoderObject *encoder;
+    PyObject *root_obj;        /* pending root object before first next() */
+    PyObject *indent_cache;    /* shared indent cache, or NULL */
+    EncoderFrame *stack;       /* frame stack (heap-allocated) */
+    Py_ssize_t stack_depth;    /* current depth */
+    Py_ssize_t stack_alloc;    /* allocated capacity */
+    bool running;              /* guards against reentrant next() */
+} PyEncoderIterObject;
+
+#define PyEncoderIterObject_CAST(op)  ((PyEncoderIterObject *)(op))
+
 static PyMemberDef encoder_members[] = {
     {"markers", _Py_T_OBJECT, offsetof(PyEncoderObject, markers), Py_READONLY, "markers"},
     {"default", _Py_T_OBJECT, offsetof(PyEncoderObject, defaultfn), Py_READONLY, "default"},
@@ -98,12 +137,30 @@ scanner_dealloc(PyObject *self);
 static int
 scanner_clear(PyObject *self);
 
+static struct PyModuleDef jsonmodule;  /* forward declaration */
+
+typedef struct {
+    PyTypeObject *EncoderIterType;
+} _jsonstate;
+
+static inline _jsonstate *
+get_json_state(PyObject *module)
+{
+    void *state = PyModule_GetState(module);
+    assert(state != NULL);
+    return (_jsonstate *)state;
+}
+
 static PyObject *
 encoder_new(PyTypeObject *type, PyObject *args, PyObject *kwds);
 static void
 encoder_dealloc(PyObject *self);
+static PyObject *
+encoder_iter_new(PyEncoderObject *encoder, PyObject *obj, Py_ssize_t indent_level);
 static int
 encoder_clear(PyObject *self);
+static PyObject *
+encoder_encode_string(PyEncoderObject *s, PyObject *obj);
 static int
 encoder_listencode_list(PyEncoderObject *s, PyUnicodeWriter *writer, PyObject *seq, Py_ssize_t indent_level, PyObject *indent_cache);
 static int
@@ -1480,6 +1537,66 @@ write_newline_indent(PyUnicodeWriter *writer,
 }
 
 
+/* Get the newline+indent string for the given level (borrowed from
+ * indent_cache, which is grown on demand).  Returns NULL on error. */
+static PyObject *
+get_newline_indent(PyEncoderObject *enc, Py_ssize_t level,
+                   PyObject *indent_cache)
+{
+    if (level * 2 >= PyList_GET_SIZE(indent_cache) &&
+        update_indent_cache(enc, level, indent_cache) < 0) {
+        return NULL;
+    }
+    return PyList_GET_ITEM(indent_cache, level * 2);
+}
+
+/* --- Streaming encoder iterator --- */
+
+/* Like encoder_write_string, but returns the encoded str for the streaming
+ * iterator to yield, instead of writing to a writer. */
+static PyObject *
+encoder_encode_string(PyEncoderObject *s, PyObject *obj)
+{
+    if (s->fast_encode == write_escaped_ascii) {
+        return ascii_escape_unicode(obj);
+    }
+    if (s->fast_encode == write_escaped_unicode) {
+        return escape_unicode(obj);
+    }
+    PyObject *encoded = PyObject_CallOneArg(s->encoder, obj);
+    if (encoded == NULL) {
+        return NULL;
+    }
+    if (!PyUnicode_Check(encoded)) {
+        PyErr_Format(PyExc_TypeError,
+                     "encoder() must return a string, not %.80s",
+                     Py_TYPE(encoded)->tp_name);
+        Py_DECREF(encoded);
+        return NULL;
+    }
+    return encoded;
+}
+
+/* Encode a non-container to a str.  Returns NULL+exception on error, or NULL
+ * with no exception if obj is a container (the caller then pushes a frame). */
+static PyObject *
+iter_encode_scalar(PyEncoderObject *s, PyObject *obj)
+{
+    if (obj == Py_None || obj == Py_True || obj == Py_False) {
+        return _encoded_const(obj);
+    }
+    if (PyUnicode_Check(obj)) {
+        return encoder_encode_string(s, obj);
+    }
+    if (PyLong_Check(obj)) {
+        return PyLong_Type.tp_repr(obj);
+    }
+    if (PyFloat_Check(obj)) {
+        return encoder_encode_float(s, obj);
+    }
+    return NULL;
+}
+
 /* Register obj for circular-reference detection.  Stores a new marker key in
  * *ident_out (NULL if markers are disabled); returns 0, or -1 on a circular
  * reference or error. */
@@ -1519,9 +1636,8 @@ json_marker_leave(PyObject *markers, PyObject *ident)
         return 0;
     }
     int rv = 0;
-    /* markers can already be NULL here: the encoder and a streaming iterator
-     * can sit in the same reference cycle, and the GC may run the encoder's
-     * tp_clear before the iterator pops its remaining frames. */
+    /* markers is NULL if the encoder's tp_clear ran before the iterator's
+     * (both can sit in the same reference cycle). */
     if (markers != NULL) {
         rv = PyDict_DelItem(markers, ident);
     }
@@ -1529,6 +1645,142 @@ json_marker_leave(PyObject *markers, PyObject *ident)
     return rv;
 }
 
+/* Remove the markers registered by a default() chain.  Returns 0, or -1 with
+ * an exception set (the first failure wins). */
+static int
+iter_leave_chain(PyEncoderObject *enc, PyObject *idents)
+{
+    if (idents == NULL || enc->markers == NULL || enc->markers == Py_None) {
+        return 0;
+    }
+    int rv = 0;
+    for (Py_ssize_t i = 0; i < PyList_GET_SIZE(idents); i++) {
+        if (PyDict_DelItem(enc->markers, PyList_GET_ITEM(idents, i)) < 0) {
+            rv = -1;
+        }
+    }
+    return rv;
+}
+
+/* Push a frame for a non-empty list/tuple or dict.  Returns 0 / -1 (exception
+ * set).  The opener bracket is not yielded here; the caller emits it. */
+static int
+iter_push_frame(PyEncoderIterObject *self, PyObject *container,
+                Py_ssize_t indent_level)
+{
+    if (self->stack_depth >= Py_GetRecursionLimit()) {
+        PyErr_SetString(PyExc_RecursionError,
+                        "maximum recursion depth exceeded "
+                        "while encoding a JSON object");
+        return -1;
+    }
+    if (self->stack_depth == self->stack_alloc) {
+        Py_ssize_t new_alloc = self->stack_alloc ? self->stack_alloc * 2 : 8;
+        EncoderFrame *new_stack = PyMem_Realloc(self->stack,
+                                                new_alloc * sizeof(EncoderFrame));
+        if (new_stack == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+        self->stack = new_stack;
+        self->stack_alloc = new_alloc;
+    }
+
+    PyEncoderObject *enc = self->encoder;
+    EncoderFrame *f = &self->stack[self->stack_depth];
+    f->container = Py_NewRef(container);
+    f->indent_level = indent_level;
+    f->first = true;
+    f->need_value = false;
+    f->cur_key = NULL;
+    f->cur_keystr = NULL;
+    f->cur_value = NULL;
+    f->ident = NULL;
+    f->default_idents = NULL;
+    f->default_sources = NULL;
+
+    if (json_marker_enter(enc->markers, container, &f->ident) < 0) {
+        Py_DECREF(f->container);
+        return -1;
+    }
+
+    if (PyList_Check(container) || PyTuple_Check(container)) {
+        f->kind = FRAME_LIST;
+        f->items = Py_NewRef(container);
+        f->length = PySequence_Fast_GET_SIZE(f->items);
+        f->index = 0;
+    }
+    else {
+        /* dict */
+        f->kind = FRAME_DICT;
+        f->index = 0;
+        if (PyAnyDict_CheckExact(container) && !enc->sort_keys) {
+            /* Iterate lazily with PyDict_Next: iter_dict_next() raises
+             * RuntimeError if the dict changes size between yields. */
+            f->items = NULL;
+            f->length = PyDict_GET_SIZE(container);
+        }
+        else {
+            /* Snapshot into a list we own exclusively: sort_keys must fix
+             * the order upfront, and a non-dict mapping controls the list
+             * its items() returns (gh-142831). */
+            if (PyDict_CheckExact(container)) {
+                f->items = PyDict_Items(container);
+            }
+            else {
+                PyObject *items = PyMapping_Items(container);
+                if (items != NULL && PyList_CheckExact(items)
+                    && Py_REFCNT(items) == 1) {
+                    /* A fresh list nothing else can mutate. */
+                    f->items = items;
+                }
+                else {
+                    f->items = items != NULL ? PySequence_List(items) : NULL;
+                    Py_XDECREF(items);
+                }
+            }
+            if (f->items == NULL) {
+                goto fail;
+            }
+            if (enc->sort_keys && PyList_Sort(f->items) < 0) {
+                Py_CLEAR(f->items);
+                goto fail;
+            }
+            f->length = PyList_GET_SIZE(f->items);
+        }
+    }
+
+    self->stack_depth++;
+    return 0;
+
+fail:
+    (void)json_marker_leave(enc->markers, f->ident);
+    Py_DECREF(f->container);
+    return -1;
+}
+
+/* Pop the top frame.  Returns 0, or -1 with an exception set when removing a
+ * circular-reference marker failed. */
+static int
+iter_pop_frame(PyEncoderIterObject *self)
+{
+    assert(self->stack_depth > 0);
+    self->stack_depth--;
+    EncoderFrame *f = &self->stack[self->stack_depth];
+    PyEncoderObject *enc = self->encoder;
+    int rv = json_marker_leave(enc->markers, f->ident);
+    if (iter_leave_chain(enc, f->default_idents) < 0) {
+        rv = -1;
+    }
+    Py_XDECREF(f->default_idents);
+    Py_XDECREF(f->default_sources);
+    Py_XDECREF(f->cur_key);
+    Py_XDECREF(f->cur_keystr);
+    Py_XDECREF(f->cur_value);
+    Py_XDECREF(f->items);
+    Py_DECREF(f->container);
+    return rv;
+}
 
 /* Convert a dict key to the unescaped string to be quoted (str kept as-is;
  * int/float/bool/None stringified).  Returns a new ref, or NULL: for an
@@ -1559,6 +1811,673 @@ encoder_key_to_str(PyEncoderObject *s, PyObject *key, int *skip)
                  "keys must be str, int, float, bool or None, "
                  "not %.100s", Py_TYPE(key)->tp_name);
     return NULL;
+}
+
+/* Advance a dict frame to the next pair, setting cur_key (the original key),
+ * cur_keystr (its unescaped string form) and cur_value, all owned.  Returns
+ * 1 (pair found), 0 (exhausted) or -1 (error); honours skipkeys. */
+static int
+iter_dict_next(PyEncoderIterObject *self, EncoderFrame *f)
+{
+    PyEncoderObject *enc = self->encoder;
+    Py_CLEAR(f->cur_key);
+    Py_CLEAR(f->cur_keystr);
+    Py_CLEAR(f->cur_value);
+    while (1) {
+        PyObject *key = NULL, *value = NULL;
+        if (f->items == NULL) {
+            /* Lazy iteration over an exact dict.  The pair is claimed under
+             * a critical section so a concurrent mutation cannot invalidate
+             * the borrowed cursor (matching the locked one-shot path). */
+            int status = 1;
+            Py_BEGIN_CRITICAL_SECTION(f->container);
+            if (PyDict_GET_SIZE(f->container) != f->length) {
+                PyErr_SetString(PyExc_RuntimeError,
+                                "dictionary changed size during iteration");
+                status = -1;
+            }
+            else if (PyDict_Next(f->container, &f->index, &key, &value)) {
+                Py_INCREF(key);
+                Py_INCREF(value);
+            }
+            else {
+                status = 0;
+            }
+            Py_END_CRITICAL_SECTION();
+            if (status <= 0) {
+                return status;
+            }
+        }
+        else {
+            if (f->index >= f->length) {
+                return 0;
+            }
+            PyObject *item = PyList_GET_ITEM(f->items, f->index);
+            f->index++;
+            /* A non-dict mapping's items() may yield non-2-tuples. */
+            if (!PyTuple_Check(item) || PyTuple_GET_SIZE(item) != 2) {
+                PyErr_SetString(PyExc_ValueError,
+                                "items must return 2-tuples");
+                return -1;
+            }
+            key = Py_NewRef(PyTuple_GET_ITEM(item, 0));
+            value = Py_NewRef(PyTuple_GET_ITEM(item, 1));
+        }
+        int skip;
+        PyObject *keystr = encoder_key_to_str(enc, key, &skip);
+        if (keystr == NULL) {
+            Py_DECREF(key);
+            Py_DECREF(value);
+            if (skip) {
+                continue;
+            }
+            return -1;
+        }
+        /* The pair must stay valid across yield points. */
+        f->cur_key = key;
+        f->cur_keystr = keystr;
+        f->cur_value = value;
+        return 1;
+    }
+}
+
+static void
+encoder_iter_dealloc(PyObject *op)
+{
+    PyEncoderIterObject *self = PyEncoderIterObject_CAST(op);
+    PyTypeObject *tp = Py_TYPE(op);
+    PyObject_GC_UnTrack(op);
+    PyObject *exc = PyErr_GetRaisedException();
+    while (self->stack_depth > 0) {
+        if (iter_pop_frame(self) < 0) {
+            PyErr_Clear();
+        }
+    }
+    PyErr_SetRaisedException(exc);
+    PyMem_Free(self->stack);
+    Py_XDECREF(self->encoder);
+    Py_XDECREF(self->root_obj);
+    Py_XDECREF(self->indent_cache);
+    PyObject_GC_Del(op);
+    Py_DECREF(tp);
+}
+
+static int
+encoder_iter_traverse(PyObject *op, visitproc visit, void *arg)
+{
+    PyEncoderIterObject *self = PyEncoderIterObject_CAST(op);
+    Py_VISIT(Py_TYPE(self));
+    Py_VISIT(self->encoder);
+    Py_VISIT(self->root_obj);
+    Py_VISIT(self->indent_cache);
+    for (Py_ssize_t i = 0; i < self->stack_depth; i++) {
+        EncoderFrame *f = &self->stack[i];
+        Py_VISIT(f->container);
+        Py_VISIT(f->items);
+        Py_VISIT(f->cur_key);
+        Py_VISIT(f->cur_keystr);
+        Py_VISIT(f->cur_value);
+        Py_VISIT(f->ident);
+        Py_VISIT(f->default_idents);
+        Py_VISIT(f->default_sources);
+    }
+    return 0;
+}
+
+static int
+encoder_iter_clear(PyObject *op)
+{
+    PyEncoderIterObject *self = PyEncoderIterObject_CAST(op);
+    PyObject *exc = PyErr_GetRaisedException();
+    while (self->stack_depth > 0) {
+        if (iter_pop_frame(self) < 0) {
+            PyErr_Clear();
+        }
+    }
+    PyErr_SetRaisedException(exc);
+    Py_CLEAR(self->encoder);
+    Py_CLEAR(self->root_obj);
+    Py_CLEAR(self->indent_cache);
+    return 0;
+}
+
+/* Prepend `sep` to `chunk`, consuming chunk's reference.  Returns chunk
+ * unchanged if sep is NULL (no separator) or chunk is NULL (propagating an
+ * error).  Returns a new reference, or NULL on error. */
+static PyObject *
+iter_prepend_sep(PyObject *sep, PyObject *chunk)
+{
+    if (sep == NULL || chunk == NULL) {
+        return chunk;
+    }
+    PyObject *result = PyUnicode_Concat(sep, chunk);
+    Py_DECREF(chunk);
+    return result;
+}
+
+/* Emit the opener for a container child (at parent level lvl + 1), pushing
+ * its frame.  An empty child is returned directly as "[]"/"{}".  Returns the
+ * chunk (prepended with sep), or NULL+exception on error. */
+static PyObject *
+iter_open_child(PyEncoderIterObject *self, PyObject *child, bool child_is_list,
+                Py_ssize_t lvl, PyObject *sep)
+{
+    Py_ssize_t length = child_is_list ? Py_SIZE(child)
+                                      : PyDict_GET_SIZE(child);
+    if (length == 0) {
+        _Py_DECLARE_STR(empty_array, "[]");
+        _Py_DECLARE_STR(empty_object, "{}");
+        PyObject *empty = child_is_list ? &_Py_STR(empty_array)
+                                        : &_Py_STR(empty_object);
+        return iter_prepend_sep(sep, Py_NewRef(empty));
+    }
+    if (iter_push_frame(self, child, lvl + 1) < 0) {
+        return NULL;
+    }
+    return iter_prepend_sep(sep, _Py_LATIN1_CHR(child_is_list ? '[' : '{'));
+}
+
+/* Resolve a non-encodable obj via default(), returning the replacement (new
+ * ref).  With markers enabled, registers obj and returns its marker key in
+ * *ident_out; the caller removes it once the replacement is fully encoded.
+ * Returns NULL+exception on error (cleaning up any marker). */
+static PyObject *
+iter_resolve_default(PyEncoderObject *enc, PyObject *obj, PyObject **ident_out)
+{
+    PyObject *ident;
+    if (json_marker_enter(enc->markers, obj, &ident) < 0) {
+        return NULL;
+    }
+    PyObject *newobj = PyObject_CallOneArg(enc->defaultfn, obj);
+    if (newobj == NULL) {
+        (void)json_marker_leave(enc->markers, ident);
+        return NULL;
+    }
+    *ident_out = ident;
+    return newobj;
+}
+
+/* Encode one child value (list element or dict value) at indent level lvl,
+ * prepending sep (or NULL).  Scalars return a single chunk; containers are
+ * pushed as a new frame and their opener returned.  Unknown objects are
+ * resolved through default(), repeatedly if needed, so a container stays
+ * streamed no matter how deep the default() chain is.  Returns NULL+exception
+ * on error. */
+static PyObject *
+iter_encode_child(PyEncoderIterObject *self, PyObject *value, Py_ssize_t lvl,
+                  PyObject *sep)
+{
+    PyEncoderObject *enc = self->encoder;
+
+    PyObject *scalar = iter_encode_scalar(enc, value);
+    if (scalar != NULL) {
+        return iter_prepend_sep(sep, scalar);
+    }
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
+
+    bool is_list = PyList_Check(value) || PyTuple_Check(value);
+    if (is_list || PyAnyDict_Check(value)) {
+        return iter_open_child(self, value, is_list, lvl, sep);
+    }
+
+    /* Unknown object: resolve through default().  Every resolved object
+     * stays registered in markers until its replacement is fully encoded,
+     * so cycles through default() are detected. */
+    PyObject *idents = NULL;    /* marker keys of the chain, or NULL */
+    PyObject *sources = NULL;   /* objects handed to default(), for notes */
+    PyObject *cur = Py_NewRef(value);
+    PyObject *chunk = NULL;
+
+    for (;;) {
+        if (sources != NULL
+            && PyList_GET_SIZE(sources) >= Py_GetRecursionLimit()) {
+            PyErr_SetString(PyExc_RecursionError,
+                            "maximum recursion depth exceeded "
+                            "while encoding a JSON object");
+            goto error;
+        }
+        PyObject *ident = NULL;
+        PyObject *newobj = iter_resolve_default(enc, cur, &ident);
+        if (newobj == NULL) {
+            goto error;
+        }
+        if (ident != NULL) {
+            int r = -1;
+            if (idents != NULL || (idents = PyList_New(0)) != NULL) {
+                r = PyList_Append(idents, ident);
+            }
+            if (r < 0) {
+                (void)json_marker_leave(enc->markers, ident);
+                Py_DECREF(newobj);
+                goto error;
+            }
+            Py_DECREF(ident);
+        }
+        if (sources == NULL && (sources = PyList_New(0)) == NULL) {
+            Py_DECREF(newobj);
+            goto error;
+        }
+        if (PyList_Append(sources, cur) < 0) {
+            Py_DECREF(newobj);
+            goto error;
+        }
+        Py_SETREF(cur, newobj);
+
+        scalar = iter_encode_scalar(enc, cur);
+        if (scalar != NULL) {
+            chunk = iter_prepend_sep(sep, scalar);
+            if (chunk == NULL) {
+                goto error;
+            }
+            break;
+        }
+        if (PyErr_Occurred()) {
+            goto error;
+        }
+        is_list = PyList_Check(cur) || PyTuple_Check(cur);
+        if (is_list || PyAnyDict_Check(cur)) {
+            Py_ssize_t depth_before = self->stack_depth;
+            chunk = iter_open_child(self, cur, is_list, lvl, sep);
+            if (chunk == NULL) {
+                goto error;
+            }
+            if (self->stack_depth > depth_before) {
+                /* The frame owns the chain: markers are removed and error
+                 * notes attached when it is popped. */
+                EncoderFrame *f = &self->stack[self->stack_depth - 1];
+                f->default_idents = idents;
+                f->default_sources = sources;
+                Py_DECREF(cur);
+                return chunk;
+            }
+            break;      /* empty container: done in this chunk */
+        }
+        /* Still not encodable: run default() on the result again. */
+    }
+
+    /* Fully encoded in this chunk: drop the chain markers now. */
+    if (iter_leave_chain(enc, idents) < 0) {
+        Py_CLEAR(chunk);
+        goto error;
+    }
+    Py_XDECREF(idents);
+    Py_XDECREF(sources);
+    Py_DECREF(cur);
+    return chunk;
+
+error:
+    /* One note per chain hop whose replacement failed, innermost first,
+     * matching the one-shot encoder. */
+    if (sources != NULL) {
+        for (Py_ssize_t i = PyList_GET_SIZE(sources) - 1; i >= 0; i--) {
+            _PyErr_FormatNote("when serializing %T object",
+                              PyList_GET_ITEM(sources, i));
+        }
+    }
+    (void)iter_leave_chain(enc, idents);
+    Py_XDECREF(idents);
+    Py_XDECREF(sources);
+    Py_DECREF(cur);
+    return NULL;
+}
+
+/* Compute the separator/indent prefix to emit before frame f's next item,
+ * updating f->first.  On success *prefix is borrowed (from enc or the indent
+ * cache) or NULL when nothing precedes the item.  Returns 0, or -1 with an
+ * exception set. */
+static int
+iter_item_prefix(PyEncoderIterObject *self, EncoderFrame *f, PyObject **prefix)
+{
+    PyEncoderObject *enc = self->encoder;
+    *prefix = NULL;
+    if (enc->indent == Py_None) {
+        if (!f->first) {
+            *prefix = enc->item_separator;
+        }
+        f->first = false;
+        return 0;
+    }
+    if (f->first) {
+        f->first = false;
+        *prefix = get_newline_indent(enc, f->indent_level + 1,
+                                     self->indent_cache);
+    }
+    else {
+        *prefix = get_item_separator(enc, f->indent_level + 1,
+                                     self->indent_cache);
+    }
+    return *prefix == NULL ? -1 : 0;
+}
+
+/* Process one step of the top-of-stack list frame. */
+static PyObject *
+iter_handle_list_frame(PyEncoderIterObject *self, EncoderFrame *f)
+{
+    PyEncoderObject *enc = self->encoder;
+    Py_ssize_t lvl = f->indent_level;
+
+    /* Use the live size (the list may shrink between yields) and claim the
+     * item under a critical section: user code run later can mutate the
+     * sequence (gh-142831), and another thread can mutate it concurrently. */
+    PyObject *item = NULL;
+    Py_BEGIN_CRITICAL_SECTION_SEQUENCE_FAST(f->items);
+    if (f->index < PySequence_Fast_GET_SIZE(f->items)) {
+        item = Py_NewRef(PySequence_Fast_GET_ITEM(f->items, f->index));
+        f->index++;
+    }
+    Py_END_CRITICAL_SECTION_SEQUENCE_FAST();
+
+    if (item == NULL) {
+        bool had_items = !f->first;
+        if (iter_pop_frame(self) < 0) {
+            return NULL;
+        }
+        if (enc->indent != Py_None && had_items) {
+            PyObject *ni = get_newline_indent(enc, lvl, self->indent_cache);
+            if (ni == NULL) {
+                return NULL;
+            }
+            return PyUnicode_Concat(ni, _Py_LATIN1_CHR(']'));
+        }
+        return _Py_LATIN1_CHR(']');
+    }
+
+    PyObject *sep;
+    if (iter_item_prefix(self, f, &sep) < 0) {
+        Py_DECREF(item);
+        return NULL;
+    }
+    PyObject *chunk = iter_encode_child(self, item, lvl, sep);
+    Py_DECREF(item);
+    return chunk;
+}
+
+/* Process one step of the top-of-stack dict frame (a key+separator chunk,
+ * then the value on the next step). */
+static PyObject *
+iter_handle_dict_frame(PyEncoderIterObject *self, EncoderFrame *f)
+{
+    PyEncoderObject *enc = self->encoder;
+    Py_ssize_t lvl = f->indent_level;
+
+    if (f->need_value) {
+        PyObject *value = Py_NewRef(f->cur_value);
+        f->need_value = false;
+        PyObject *chunk = iter_encode_child(self, value, lvl, NULL);
+        Py_DECREF(value);
+        return chunk;
+    }
+
+    int has_next = iter_dict_next(self, f);
+    if (has_next < 0) {
+        return NULL;
+    }
+    if (!has_next) {
+        bool had_items = !f->first;
+        if (iter_pop_frame(self) < 0) {
+            return NULL;
+        }
+        if (enc->indent != Py_None && had_items) {
+            PyObject *ni = get_newline_indent(enc, lvl, self->indent_cache);
+            if (ni == NULL) {
+                return NULL;
+            }
+            return PyUnicode_Concat(ni, _Py_LATIN1_CHR('}'));
+        }
+        return _Py_LATIN1_CHR('}');
+    }
+
+    /* Chunk: [prefix +] quoted key + key_separator */
+    PyObject *keystr = encoder_encode_string(enc, f->cur_keystr);
+    if (keystr == NULL) {
+        /* The one-shot encoder attaches no item note for a failing key. */
+        Py_CLEAR(f->cur_key);
+        Py_CLEAR(f->cur_keystr);
+        Py_CLEAR(f->cur_value);
+        return NULL;
+    }
+    PyObject *prefix;
+    if (iter_item_prefix(self, f, &prefix) < 0) {
+        Py_DECREF(keystr);
+        return NULL;
+    }
+    PyObject *chunk = iter_prepend_sep(prefix, keystr);
+    if (chunk == NULL) {
+        return NULL;
+    }
+    PyObject *result = PyUnicode_Concat(chunk, enc->key_separator);
+    Py_DECREF(chunk);
+    f->need_value = true;
+    return result;
+}
+
+/* Walk the frame stack innermost-first and attach a contextual error note for
+ * each in-progress container, matching the one-shot encoder. */
+static void
+iter_attach_notes(PyEncoderIterObject *self)
+{
+    for (Py_ssize_t i = self->stack_depth - 1; i >= 0; i--) {
+        EncoderFrame *f = &self->stack[i];
+        if (f->kind == FRAME_LIST) {
+            /* The in-progress element: index was advanced past it. */
+            _PyErr_FormatNote("when serializing %T item %zd",
+                              f->container, f->index - 1);
+        }
+        else if (f->cur_key != NULL) {
+            /* cur_key is NULL when advancing the frame itself failed. */
+            _PyErr_FormatNote("when serializing %T item %R",
+                              f->container, f->cur_key);
+        }
+        if (f->default_sources != NULL) {
+            for (Py_ssize_t j = PyList_GET_SIZE(f->default_sources) - 1;
+                 j >= 0; j--) {
+                _PyErr_FormatNote("when serializing %T object",
+                                  PyList_GET_ITEM(f->default_sources, j));
+            }
+        }
+    }
+}
+
+/* Produce the next token chunk, or NULL: with an exception set on error,
+ * without one when the document is complete. */
+static PyObject *
+iter_step(PyEncoderIterObject *self)
+{
+    if (self->root_obj != NULL) {
+        PyObject *root = self->root_obj;
+        self->root_obj = NULL;
+        /* Dispatch the root as a child at level -1, so a container frame
+         * lands at level 0. */
+        PyObject *chunk = iter_encode_child(self, root, -1, NULL);
+        Py_DECREF(root);
+        return chunk;
+    }
+    if (self->stack_depth > 0) {
+        EncoderFrame *f = &self->stack[self->stack_depth - 1];
+        if (f->kind == FRAME_LIST) {
+            return iter_handle_list_frame(self, f);
+        }
+        return iter_handle_dict_frame(self, f);
+    }
+    return NULL;
+}
+
+/* Token chunks are buffered up to roughly this many characters per yield:
+ * yielding every token would cost an allocation and a Python-level fp.write()
+ * call per scalar. */
+#define ITER_CHUNK_SIZE 8192
+
+static PyObject *
+encoder_iter_iternext(PyObject *op)
+{
+    PyEncoderIterObject *self = PyEncoderIterObject_CAST(op);
+
+    if (self->running) {
+        PyErr_SetString(PyExc_ValueError,
+                        "encoder iterator already executing");
+        return NULL;
+    }
+    if (self->root_obj == NULL && self->stack_depth == 0) {
+        return NULL;    /* exhausted */
+    }
+    self->running = true;
+
+    PyUnicodeWriter *writer = NULL;
+    Py_ssize_t buffered = 0;
+    for (;;) {
+        PyObject *chunk = iter_step(self);
+        if (chunk == NULL) {
+            if (PyErr_Occurred()) {
+                goto error;
+            }
+            break;      /* complete: flush what is buffered */
+        }
+        if (writer == NULL) {
+            if (self->root_obj == NULL && self->stack_depth == 0) {
+                /* The whole document fit in this one chunk. */
+                self->running = false;
+                return chunk;
+            }
+            writer = PyUnicodeWriter_Create(ITER_CHUNK_SIZE);
+            if (writer == NULL) {
+                Py_DECREF(chunk);
+                goto error;
+            }
+        }
+        buffered += PyUnicode_GET_LENGTH(chunk);
+        int w = PyUnicodeWriter_WriteStr(writer, chunk);
+        Py_DECREF(chunk);
+        if (w < 0) {
+            goto error;
+        }
+        if (buffered >= ITER_CHUNK_SIZE) {
+            break;
+        }
+    }
+    self->running = false;
+    if (writer == NULL) {
+        return NULL;    /* completed with nothing left to yield */
+    }
+    return PyUnicodeWriter_Finish(writer);
+
+error:
+    /* Match generator behavior: an error permanently exhausts the iterator.
+     * Attach the contextual notes before unwinding the frames they need. */
+    iter_attach_notes(self);
+    PyObject *exc = PyErr_GetRaisedException();
+    while (self->stack_depth > 0) {
+        if (iter_pop_frame(self) < 0) {
+            PyErr_Clear();
+        }
+    }
+    Py_CLEAR(self->root_obj);
+    PyErr_SetRaisedException(exc);
+    if (writer != NULL) {
+        PyUnicodeWriter_Discard(writer);
+    }
+    self->running = false;
+    return NULL;
+}
+
+PyDoc_STRVAR(encoder_iter_close_doc,
+             "close()\n"
+             "--\n"
+             "\n"
+             "Release the resources held by the iterator and mark it exhausted,\n"
+             "like generator.close().  Further next() calls raise StopIteration.");
+
+static PyObject *
+encoder_iter_close(PyObject *op, PyObject *Py_UNUSED(ignored))
+{
+    PyEncoderIterObject *self = PyEncoderIterObject_CAST(op);
+    if (self->running) {
+        PyErr_SetString(PyExc_ValueError,
+                        "encoder iterator already executing");
+        return NULL;
+    }
+    PyObject *exc = PyErr_GetRaisedException();
+    while (self->stack_depth > 0) {
+        if (iter_pop_frame(self) < 0) {
+            PyErr_Clear();
+        }
+    }
+    Py_CLEAR(self->root_obj);
+    PyErr_SetRaisedException(exc);
+    Py_RETURN_NONE;
+}
+
+static PyMethodDef encoder_iter_methods[] = {
+    {"close", encoder_iter_close, METH_NOARGS, encoder_iter_close_doc},
+    {NULL, NULL}
+};
+
+static PyType_Slot PyEncoderIterType_slots[] = {
+    {Py_tp_dealloc, encoder_iter_dealloc},
+    {Py_tp_traverse, encoder_iter_traverse},
+    {Py_tp_clear, encoder_iter_clear},
+    {Py_tp_iter, PyObject_SelfIter},
+    {Py_tp_iternext, encoder_iter_iternext},
+    {Py_tp_methods, encoder_iter_methods},
+    {0, 0}
+};
+
+static PyType_Spec PyEncoderIterType_spec = {
+    .name = "_json.EncoderIter",
+    .basicsize = sizeof(PyEncoderIterObject),
+    .itemsize = 0,
+    .flags = (Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC
+              | Py_TPFLAGS_IMMUTABLETYPE | Py_TPFLAGS_DISALLOW_INSTANTIATION),
+    .slots = PyEncoderIterType_slots,
+};
+
+static PyObject *
+encoder_iter_new(PyEncoderObject *encoder, PyObject *obj, Py_ssize_t indent_level)
+{
+    PyObject *module = PyType_GetModule(Py_TYPE(encoder));
+    if (module == NULL) {
+        return NULL;
+    }
+    PyTypeObject *iter_type = get_json_state(module)->EncoderIterType;
+    PyEncoderIterObject *self = PyObject_GC_New(PyEncoderIterObject, iter_type);
+    if (self == NULL) {
+        return NULL;
+    }
+    /* Initialize all fields before the first failable call: the
+     * deallocator walks them on failure. */
+    self->encoder = (PyEncoderObject *)Py_NewRef(encoder);
+    self->root_obj = Py_NewRef(obj);
+    self->stack = NULL;
+    self->stack_depth = 0;
+    self->stack_alloc = 0;
+    self->running = false;
+    self->indent_cache = NULL;
+    if (encoder->indent != Py_None) {
+        self->indent_cache = create_indent_cache(encoder, indent_level);
+        if (self->indent_cache == NULL) {
+            Py_DECREF(self);
+            return NULL;
+        }
+    }
+    PyObject_GC_Track(self);
+    return (PyObject *)self;
+}
+
+static PyObject *
+encoder_iterencode(PyObject *op, PyObject *const *args, Py_ssize_t nargs)
+{
+    /* Return a streaming C iterator that yields JSON string chunks. */
+    if (nargs != 2) {
+        PyErr_Format(PyExc_TypeError,
+                     "_iterencode expected 2 arguments, got %zd", nargs);
+        return NULL;
+    }
+    Py_ssize_t indent_level = PyLong_AsSsize_t(args[1]);
+    if (indent_level == -1 && PyErr_Occurred()) {
+        return NULL;
+    }
+    return encoder_iter_new(PyEncoderObject_CAST(op), args[0], indent_level);
 }
 
 static PyObject *
@@ -2084,6 +3003,13 @@ encoder_clear(PyObject *op)
 
 PyDoc_STRVAR(encoder_doc, "Encoder(markers, default, encoder, indent, key_separator, item_separator, sort_keys, skipkeys, allow_nan)");
 
+static PyMethodDef encoder_methods[] = {
+    {"_iterencode", _PyCFunction_CAST(encoder_iterencode), METH_FASTCALL,
+     "_iterencode(obj, _current_indent_level)\n--\n\n"
+     "Return an iterator yielding the JSON encoding of obj as string chunks."},
+    {NULL, NULL}
+};
+
 static PyType_Slot PyEncoderType_slots[] = {
     {Py_tp_doc, (void *)encoder_doc},
     {Py_tp_dealloc, encoder_dealloc},
@@ -2091,6 +3017,7 @@ static PyType_Slot PyEncoderType_slots[] = {
     {Py_tp_traverse, encoder_traverse},
     {Py_tp_clear, encoder_clear},
     {Py_tp_members, encoder_members},
+    {Py_tp_methods, encoder_methods},
     {Py_tp_new, encoder_new},
     {0, 0}
 };
@@ -2121,12 +3048,47 @@ _json_exec(PyObject *module)
         return -1;
     }
 
-    PyObject *PyEncoderType = PyType_FromSpec(&PyEncoderType_spec);
+    /* Created with the module so encoder_iter_new() can recover it via
+     * PyType_GetModuleByDef(). */
+    PyObject *PyEncoderType = PyType_FromModuleAndSpec(module,
+                                                       &PyEncoderType_spec, NULL);
     if (PyModule_Add(module, "make_encoder", PyEncoderType) < 0) {
         return -1;
     }
 
+    PyObject *PyEncoderIterType = PyType_FromModuleAndSpec(module,
+                                                           &PyEncoderIterType_spec,
+                                                           NULL);
+    if (PyEncoderIterType == NULL) {
+        return -1;
+    }
+    get_json_state(module)->EncoderIterType =
+        (PyTypeObject *)Py_NewRef(PyEncoderIterType);
+    if (PyModule_Add(module, "_EncoderIter", PyEncoderIterType) < 0) {
+        return -1;
+    }
+
     return 0;
+}
+
+static int
+_json_traverse(PyObject *module, visitproc visit, void *arg)
+{
+    Py_VISIT(get_json_state(module)->EncoderIterType);
+    return 0;
+}
+
+static int
+_json_clear(PyObject *module)
+{
+    Py_CLEAR(get_json_state(module)->EncoderIterType);
+    return 0;
+}
+
+static void
+_json_free(void *module)
+{
+    (void)_json_clear((PyObject *)module);
 }
 
 static PyModuleDef_Slot _json_slots[] = {
@@ -2141,8 +3103,12 @@ static struct PyModuleDef jsonmodule = {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "_json",
     .m_doc = module_doc,
+    .m_size = sizeof(_jsonstate),
     .m_methods = speedups_methods,
     .m_slots = _json_slots,
+    .m_traverse = _json_traverse,
+    .m_clear = _json_clear,
+    .m_free = _json_free,
 };
 
 PyMODINIT_FUNC
