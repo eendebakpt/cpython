@@ -645,8 +645,8 @@ PyDoc_STRVAR(_remote_debugging_GCMonitor_get_gc_stats__doc__,
 "        - collected: Total number of collected objects.\n"
 "        - uncollectable: Total number of uncollectable objects.\n"
 "        - candidates: Total objects considered and traversed.\n"
-"        - heap_size: number of live objects.\n"
 "        - duration: Total collection time, in seconds.\n"
+"        - max_pause: Maximum collection pause, in seconds.\n"
 "\n"
 "Raises:\n"
 "    RuntimeError: If the target process cannot be inspected or if\n"
@@ -1615,6 +1615,7 @@ PyDoc_STRVAR(_remote_debugging_get_gc_stats__doc__,
 "        - uncollectable: Total number of uncollectable objects.\n"
 "        - candidates: Total objects considered and traversed.\n"
 "        - duration: Total collection time, in seconds.\n"
+"        - max_pause: Maximum collection pause, in seconds.\n"
 "\n"
 "Raises:\n"
 "    RuntimeError: If the target process cannot be inspected or if its\n"
@@ -1685,4 +1686,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=5f20a08be0d0ed5a input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f488a942e0663370 input=a9049054013a1b77]*/

@@ -304,6 +304,24 @@ gc_get_count(PyObject *module, PyObject *Py_UNUSED(ignored))
     return gc_get_count_impl(module);
 }
 
+PyDoc_STRVAR(gc_get_implementation__doc__,
+"get_implementation($module, /)\n"
+"--\n"
+"\n"
+"Return the name of the active garbage collector implementation.");
+
+#define GC_GET_IMPLEMENTATION_METHODDEF    \
+    {"get_implementation", (PyCFunction)gc_get_implementation, METH_NOARGS, gc_get_implementation__doc__},
+
+static PyObject *
+gc_get_implementation_impl(PyObject *module);
+
+static PyObject *
+gc_get_implementation(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return gc_get_implementation_impl(module);
+}
+
 PyDoc_STRVAR(gc_get_referrers__doc__,
 "get_referrers($module, /, *objs)\n"
 "--\n"
@@ -583,4 +601,4 @@ gc_get_freeze_count(PyObject *module, PyObject *Py_UNUSED(ignored))
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=d0cb000f41ffe433 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=46c2250eb0ff01dc input=a9049054013a1b77]*/
