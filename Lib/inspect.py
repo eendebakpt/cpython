@@ -925,6 +925,7 @@ def getabsfile(object, _filename=None):
 
 modulesbyfile = {}
 _filesbymodname = {}
+_modulesbyfile_keys = frozenset()
 
 def getmodule(object, _filename=None):
     """Return the module an object was defined in, or None if not found."""
@@ -943,21 +944,27 @@ def getmodule(object, _filename=None):
         return None
     if file in modulesbyfile:
         return sys.modules.get(modulesbyfile[file])
-    # Update the filename to module name cache and check yet again
-    # Copy sys.modules in order to cope with changes while iterating
-    for modname, module in sys.modules.copy().items():
-        if ismodule(module) and hasattr(module, '__file__'):
-            f = module.__file__
-            if f == _filesbymodname.get(modname, None):
-                # Have already mapped this module, so skip it
-                continue
-            _filesbymodname[modname] = f
-            f = getabsfile(module)
-            # Always map to the name the module knows itself by
-            modulesbyfile[f] = modulesbyfile[
-                os.path.realpath(f)] = module.__name__
-    if file in modulesbyfile:
-        return sys.modules.get(modulesbyfile[file])
+    # Update the filename to module name cache and check yet again,
+    # unless the set of loaded modules has not changed since the last
+    # scan (the file cannot be found in that case either).
+    global _modulesbyfile_keys
+    if sys.modules.keys() != _modulesbyfile_keys:
+        # Copy sys.modules in order to cope with changes while iterating
+        modules = sys.modules.copy()
+        for modname, module in modules.items():
+            if ismodule(module) and hasattr(module, '__file__'):
+                f = module.__file__
+                if f == _filesbymodname.get(modname, None):
+                    # Have already mapped this module, so skip it
+                    continue
+                _filesbymodname[modname] = f
+                f = getabsfile(module)
+                # Always map to the name the module knows itself by
+                modulesbyfile[f] = modulesbyfile[
+                    os.path.realpath(f)] = module.__name__
+        _modulesbyfile_keys = frozenset(modules)
+        if file in modulesbyfile:
+            return sys.modules.get(modulesbyfile[file])
     # Check the main module
     main = sys.modules['__main__']
     if not hasattr(object, '__name__'):

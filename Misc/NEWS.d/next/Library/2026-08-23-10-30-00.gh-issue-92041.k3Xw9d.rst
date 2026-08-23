@@ -1,0 +1,5 @@
+Speed up :func:`inspect.getmodule` (and thereby :func:`inspect.stack` and
+:func:`inspect.getsource` for frames from dynamically created code) by
+skipping the rescan of :data:`sys.modules` when no modules have been added
+or removed since the last scan.  The rescan cannot find new files in that
+case.  This avoids a full scan on every cache miss.
