@@ -7779,6 +7779,12 @@ _PyType_GetSlotNames(PyTypeObject *cls)
         return slotnames;
     }
 
+    /* Without __slots__ anywhere in the MRO, copyreg._slotnames() returns an
+       empty list, and it cannot cache that on an immutable type. */
+    if (_PyType_Lookup(cls, &_Py_ID(__slots__)) == NULL) {
+        Py_RETURN_NONE;
+    }
+
     /* The class does not have the slot names cached yet. */
     copyreg = import_copyreg();
     if (copyreg == NULL)
