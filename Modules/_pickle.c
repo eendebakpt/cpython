@@ -2204,42 +2204,55 @@ whichmodule(PickleState *st, PyObject *global, PyObject *global_name, PyObject *
        custom import functions (IMHO, this would be a nice security
        feature). The import C API would need to be extended to support the
        extra parameters of __import__ to fix that. */
-    /* Try sys.modules first: the module is almost always already imported,
-       and PyImport_Import() has to build a globals dict and go through
-       builtins.__import__() even for a cache hit. */
+    /* Try sys.modules first: PyImport_Import() builds a globals dict and goes
+       through builtins.__import__() even when the module is already imported.
+       A cached module can still be partially initialised by a concurrent
+       import, so if the object is not found in it we redo the lookup through
+       PyImport_Import(), which waits for that import to finish (this is what
+       Unpickler.find_class() avoids PyImport_GetModule() for). */
+    PyObject *actual = NULL;
     module = PyImport_GetModule(module_name);
-    if (module == Py_None) {
-        /* A blocked import: let PyImport_Import() raise the usual error. */
-        Py_CLEAR(module);
-    }
-    if (module == NULL && !PyErr_Occurred()) {
-        module = PyImport_Import(module_name);
-    }
-    if (module == NULL) {
-        if (PyErr_ExceptionMatches(PyExc_ImportError) ||
-            PyErr_ExceptionMatches(PyExc_ValueError))
-        {
-            PyObject *exc = PyErr_GetRaisedException();
-            PyErr_Format(st->PicklingError,
-                         "Can't pickle %R: %S", global, exc);
-            _PyErr_ChainExceptions1(exc);
-        }
+    if (module == NULL && PyErr_Occurred()) {
         Py_DECREF(module_name);
         return NULL;
     }
-    PyObject *actual = getattribute(module, dotted_path, 1);
-    Py_DECREF(module);
+    if (module != NULL && module != Py_None) {
+        actual = getattribute(module, dotted_path, 1);
+        if (actual != global) {
+            PyErr_Clear();
+            Py_CLEAR(actual);
+        }
+    }
+    Py_XDECREF(module);
+
     if (actual == NULL) {
-        assert(PyErr_Occurred());
-        if (PyErr_ExceptionMatches(PyExc_AttributeError)) {
-            PyObject *exc = PyErr_GetRaisedException();
-            PyErr_Format(st->PicklingError,
-                         "Can't pickle %R: it's not found as %S.%S",
-                         global, module_name, global_name);
-            _PyErr_ChainExceptions1(exc);
+        module = PyImport_Import(module_name);
+        if (module == NULL) {
+            if (PyErr_ExceptionMatches(PyExc_ImportError) ||
+                PyErr_ExceptionMatches(PyExc_ValueError))
+            {
+                PyObject *exc = PyErr_GetRaisedException();
+                PyErr_Format(st->PicklingError,
+                             "Can't pickle %R: %S", global, exc);
+                _PyErr_ChainExceptions1(exc);
+            }
+            Py_DECREF(module_name);
+            return NULL;
         }
-        Py_DECREF(module_name);
-        return NULL;
+        actual = getattribute(module, dotted_path, 1);
+        Py_DECREF(module);
+        if (actual == NULL) {
+            assert(PyErr_Occurred());
+            if (PyErr_ExceptionMatches(PyExc_AttributeError)) {
+                PyObject *exc = PyErr_GetRaisedException();
+                PyErr_Format(st->PicklingError,
+                             "Can't pickle %R: it's not found as %S.%S",
+                             global, module_name, global_name);
+                _PyErr_ChainExceptions1(exc);
+            }
+            Py_DECREF(module_name);
+            return NULL;
+        }
     }
     if (actual != global) {
         Py_DECREF(actual);
