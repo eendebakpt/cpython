@@ -2204,7 +2204,17 @@ whichmodule(PickleState *st, PyObject *global, PyObject *global_name, PyObject *
        custom import functions (IMHO, this would be a nice security
        feature). The import C API would need to be extended to support the
        extra parameters of __import__ to fix that. */
-    module = PyImport_Import(module_name);
+    /* Try sys.modules first: the module is almost always already imported,
+       and PyImport_Import() has to build a globals dict and go through
+       builtins.__import__() even for a cache hit. */
+    module = PyImport_GetModule(module_name);
+    if (module == Py_None) {
+        /* A blocked import: let PyImport_Import() raise the usual error. */
+        Py_CLEAR(module);
+    }
+    if (module == NULL && !PyErr_Occurred()) {
+        module = PyImport_Import(module_name);
+    }
     if (module == NULL) {
         if (PyErr_ExceptionMatches(PyExc_ImportError) ||
             PyErr_ExceptionMatches(PyExc_ValueError))
