@@ -156,6 +156,11 @@ enum {
     /* Initial size of the write buffer of Pickler. */
     WRITE_BUF_SIZE = 4096,
 
+    /* Size of the buffer a Pickler starts out with.  Most pickles are small,
+       and a fresh 4 KiB buffer is too large for the fast allocator, so start
+       small and let _Pickler_Write() grow the buffer as needed. */
+    INITIAL_BUF_SIZE = 256,
+
     /* Prefetch size when unpickling (disabled on unpeekable streams) */
     PREFETCH = 8192 * 16,
     /* Data larger that this will be read in chunks, to prevent extreme
@@ -1139,7 +1144,7 @@ _Pickler_New(PickleState *st)
         return NULL;
     }
 
-    const Py_ssize_t max_output_len = WRITE_BUF_SIZE;
+    const Py_ssize_t max_output_len = INITIAL_BUF_SIZE;
     PyObject *output_buffer = PyBytes_FromStringAndSize(NULL, max_output_len);
     if (output_buffer == NULL) {
         goto error;
