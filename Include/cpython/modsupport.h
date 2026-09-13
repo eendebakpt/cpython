@@ -21,18 +21,23 @@ typedef struct {
     uint8_t v;
 } _PyOnceFlag;
 
-typedef struct _PyArg_Parser {
+/* Fields of _PyArg_Parser only used by parsers with a format string. */
+typedef struct _PyArg_ParserExt {
     const char *format;
-    const char * const *keywords;
-    const char *fname;
     const char *custom_msg;
-    _PyOnceFlag once;       /* atomic one-time initialization flag */
-    int is_kwtuple_owned;   /* does this parser own the kwtuple object? */
-    int pos;                /* number of positional-only arguments */
     int min;                /* minimal number of arguments */
     int max;                /* maximal number of positional arguments */
+} _PyArg_ParserExt;
+
+typedef struct _PyArg_Parser {
+    const char * const *keywords;
+    const char *fname;
+    _PyOnceFlag once;       /* atomic one-time initialization flag */
+    uint8_t is_kwtuple_owned;  /* does this parser own the kwtuple object? */
+    int pos;                /* number of positional-only arguments */
     PyObject *kwtuple;      /* tuple of keyword parameter names */
     struct _PyArg_Parser *next;
+    _PyArg_ParserExt *ext;  /* NULL if the parser has no format string */
 } _PyArg_Parser;
 
 PyAPI_FUNC(int) _PyArg_ParseTupleAndKeywordsFast(PyObject *, PyObject *,

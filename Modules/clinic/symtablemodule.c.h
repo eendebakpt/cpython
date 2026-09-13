@@ -52,6 +52,7 @@ _symtable_symtable(PyObject *module, PyObject *const *args, Py_ssize_t nargs, Py
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "symtable",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -97,4 +98,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=23523cada784726e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2cd2521f65c73402 input=a9049054013a1b77]*/

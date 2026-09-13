@@ -175,6 +175,7 @@ _asyncio_Future_set_result(PyObject *self, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_result",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -225,6 +226,7 @@ _asyncio_Future_set_exception(PyObject *self, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "set_exception",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -290,6 +292,7 @@ _asyncio_Future_add_done_callback(PyObject *self, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "add_done_callback",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -346,6 +349,7 @@ _asyncio_Future_remove_done_callback(PyObject *self, PyTypeObject *cls, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "remove_done_callback",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -2258,4 +2262,4 @@ _asyncio_future_discard_from_awaited_by(PyObject *module, PyObject *const *args,
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=46d50c477614b57e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=cd3eb5e99d19d64b input=a9049054013a1b77]*/

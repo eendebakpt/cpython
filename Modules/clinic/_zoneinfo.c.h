@@ -109,6 +109,7 @@ zoneinfo_ZoneInfo_from_file(PyObject *type, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_file",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -286,6 +287,7 @@ zoneinfo_ZoneInfo_utcoffset(PyObject *self, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "utcoffset",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -330,6 +332,7 @@ zoneinfo_ZoneInfo_dst(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "dst",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -375,6 +378,7 @@ zoneinfo_ZoneInfo_tzname(PyObject *self, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "tzname",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -420,6 +424,7 @@ zoneinfo_ZoneInfo__unpickle(PyObject *type, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_unpickle",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -454,4 +459,4 @@ zoneinfo_ZoneInfo__unpickle(PyObject *type, PyTypeObject *cls, PyObject *const *
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=c6df04d7b400bd7f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c7eebc2b7022edd0 input=a9049054013a1b77]*/

@@ -638,6 +638,7 @@ unpack_from(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "unpack_from",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -726,4 +727,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=021b89d2d3c3c225 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=62827d2b77af8b60 input=a9049054013a1b77]*/

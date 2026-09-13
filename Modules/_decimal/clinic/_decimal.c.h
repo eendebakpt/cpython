@@ -744,6 +744,7 @@ _decimal_Decimal_from_float(PyObject *type, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_float",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -796,6 +797,7 @@ _decimal_Decimal_from_number(PyObject *type, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "from_number",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -845,6 +847,7 @@ _decimal_Context_create_decimal_from_float(PyObject *context, PyTypeObject *cls,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "create_decimal_from_float",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -999,6 +1002,7 @@ _decimal_Decimal___format__(PyObject *dec, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__format__",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1306,6 +1310,7 @@ _decimal_Decimal___round__(PyObject *self, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__round__",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4138,6 +4143,7 @@ _decimal_Context_abs(PyObject *context, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "abs",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4182,6 +4188,7 @@ _decimal_Context_exp(PyObject *context, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "exp",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4226,6 +4233,7 @@ _decimal_Context_ln(PyObject *context, PyTypeObject *cls, PyObject *const *args,
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "ln",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4271,6 +4279,7 @@ _decimal_Context_log10(PyObject *context, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "log10",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4318,6 +4327,7 @@ _decimal_Context_minus(PyObject *context, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "minus",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4363,6 +4373,7 @@ _decimal_Context_next_minus(PyObject *context, PyTypeObject *cls, PyObject *cons
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "next_minus",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4408,6 +4419,7 @@ _decimal_Context_next_plus(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "next_plus",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4453,6 +4465,7 @@ _decimal_Context_normalize(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "normalize",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4499,6 +4512,7 @@ _decimal_Context_plus(PyObject *context, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "plus",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4544,6 +4558,7 @@ _decimal_Context_to_integral_value(PyObject *context, PyTypeObject *cls, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "to_integral_value",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4589,6 +4604,7 @@ _decimal_Context_to_integral_exact(PyObject *context, PyTypeObject *cls, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "to_integral_exact",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4634,6 +4650,7 @@ _decimal_Context_to_integral(PyObject *context, PyTypeObject *cls, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "to_integral",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4678,6 +4695,7 @@ _decimal_Context_sqrt(PyObject *context, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sqrt",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4723,6 +4741,7 @@ _decimal_Context_add(PyObject *context, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "add",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4770,6 +4789,7 @@ _decimal_Context_compare(PyObject *context, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compare",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4817,6 +4837,7 @@ _decimal_Context_compare_signal(PyObject *context, PyTypeObject *cls, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compare_signal",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4864,6 +4885,7 @@ _decimal_Context_divide(PyObject *context, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "divide",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4911,6 +4933,7 @@ _decimal_Context_divide_int(PyObject *context, PyTypeObject *cls, PyObject *cons
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "divide_int",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -4958,6 +4981,7 @@ _decimal_Context_max(PyObject *context, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "max",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5005,6 +5029,7 @@ _decimal_Context_max_mag(PyObject *context, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "max_mag",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5052,6 +5077,7 @@ _decimal_Context_min(PyObject *context, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "min",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5099,6 +5125,7 @@ _decimal_Context_min_mag(PyObject *context, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "min_mag",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5146,6 +5173,7 @@ _decimal_Context_multiply(PyObject *context, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "multiply",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5193,6 +5221,7 @@ _decimal_Context_next_toward(PyObject *context, PyTypeObject *cls, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "next_toward",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5240,6 +5269,7 @@ _decimal_Context_quantize(PyObject *context, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "quantize",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5290,6 +5320,7 @@ _decimal_Context_remainder(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "remainder",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5340,6 +5371,7 @@ _decimal_Context_remainder_near(PyObject *context, PyTypeObject *cls, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "remainder_near",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5387,6 +5419,7 @@ _decimal_Context_subtract(PyObject *context, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "subtract",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5547,6 +5580,7 @@ _decimal_Context_fma(PyObject *context, PyTypeObject *cls, PyObject *const *args
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "fma",
+        .pos = 3,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5618,6 +5652,7 @@ _decimal_Context_is_normal(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_normal",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5663,6 +5698,7 @@ _decimal_Context_is_subnormal(PyObject *context, PyTypeObject *cls, PyObject *co
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_subnormal",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5708,6 +5744,7 @@ _decimal_Context_is_finite(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_finite",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5753,6 +5790,7 @@ _decimal_Context_is_infinite(PyObject *context, PyTypeObject *cls, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_infinite",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5798,6 +5836,7 @@ _decimal_Context_is_nan(PyObject *context, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_nan",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5843,6 +5882,7 @@ _decimal_Context_is_qnan(PyObject *context, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_qnan",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5888,6 +5928,7 @@ _decimal_Context_is_snan(PyObject *context, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_snan",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5933,6 +5974,7 @@ _decimal_Context_is_signed(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_signed",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -5978,6 +6020,7 @@ _decimal_Context_is_zero(PyObject *context, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_zero",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6023,6 +6066,7 @@ _decimal_Context_is_canonical(PyObject *context, PyTypeObject *cls, PyObject *co
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "is_canonical",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6068,6 +6112,7 @@ _decimal_Context__apply(PyObject *context, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "_apply",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6115,6 +6160,7 @@ _decimal_Context_apply(PyObject *context, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "apply",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6162,6 +6208,7 @@ _decimal_Context_canonical(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "canonical",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6207,6 +6254,7 @@ _decimal_Context_copy_abs(PyObject *context, PyTypeObject *cls, PyObject *const 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "copy_abs",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6252,6 +6300,7 @@ _decimal_Context_copy_decimal(PyObject *context, PyTypeObject *cls, PyObject *co
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "copy_decimal",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6297,6 +6346,7 @@ _decimal_Context_copy_negate(PyObject *context, PyTypeObject *cls, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "copy_negate",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6341,6 +6391,7 @@ _decimal_Context_logb(PyObject *context, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "logb",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6399,6 +6450,7 @@ _decimal_Context_logical_invert(PyObject *context, PyTypeObject *cls, PyObject *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "logical_invert",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6444,6 +6496,7 @@ _decimal_Context_number_class(PyObject *context, PyTypeObject *cls, PyObject *co
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "number_class",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6489,6 +6542,7 @@ _decimal_Context_to_sci_string(PyObject *context, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "to_sci_string",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6534,6 +6588,7 @@ _decimal_Context_to_eng_string(PyObject *context, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "to_eng_string",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6579,6 +6634,7 @@ _decimal_Context_compare_total(PyObject *context, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compare_total",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6626,6 +6682,7 @@ _decimal_Context_compare_total_mag(PyObject *context, PyTypeObject *cls, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "compare_total_mag",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6673,6 +6730,7 @@ _decimal_Context_copy_sign(PyObject *context, PyTypeObject *cls, PyObject *const
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "copy_sign",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6741,6 +6799,7 @@ _decimal_Context_logical_and(PyObject *context, PyTypeObject *cls, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "logical_and",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6809,6 +6868,7 @@ _decimal_Context_logical_or(PyObject *context, PyTypeObject *cls, PyObject *cons
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "logical_or",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6877,6 +6937,7 @@ _decimal_Context_logical_xor(PyObject *context, PyTypeObject *cls, PyObject *con
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "logical_xor",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6924,6 +6985,7 @@ _decimal_Context_rotate(PyObject *context, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "rotate",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -6971,6 +7033,7 @@ _decimal_Context_scaleb(PyObject *context, PyTypeObject *cls, PyObject *const *a
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "scaleb",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7018,6 +7081,7 @@ _decimal_Context_shift(PyObject *context, PyTypeObject *cls, PyObject *const *ar
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "shift",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7065,6 +7129,7 @@ _decimal_Context_same_quantum(PyObject *context, PyTypeObject *cls, PyObject *co
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "same_quantum",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -7100,4 +7165,4 @@ exit:
 #ifndef _DECIMAL_CONTEXT_APPLY_METHODDEF
     #define _DECIMAL_CONTEXT_APPLY_METHODDEF
 #endif /* !defined(_DECIMAL_CONTEXT_APPLY_METHODDEF) */
-/*[clinic end generated code: output=718b1f6c20412350 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=4ff9f117bced840f input=a9049054013a1b77]*/

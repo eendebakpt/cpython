@@ -196,11 +196,16 @@ _gdbm_gdbm_nextkey(PyObject *self, PyTypeObject *cls, PyObject *const *args, Py_
     #  define KWTUPLE NULL
     #endif
 
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "s#:nextkey",
+    };
+
     static const char * const _keywords[] = {"", NULL};
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
-        .format = "s#:nextkey",
+        .pos = 1,
         .kwtuple = KWTUPLE,
+        .ext = &_parser_ext,
     };
     #undef KWTUPLE
     const char *key;
@@ -389,4 +394,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=429b5db24568292e input=a9049054013a1b77]*/
+/*[clinic end generated code: output=2a863766541735fa input=a9049054013a1b77]*/

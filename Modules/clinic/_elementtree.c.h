@@ -40,6 +40,7 @@ _elementtree_Element_append(PyObject *self, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "append",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -202,6 +203,7 @@ _elementtree_Element___setstate__(PyObject *self, PyTypeObject *cls, PyObject *c
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "__setstate__",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -249,6 +251,7 @@ _elementtree_Element_extend(PyObject *self, PyTypeObject *cls, PyObject *const *
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "extend",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -858,6 +861,7 @@ _elementtree_Element_makeelement(PyObject *self, PyTypeObject *cls, PyObject *co
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "makeelement",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1479,4 +1483,4 @@ skip_optional:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=e2e9cf288c4400f6 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=771a6ff24852d7b1 input=a9049054013a1b77]*/

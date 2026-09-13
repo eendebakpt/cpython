@@ -1011,6 +1011,7 @@ math_prod(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject *k
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "prod",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1081,6 +1082,7 @@ math_nextafter(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObje
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "nextafter",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1164,4 +1166,4 @@ math_ulp(PyObject *module, PyObject *arg)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=3452ce8caa2d1bd7 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=c193339d9c5bb6b6 input=a9049054013a1b77]*/

@@ -959,6 +959,7 @@ unicode_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "replace",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1916,4 +1917,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=9d243c63e951e31d input=a9049054013a1b77]*/
+/*[clinic end generated code: output=ac252e5d08c58afc input=a9049054013a1b77]*/

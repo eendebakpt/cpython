@@ -2150,24 +2150,24 @@ static int
 _parser_init(void *arg)
 {
     struct _PyArg_Parser *parser = (struct _PyArg_Parser *)arg;
+    struct _PyArg_ParserExt *ext = parser->ext;
+    const char *format = ext != NULL ? ext->format : NULL;
     const char * const *keywords = parser->keywords;
     assert(keywords != NULL);
-    assert(parser->pos == 0 &&
-           (parser->format == NULL || parser->fname == NULL) &&
-           parser->custom_msg == NULL &&
-           parser->min == 0 &&
-           parser->max == 0);
+    assert(format == NULL || parser->fname == NULL);
+    assert(ext == NULL ||
+           (ext->custom_msg == NULL && ext->min == 0 && ext->max == 0));
 
     int len, pos;
     if (scan_keywords(keywords, &len, &pos) < 0) {
         return -1;
     }
+    assert(parser->pos == 0 || parser->pos == pos);  // may be set statically
 
     const char *fname, *custommsg = NULL;
     int min = 0, max = 0;
-    if (parser->format) {
-        assert(parser->fname == NULL);
-        if (parse_format(parser->format, len, pos,
+    if (format) {
+        if (parse_format(format, len, pos,
                          &fname, &custommsg, &min, &max) < 0) {
             return -1;
         }
@@ -2208,11 +2208,14 @@ _parser_init(void *arg)
 
     parser->pos = pos;
     parser->fname = fname;
-    parser->custom_msg = custommsg;
-    parser->min = min;
-    parser->max = max;
-    parser->kwtuple = kwtuple;
+    if (ext != NULL) {
+        ext->custom_msg = custommsg;
+        ext->min = min;
+        ext->max = max;
+    }
     parser->is_kwtuple_owned = owned;
+    // Set last: see _PyArg_UnpackKeywords()
+    _Py_atomic_store_ptr_release(&parser->kwtuple, kwtuple);
 
     assert(parser->next == NULL);
     parser->next = _Py_atomic_load_ptr(&_PyRuntime.getargs.static_parsers);
@@ -2236,16 +2239,18 @@ parser_clear(struct _PyArg_Parser *parser)
         Py_CLEAR(parser->kwtuple);
     }
 
-    if (parser->format) {
+    struct _PyArg_ParserExt *ext = parser->ext;
+    if (ext != NULL && ext->format != NULL) {
         parser->fname = NULL;
     }
     else {
         assert(parser->fname != NULL);
     }
-    parser->custom_msg = NULL;
-    parser->pos = 0;
-    parser->min = 0;
-    parser->max = 0;
+    if (ext != NULL) {
+        ext->custom_msg = NULL;
+        ext->min = 0;
+        ext->max = 0;
+    }
     parser->is_kwtuple_owned = 0;
     parser->once.v = 0;
 }
@@ -2303,10 +2308,11 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
     assert(kwargs == NULL || kwnames == NULL);
     assert(p_va != NULL);
 
-    if (parser == NULL) {
+    if (parser == NULL || parser->ext == NULL) {
         PyErr_BadInternalCall();
         return 0;
     }
+    struct _PyArg_ParserExt *ext = parser->ext;
 
     if (kwnames != NULL && !PyTuple_Check(kwnames)) {
         PyErr_BadInternalCall();
@@ -2353,8 +2359,8 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                      nargs + nkwargs);
         return cleanreturn(0, &freelist);
     }
-    if (parser->max < nargs) {
-        if (parser->max == 0) {
+    if (ext->max < nargs) {
+        if (ext->max == 0) {
             PyErr_Format(PyExc_TypeError,
                          "%.200s%s takes no positional arguments",
                          (parser->fname == NULL) ? "function" : parser->fname,
@@ -2365,15 +2371,15 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                          "%.200s%s takes %s %d positional argument%s (%zd given)",
                          (parser->fname == NULL) ? "function" : parser->fname,
                          (parser->fname == NULL) ? "" : "()",
-                         (parser->min < parser->max) ? "at most" : "exactly",
-                         parser->max,
-                         parser->max == 1 ? "" : "s",
+                         (ext->min < ext->max) ? "at most" : "exactly",
+                         ext->max,
+                         ext->max == 1 ? "" : "s",
                          nargs);
         }
         return cleanreturn(0, &freelist);
     }
 
-    format = parser->format;
+    format = ext->format;
     assert(format != NULL || len == 0);
     /* convert tuple args and keyword args in same loop, using kwtuple to drive process */
     for (i = 0; i < len; i++) {
@@ -2412,22 +2418,22 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                 levels, msgbuf, sizeof(msgbuf), &freelist);
             Py_DECREF(current_arg);
             if (msg) {
-                seterror(i+1, msg, levels, parser->fname, parser->custom_msg);
+                seterror(i+1, msg, levels, parser->fname, ext->custom_msg);
                 return cleanreturn(0, &freelist);
             }
             continue;
         }
 
-        if (i < parser->min) {
+        if (i < ext->min) {
             /* Less arguments than required */
             if (i < pos) {
-                int min = Py_MIN(pos, parser->min);
+                int min = Py_MIN(pos, ext->min);
                 PyErr_Format(PyExc_TypeError,
                              "%.200s%s takes %s %d positional argument%s"
                              " (%zd given)",
                              (parser->fname == NULL) ? "function" : parser->fname,
                              (parser->fname == NULL) ? "" : "()",
-                             min < parser->max ? "at least" : "exactly",
+                             min < ext->max ? "at least" : "exactly",
                              min,
                              min == 1 ? "" : "s",
                              nargs);
@@ -2531,26 +2537,26 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
 
     assert(kwargs == NULL || PyDict_Check(kwargs));
     assert(kwargs == NULL || kwnames == NULL);
-
-    if (parser == NULL) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
-
-    if (kwnames != NULL && !PyTuple_Check(kwnames)) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
+    assert(kwnames == NULL || PyTuple_Check(kwnames));
+    assert(parser != NULL);
 
     if (args == NULL && nargs == 0) {
         args = buf;
     }
 
-    if (parser_init(parser) < 0) {
-        return NULL;
+    // No initialization needed for a static kwtuple
+    kwtuple = _Py_atomic_load_ptr_acquire(&parser->kwtuple);
+    if (kwtuple == NULL) {
+        if (parser_init(parser) < 0) {
+            return NULL;
+        }
+        kwtuple = parser->kwtuple;
     }
-
-    kwtuple = parser->kwtuple;
+#ifndef NDEBUG
+    for (i = 0; parser->keywords[i] && !*parser->keywords[i]; i++) {
+    }
+    assert(parser->pos == i);
+#endif
     posonly = parser->pos;
     minposonly = Py_MIN(posonly, minpos);
     maxargs = posonly + (int)PyTuple_GET_SIZE(kwtuple);

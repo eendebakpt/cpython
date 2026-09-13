@@ -414,6 +414,7 @@ mmap_mmap_flush(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "flush",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -881,4 +882,4 @@ exit:
 #ifndef MMAP_MMAP_MADVISE_METHODDEF
     #define MMAP_MMAP_MADVISE_METHODDEF
 #endif /* !defined(MMAP_MMAP_MADVISE_METHODDEF) */
-/*[clinic end generated code: output=1122b93314aebc5c input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6a90e7a6c88f02b0 input=a9049054013a1b77]*/

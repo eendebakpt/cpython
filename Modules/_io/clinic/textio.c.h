@@ -65,6 +65,7 @@ _io__TextIOBase_read(PyObject *self, PyTypeObject *cls, PyObject *const *args, P
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "read",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -120,6 +121,7 @@ _io__TextIOBase_readline(PyObject *self, PyTypeObject *cls, PyObject *const *arg
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "readline",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -175,6 +177,7 @@ _io__TextIOBase_write(PyObject *self, PyTypeObject *cls, PyObject *const *args, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "write",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1362,4 +1365,4 @@ _io_TextIOWrapper_buffer_get(PyObject *self, void *Py_UNUSED(context))
 
     return return_value;
 }
-/*[clinic end generated code: output=e93032a0691ff0e4 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=f97c9aaf079921df input=a9049054013a1b77]*/

@@ -49,6 +49,7 @@ _opcode_stack_effect(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "stack_effect",
+        .pos = 2,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -776,4 +777,4 @@ _opcode_get_executor(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=a11f02989c3175d7 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=51336bbb5d323694 input=a9049054013a1b77]*/

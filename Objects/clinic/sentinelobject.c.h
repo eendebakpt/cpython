@@ -39,6 +39,7 @@ sentinel_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sentinel",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -69,4 +70,4 @@ skip_optional_kwonly:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=958842ece254c82f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=1ef955453ddb9440 input=a9049054013a1b77]*/

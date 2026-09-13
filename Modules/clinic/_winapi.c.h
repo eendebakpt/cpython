@@ -208,11 +208,15 @@ _winapi_CreateEventW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     #  define KWTUPLE NULL
     #endif  // !Py_BUILD_CORE
 
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_POINTER "iiO&:CreateEventW",
+    };
+
     static const char * const _keywords[] = {"security_attributes", "manual_reset", "initial_state", "name", NULL};
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
-        .format = "" F_POINTER "iiO&:CreateEventW",
         .kwtuple = KWTUPLE,
+        .ext = &_parser_ext,
     };
     #undef KWTUPLE
     LPSECURITY_ATTRIBUTES security_attributes;
@@ -424,11 +428,15 @@ _winapi_CreateMutexW(PyObject *module, PyObject *const *args, Py_ssize_t nargs, 
     #  define KWTUPLE NULL
     #endif  // !Py_BUILD_CORE
 
+    static _PyArg_ParserExt _parser_ext = {
+        .format = "" F_POINTER "iO&:CreateMutexW",
+    };
+
     static const char * const _keywords[] = {"security_attributes", "initial_owner", "name", NULL};
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
-        .format = "" F_POINTER "iO&:CreateMutexW",
         .kwtuple = KWTUPLE,
+        .ext = &_parser_ext,
     };
     #undef KWTUPLE
     LPSECURITY_ATTRIBUTES security_attributes;
@@ -3057,4 +3065,4 @@ _winapi_GetTickCount64(PyObject *module, PyObject *Py_UNUSED(ignored))
 #ifndef _WINAPI_GETSHORTPATHNAME_METHODDEF
     #define _WINAPI_GETSHORTPATHNAME_METHODDEF
 #endif /* !defined(_WINAPI_GETSHORTPATHNAME_METHODDEF) */
-/*[clinic end generated code: output=8173751196d44211 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6de1959f8798c036 input=a9049054013a1b77]*/

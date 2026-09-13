@@ -40,6 +40,7 @@ long_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "int",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -493,4 +494,4 @@ int_is_integer(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return int_is_integer_impl(self);
 }
-/*[clinic end generated code: output=d95766fb7ff46963 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=aee5104d97f803dd input=a9049054013a1b77]*/

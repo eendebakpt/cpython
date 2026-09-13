@@ -59,6 +59,7 @@ _IGNORED = {
 _OTHER_SUPPORTED_TYPES = {
     # Holds tuple of strings, which we statically initialize:
     '_PyArg_Parser',
+    '_PyArg_ParserExt',
     # Uses of these should be const, but we don't worry about it.
     'PyModuleDef',
     'PyModuleDef_Slot[]',

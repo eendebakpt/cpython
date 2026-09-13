@@ -555,6 +555,7 @@ builtin_eval(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "eval",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -636,6 +637,7 @@ builtin_exec(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "exec",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -895,6 +897,7 @@ builtin_iter(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "iter",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -975,6 +978,7 @@ builtin_aiter(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "aiter",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1445,6 +1449,7 @@ builtin_sum(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObject 
     static _PyArg_Parser _parser = {
         .keywords = _keywords,
         .fname = "sum",
+        .pos = 1,
         .kwtuple = KWTUPLE,
     };
     #undef KWTUPLE
@@ -1539,4 +1544,4 @@ builtin_issubclass(PyObject *module, PyObject *const *args, Py_ssize_t nargs)
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=5fb1ac6a4253ee2f input=a9049054013a1b77]*/
+/*[clinic end generated code: output=fbf8ab66d1750fc4 input=a9049054013a1b77]*/
