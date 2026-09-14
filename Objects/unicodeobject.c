@@ -2346,7 +2346,7 @@ _PyUnicode_FindMaxChar(PyObject *unicode, Py_ssize_t start, Py_ssize_t end)
 /* Ensure that a string uses the most efficient storage, if it is not the
    case: create a new string with of the right kind. Write NULL into *p_unicode
    on error. */
-static void
+Py_NO_INLINE static void
 unicode_adjust_maxchar(PyObject **p_unicode)
 {
     PyObject *unicode, *copy;
@@ -9959,10 +9959,7 @@ any_find_slice(PyObject* s1, PyObject* s2,
     if (direction > 0) {
         switch (kind1) {
         case PyUnicode_1BYTE_KIND:
-            if (PyUnicode_IS_ASCII(s1) && PyUnicode_IS_ASCII(s2))
-                result = asciilib_find_slice(buf1, len1, buf2, len2, start, end);
-            else
-                result = ucs1lib_find_slice(buf1, len1, buf2, len2, start, end);
+            result = ucs1lib_find_slice(buf1, len1, buf2, len2, start, end);
             break;
         case PyUnicode_2BYTE_KIND:
             result = ucs2lib_find_slice(buf1, len1, buf2, len2, start, end);
@@ -9977,10 +9974,7 @@ any_find_slice(PyObject* s1, PyObject* s2,
     else {
         switch (kind1) {
         case PyUnicode_1BYTE_KIND:
-            if (PyUnicode_IS_ASCII(s1) && PyUnicode_IS_ASCII(s2))
-                result = asciilib_rfind_slice(buf1, len1, buf2, len2, start, end);
-            else
-                result = ucs1lib_rfind_slice(buf1, len1, buf2, len2, start, end);
+            result = ucs1lib_rfind_slice(buf1, len1, buf2, len2, start, end);
             break;
         case PyUnicode_2BYTE_KIND:
             result = ucs2lib_rfind_slice(buf1, len1, buf2, len2, start, end);
@@ -10859,10 +10853,7 @@ anylib_find(int kind, PyObject *str1, const void *buf1, Py_ssize_t len1,
 {
     switch (kind) {
     case PyUnicode_1BYTE_KIND:
-        if (PyUnicode_IS_ASCII(str1) && PyUnicode_IS_ASCII(str2))
-            return asciilib_find(buf1, len1, buf2, len2, offset);
-        else
-            return ucs1lib_find(buf1, len1, buf2, len2, offset);
+        return ucs1lib_find(buf1, len1, buf2, len2, offset);
     case PyUnicode_2BYTE_KIND:
         return ucs2lib_find(buf1, len1, buf2, len2, offset);
     case PyUnicode_4BYTE_KIND:

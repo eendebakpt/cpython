@@ -11,8 +11,9 @@
 #define STRINGLIB_CHAR           Py_UCS1
 #define STRINGLIB_TYPE_NAME      "unicode"
 #define STRINGLIB_PARSE_CODE     "U"
-#define STRINGLIB_ISSPACE        Py_UNICODE_ISSPACE
-#define STRINGLIB_ISLINEBREAK    BLOOM_LINEBREAK
+/* The string is ASCII: no need to check for non-ASCII characters */
+#define STRINGLIB_ISSPACE(ch)    _Py_ascii_whitespace[(ch)]
+#define STRINGLIB_ISLINEBREAK(ch) ascii_linebreak[(ch)]
 #define STRINGLIB_ISDECIMAL      Py_UNICODE_ISDECIMAL
 #define STRINGLIB_TODECIMAL      Py_UNICODE_TODECIMAL
 #define STRINGLIB_STR            PyUnicode_1BYTE_DATA
