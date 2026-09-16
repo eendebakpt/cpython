@@ -3217,6 +3217,10 @@ long_divrem(PyLongObject *a, PyLongObject *b,
     Py_ssize_t size_a = _PyLong_DigitCount(a), size_b = _PyLong_DigitCount(b);
     PyLongObject *z;
 
+    /* prem may be NULL: the caller then wants only the quotient, and no
+       remainder object is built on any path.  pdiv is always required. */
+    assert(pdiv != NULL);
+
     if (size_b == 0) {
         PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
         return -1;
@@ -3323,7 +3327,10 @@ long_rem(PyLongObject *a, PyLongObject *b, PyLongObject **prem)
 }
 
 /* Unsigned int division with remainder -- the algorithm.  The arguments v1
-   and w1 should satisfy 2 <= _PyLong_DigitCount(w1) <= _PyLong_DigitCount(v1). */
+   and w1 should satisfy 2 <= _PyLong_DigitCount(w1) <= _PyLong_DigitCount(v1).
+
+   prem may be NULL, in which case the remainder is neither unshifted nor
+   returned; only the quotient is produced. */
 
 static PyLongObject *
 x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
@@ -4557,6 +4564,14 @@ l_divmod(PyLongObject *v, PyLongObject *w,
     }
     if (long_divrem(v, w, &div, &mod) < 0)
         return -1;
+    /* The shortcut above drops the remainder whenever v and w have the same
+       sign, on the grounds that the correction below cannot fire then.  That
+       premise cannot be checked there -- the remainder is deliberately not
+       computed -- so check it here, on every same-sign divmod() and %, where
+       the remainder is in hand. */
+    assert(!_PyLong_SameSign(v, w) ||
+           !((_PyLong_IsNegative(mod) && _PyLong_IsPositive(w)) ||
+             (_PyLong_IsPositive(mod) && _PyLong_IsNegative(w))));
     if ((_PyLong_IsNegative(mod) && _PyLong_IsPositive(w)) ||
         (_PyLong_IsPositive(mod) && _PyLong_IsNegative(w))) {
         PyLongObject *temp;
