@@ -3317,13 +3317,26 @@ long_rem(PyLongObject *a, PyLongObject *b, PyLongObject **prem)
 /* Unsigned int division with remainder -- the algorithm.  The arguments v1
    and w1 should satisfy 2 <= _PyLong_DigitCount(w1) <= _PyLong_DigitCount(v1). */
 
+/* Digit i of `a` as it would look after shifting `a` left by d bits, where
+   digit -1 reads as zero.  d == 0 is the identity. */
+static inline digit
+nrm_digit(const digit *a, Py_ssize_t i, int d)
+{
+    if (d == 0) {
+        return a[i];
+    }
+    assert(0 < d && d < PyLong_SHIFT);
+    return (digit)((((twodigits)a[i] << d) |
+                    (i > 0 ? (a[i-1] >> (PyLong_SHIFT - d)) : 0)) & PyLong_MASK);
+}
+
 static PyLongObject *
 x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
 {
-    PyLongObject *v, *w, *a;
-    Py_ssize_t i, k, size_v, size_w;
+    PyLongObject *v, *a, *rem;
+    Py_ssize_t i, j, k, size_v, size_w;
     int d;
-    digit wm1, wm2, carry, q, r, vtop, *v0, *vk, *w0, *ak;
+    digit wm1, wm2, carry, q, r, vtop, *v0, *w0, *ak, *vk;
     twodigits vv;
     sdigit zhi;
     stwodigits z;
@@ -3334,65 +3347,74 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
        digit is >= PyLong_BASE: the max value for q is PyLong_BASE+1, and
        that won't overflow a digit. */
 
-    /* allocate space; w will also be used to hold the final remainder */
     size_v = _PyLong_DigitCount(v1);
     size_w = _PyLong_DigitCount(w1);
     assert(size_v >= size_w && size_w >= 2); /* Assert checks by div() */
+
+    /* Algorithm D wants the divisor's top digit to be >= PyLong_BASE/2, so
+       that the quotient-digit estimate below is off by at most one.  The
+       textbook way to get that is to shift both operands left by d bits and
+       to shift the remainder back down at the end, which costs three passes
+       over the digits and a second big allocation.
+
+       Only the three digits feeding the estimate actually have to be
+       normalized, though, and those can be formed on the fly by nrm_digit().
+       The subtract-and-borrow below is exact arithmetic, so it works on the
+       unshifted digits of w1 just as well -- and the remainder then comes
+       out unshifted for free. */
+    w0 = w1->long_value.ob_digit;
+    d = PyLong_SHIFT - bit_length_digit(w0[size_w-1]);
+    wm1 = nrm_digit(w0, size_w-1, d);
+    wm2 = nrm_digit(w0, size_w-2, d);
+
+    /* v is modified in place, so it still needs a copy, one digit longer. */
     v = long_alloc(size_v+1);
     if (v == NULL) {
         *prem = NULL;
         return NULL;
     }
-    w = long_alloc(size_w);
-    if (w == NULL) {
-        Py_DECREF(v);
-        *prem = NULL;
-        return NULL;
-    }
-
-    /* normalize: shift w1 left so that its top digit is >= PyLong_BASE/2.
-       shift v1 left by the same amount.  Results go into w and v. */
-    d = PyLong_SHIFT - bit_length_digit(w1->long_value.ob_digit[size_w-1]);
-    carry = v_lshift(w->long_value.ob_digit, w1->long_value.ob_digit, size_w, d);
-    assert(carry == 0);
-    carry = v_lshift(v->long_value.ob_digit, v1->long_value.ob_digit, size_v, d);
-    if (carry != 0 || v->long_value.ob_digit[size_v-1] >= w->long_value.ob_digit[size_w-1]) {
-        v->long_value.ob_digit[size_v] = carry;
+    v0 = v->long_value.ob_digit;
+    memcpy(v0, v1->long_value.ob_digit, (size_t)size_v * sizeof(digit));
+    /* Not shifting means the extra digit is always zero, but the decision to
+       use it is the same one the shifted code makes: extend when normalizing
+       would have carried out of the top digit, or when the normalized top
+       digit is not already below the divisor's. */
+    v0[size_v] = 0;
+    carry = (d == 0) ? 0
+                     : v1->long_value.ob_digit[size_v-1] >> (PyLong_SHIFT - d);
+    if (carry != 0 || nrm_digit(v0, size_v-1, d) >= wm1) {
         size_v++;
     }
 
-    /* Now v->long_value.ob_digit[size_v-1] < w->long_value.ob_digit[size_w-1], so quotient has
-       at most (and usually exactly) k = size_v - size_w digits. */
+    /* Now the normalized v0[size_v-1] < wm1, so the quotient has at most
+       (and usually exactly) k = size_v - size_w digits. */
     k = size_v - size_w;
     assert(k >= 0);
     a = long_alloc(k);
     if (a == NULL) {
-        Py_DECREF(w);
         Py_DECREF(v);
         *prem = NULL;
         return NULL;
     }
     a->long_value.ob_digit[0] = 0;
-    v0 = v->long_value.ob_digit;
-    w0 = w->long_value.ob_digit;
-    wm1 = w0[size_w-1];
-    wm2 = w0[size_w-2];
     for (vk = v0+k, ak = a->long_value.ob_digit + k; vk-- > v0;) {
         /* inner loop: divide vk[0:size_w+1] by w0[0:size_w], giving
            single-digit quotient q, remainder in vk[0:size_w]. */
 
         SIGCHECK({
                 Py_DECREF(a);
-                Py_DECREF(w);
                 Py_DECREF(v);
                 *prem = NULL;
                 return NULL;
             });
 
-        /* estimate quotient digit q; may overestimate by 1 (rare) */
+        /* estimate quotient digit q; may overestimate by 1 (rare).
+           nrm_digit() is indexed from the base of v0, not from vk, so that
+           the digit below the window is still folded in. */
+        j = vk - v0;
         vtop = vk[size_w];
-        assert(vtop <= wm1);
-        vv = ((twodigits)vtop << PyLong_SHIFT) | vk[size_w-1];
+        vv = ((twodigits)nrm_digit(v0, j+size_w, d) << PyLong_SHIFT)
+             | nrm_digit(v0, j+size_w-1, d);
         /* The code used to compute the remainder via
          *     r = (digit)(vv - (twodigits)wm1 * q);
          * and compilers generally generated code to do the * and -.
@@ -3403,7 +3425,7 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         q = (digit)(vv / wm1);
         r = (digit)(vv % wm1);
         while ((twodigits)wm2 * q > (((twodigits)r << PyLong_SHIFT)
-                                     | vk[size_w-2])) {
+                                     | nrm_digit(v0, j+size_w-2, d))) {
             --q;
             r += wm1;
             if (r >= PyLong_BASE)
@@ -3440,12 +3462,18 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         *--ak = q;
     }
 
-    /* unshift remainder; we reuse w to store the result */
-    carry = v_rshift(w0, v0, size_w, d);
-    assert(carry==0);
+    /* The remainder needs no unshifting: it is just v0[0:size_w]. */
+    rem = long_alloc(size_w);
+    if (rem == NULL) {
+        Py_DECREF(a);
+        Py_DECREF(v);
+        *prem = NULL;
+        return NULL;
+    }
+    memcpy(rem->long_value.ob_digit, v0, (size_t)size_w * sizeof(digit));
     Py_DECREF(v);
 
-    *prem = long_normalize(w);
+    *prem = long_normalize(rem);
     return long_normalize(a);
 }
 
