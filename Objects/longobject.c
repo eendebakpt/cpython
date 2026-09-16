@@ -37,7 +37,8 @@ class int "PyObject *" "&PyLong_Type"
 
 // Forward declarations
 static PyLongObject* long_neg(PyLongObject *v);
-static PyLongObject *x_divrem(PyLongObject *, PyLongObject *, PyLongObject **);
+static PyLongObject *x_divrem(PyLongObject *, PyLongObject *, PyLongObject **,
+                              int *);
 static PyObject* long_long(PyObject *v);
 static PyObject* long_lshift_int64(PyLongObject *a, int64_t shiftby);
 
@@ -1935,6 +1936,20 @@ v_rshift(digit *z, digit *a, Py_ssize_t m, int d)
     return carry;
 }
 
+/* Return 1 if the digits a[0:m] are all zero, 0 otherwise. */
+static int
+v_iszero(digit *a, Py_ssize_t m)
+{
+    Py_ssize_t i;
+
+    for (i = 0; i < m; i++) {
+        if (a[i] != 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 /* Divide long pin, w/ size digits, by non-zero digit n, storing quotient
    in pout, and returning the remainder.  pin and pout point at the LSD.
    It's OK for pin == pout on entry, which saves oodles of mallocs/frees in
@@ -3212,14 +3227,20 @@ PyLong_FromUnicodeObject(PyObject *u, int base)
 
 static int
 long_divrem(PyLongObject *a, PyLongObject *b,
-            PyLongObject **pdiv, PyLongObject **prem)
+            PyLongObject **pdiv, PyLongObject **prem, int *rem_is_zero)
 {
     Py_ssize_t size_a = _PyLong_DigitCount(a), size_b = _PyLong_DigitCount(b);
     PyLongObject *z;
 
     /* prem may be NULL: the caller then wants only the quotient, and no
-       remainder object is built on any path.  pdiv is always required. */
+       remainder object is built on any path.  pdiv is always required.
+
+       A caller that passes prem == NULL may still pass rem_is_zero, to be told
+       whether the remainder it is throwing away was zero.  That single bit is
+       far cheaper than the remainder itself, and it is all that floor division
+       needs in order to round a truncated quotient down. */
     assert(pdiv != NULL);
+    assert(prem == NULL || rem_is_zero == NULL);
 
     if (size_b == 0) {
         PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
@@ -3228,12 +3249,15 @@ long_divrem(PyLongObject *a, PyLongObject *b,
     if (size_a < size_b ||
         (size_a == size_b &&
          a->long_value.ob_digit[size_a-1] < b->long_value.ob_digit[size_b-1])) {
-        /* |a| < |b|. */
+        /* |a| < |b|, so the remainder is a itself. */
         if (prem != NULL) {
             *prem = (PyLongObject *)long_long((PyObject *)a);
             if (*prem == NULL) {
                 return -1;
             }
+        }
+        else if (rem_is_zero != NULL) {
+            *rem_is_zero = _PyLong_IsZero(a);
         }
         *pdiv = (PyLongObject*)_PyLong_GetZero();
         return 0;
@@ -3250,9 +3274,12 @@ long_divrem(PyLongObject *a, PyLongObject *b,
                 return -1;
             }
         }
+        else if (rem_is_zero != NULL) {
+            *rem_is_zero = (rem == 0);
+        }
     }
     else {
-        z = x_divrem(a, b, prem);
+        z = x_divrem(a, b, prem, rem_is_zero);
         if (z == NULL)
             return -1;
         if (prem != NULL) {
@@ -3310,7 +3337,7 @@ long_rem(PyLongObject *a, PyLongObject *b, PyLongObject **prem)
     }
     else {
         /* Slow path using divrem. */
-        Py_XDECREF(x_divrem(a, b, prem));
+        Py_XDECREF(x_divrem(a, b, prem, NULL));
         *prem = maybe_small_long(*prem);
         if (*prem == NULL)
             return -1;
@@ -3330,10 +3357,12 @@ long_rem(PyLongObject *a, PyLongObject *b, PyLongObject **prem)
    and w1 should satisfy 2 <= _PyLong_DigitCount(w1) <= _PyLong_DigitCount(v1).
 
    prem may be NULL, in which case the remainder is neither unshifted nor
-   returned; only the quotient is produced. */
+   returned; only the quotient is produced.  rem_is_zero, if given, is then
+   set to whether that discarded remainder was zero. */
 
 static PyLongObject *
-x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
+x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem,
+         int *rem_is_zero)
 {
     PyLongObject *v, *w, *a;
     Py_ssize_t i, k, size_v, size_w;
@@ -3465,7 +3494,13 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
 
     if (prem == NULL) {
         /* The caller only wants the quotient, so the remainder's value is
-           never inspected: skip the O(size_w) unshift and throw it away. */
+           never inspected: skip the O(size_w) unshift and throw it away.
+           Shifting right by d cannot turn a nonzero value into zero or the
+           other way round, so whether the remainder is zero can still be read
+           off v0[0:size_w] as it stands, normalised by d bits. */
+        if (rem_is_zero != NULL) {
+            *rem_is_zero = v_iszero(v0, size_w);
+        }
         Py_DECREF(w);
         Py_DECREF(v);
         return long_normalize(a);
@@ -3474,6 +3509,11 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
     /* unshift remainder; we reuse w to store the result */
     carry = v_rshift(w0, v0, size_w, d);
     assert(carry==0);
+    /* The quotient-only exit above reports the remainder's zero-ness from the
+       still-shifted digits, which it has no way to check against the real
+       thing.  Check it here, on every divmod() and %, where both forms are in
+       hand. */
+    assert(v_iszero(v0, size_w) == v_iszero(w0, size_w));
     Py_DECREF(v);
 
     *prem = long_normalize(w);
@@ -4548,30 +4588,46 @@ l_divmod(PyLongObject *v, PyLongObject *w,
         return pylong_int_divmod(v, w, pdiv, pmod);
     }
 #endif
-    if (pmod == NULL && _PyLong_SameSign(v, w)) {
-        /* Floor division only.  long_divrem() gives the remainder the sign of
-           v, so the correction below can fire only when v and w have opposite
-           signs.  With matching signs the remainder is dead, and asking
-           long_divrem() not to build it saves an allocation and, in
-           x_divrem(), the O(size_w) pass that shifts it back down. */
-        if (long_divrem(v, w, &div, NULL) < 0)
+    if (pmod == NULL) {
+        /* Floor division only: the remainder is dead, but the correction
+           below still has to be applied, so something has to stand in for it.
+           long_divrem() gives the remainder the sign of v, so the correction
+           fires exactly when v and w have opposite signs and the remainder is
+           nonzero -- its value never matters, only that one bit.  And
+           `mod += w` is pointless when the caller is discarding mod.
+
+           So ask long_divrem() for the quotient and the bit.  It can produce
+           the bit without building a remainder object and, in x_divrem(),
+           without the O(size_w) pass that shifts the remainder back down. */
+        int rem_is_zero;
+
+        if (long_divrem(v, w, &div, NULL, &rem_is_zero) < 0)
             return -1;
+        if (!rem_is_zero && !_PyLong_SameSign(v, w)) {
+            /* Truncating division rounded towards zero, floor division rounds
+               down; div <= 0 here, so that means div -= 1. */
+            PyLongObject *temp;
+            temp = long_sub(div, (PyLongObject *)_PyLong_GetOne());
+            Py_SETREF(div, temp);
+            if (div == NULL)
+                return -1;
+        }
         if (pdiv != NULL)
             *pdiv = div;
         else
             Py_DECREF(div);
         return 0;
     }
-    if (long_divrem(v, w, &div, &mod) < 0)
+    if (long_divrem(v, w, &div, &mod, NULL) < 0)
         return -1;
-    /* The shortcut above drops the remainder whenever v and w have the same
-       sign, on the grounds that the correction below cannot fire then.  That
-       premise cannot be checked there -- the remainder is deliberately not
-       computed -- so check it here, on every same-sign divmod() and %, where
-       the remainder is in hand. */
-    assert(!_PyLong_SameSign(v, w) ||
-           !((_PyLong_IsNegative(mod) && _PyLong_IsPositive(w)) ||
-             (_PyLong_IsPositive(mod) && _PyLong_IsNegative(w))));
+    /* The shortcut above replaces the test below by a test on the signs of v
+       and w and on whether the remainder is zero.  That rests on long_divrem()
+       giving the remainder the sign of v, which the shortcut cannot check for
+       itself -- it deliberately never computes the remainder -- so check the
+       two tests agree here, on every divmod() and %, where mod is in hand. */
+    assert((((_PyLong_IsNegative(mod) && _PyLong_IsPositive(w)) ||
+             (_PyLong_IsPositive(mod) && _PyLong_IsNegative(w))) != 0)
+           == ((!_PyLong_IsZero(mod) && !_PyLong_SameSign(v, w)) != 0));
     if ((_PyLong_IsNegative(mod) && _PyLong_IsPositive(w)) ||
         (_PyLong_IsPositive(mod) && _PyLong_IsNegative(w))) {
         PyLongObject *temp;
@@ -4862,7 +4918,7 @@ long_true_divide(PyObject *v, PyObject *w)
     }
     else {
         PyLongObject *div, *rem;
-        div = x_divrem(x, b, &rem);
+        div = x_divrem(x, b, &rem, NULL);
         Py_SETREF(x, div);
         if (x == NULL)
             goto error;
@@ -6194,7 +6250,7 @@ _PyLong_DivmodNear(PyObject *a, PyObject *b)
     /* Do a and b have different signs?  If so, quotient is negative. */
     quo_is_neg = (_PyLong_IsNegative((PyLongObject *)a)) != (_PyLong_IsNegative((PyLongObject *)b));
 
-    if (long_divrem((PyLongObject*)a, (PyLongObject*)b, &quo, &rem) < 0)
+    if (long_divrem((PyLongObject*)a, (PyLongObject*)b, &quo, &rem, NULL) < 0)
         goto error;
 
     /* compare twice the remainder with the divisor, to see
