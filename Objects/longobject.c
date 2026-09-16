@@ -3225,9 +3225,11 @@ long_divrem(PyLongObject *a, PyLongObject *b,
         (size_a == size_b &&
          a->long_value.ob_digit[size_a-1] < b->long_value.ob_digit[size_b-1])) {
         /* |a| < |b|. */
-        *prem = (PyLongObject *)long_long((PyObject *)a);
-        if (*prem == NULL) {
-            return -1;
+        if (prem != NULL) {
+            *prem = (PyLongObject *)long_long((PyObject *)a);
+            if (*prem == NULL) {
+                return -1;
+            }
         }
         *pdiv = (PyLongObject*)_PyLong_GetZero();
         return 0;
@@ -3237,17 +3239,21 @@ long_divrem(PyLongObject *a, PyLongObject *b,
         z = divrem1(a, b->long_value.ob_digit[0], &rem);
         if (z == NULL)
             return -1;
-        *prem = (PyLongObject *) PyLong_FromLong((long)rem);
-        if (*prem == NULL) {
-            Py_DECREF(z);
-            return -1;
+        if (prem != NULL) {
+            *prem = (PyLongObject *) PyLong_FromLong((long)rem);
+            if (*prem == NULL) {
+                Py_DECREF(z);
+                return -1;
+            }
         }
     }
     else {
         z = x_divrem(a, b, prem);
-        *prem = maybe_small_long(*prem);
         if (z == NULL)
             return -1;
+        if (prem != NULL) {
+            *prem = maybe_small_long(*prem);
+        }
     }
     /* Set the signs.
        The quotient z has the sign of a*b;
@@ -3256,11 +3262,13 @@ long_divrem(PyLongObject *a, PyLongObject *b,
     if ((_PyLong_IsNegative(a)) != (_PyLong_IsNegative(b))) {
         _PyLong_Negate(&z);
         if (z == NULL) {
-            Py_CLEAR(*prem);
+            if (prem != NULL) {
+                Py_CLEAR(*prem);
+            }
             return -1;
         }
     }
-    if (_PyLong_IsNegative(a) && !_PyLong_IsZero(*prem)) {
+    if (prem != NULL && _PyLong_IsNegative(a) && !_PyLong_IsZero(*prem)) {
         _PyLong_Negate(prem);
         if (*prem == NULL) {
             Py_DECREF(z);
@@ -3340,13 +3348,17 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
     assert(size_v >= size_w && size_w >= 2); /* Assert checks by div() */
     v = long_alloc(size_v+1);
     if (v == NULL) {
-        *prem = NULL;
+        if (prem != NULL) {
+            *prem = NULL;
+        }
         return NULL;
     }
     w = long_alloc(size_w);
     if (w == NULL) {
         Py_DECREF(v);
-        *prem = NULL;
+        if (prem != NULL) {
+            *prem = NULL;
+        }
         return NULL;
     }
 
@@ -3369,7 +3381,9 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
     if (a == NULL) {
         Py_DECREF(w);
         Py_DECREF(v);
-        *prem = NULL;
+        if (prem != NULL) {
+            *prem = NULL;
+        }
         return NULL;
     }
     a->long_value.ob_digit[0] = 0;
@@ -3385,7 +3399,9 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
                 Py_DECREF(a);
                 Py_DECREF(w);
                 Py_DECREF(v);
-                *prem = NULL;
+                if (prem != NULL) {
+                    *prem = NULL;
+                }
                 return NULL;
             });
 
@@ -3438,6 +3454,14 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         /* store quotient digit */
         assert(q < PyLong_BASE);
         *--ak = q;
+    }
+
+    if (prem == NULL) {
+        /* The caller only wants the quotient, so the remainder's value is
+           never inspected: skip the O(size_w) unshift and throw it away. */
+        Py_DECREF(w);
+        Py_DECREF(v);
+        return long_normalize(a);
     }
 
     /* unshift remainder; we reuse w to store the result */
@@ -4517,6 +4541,20 @@ l_divmod(PyLongObject *v, PyLongObject *w,
         return pylong_int_divmod(v, w, pdiv, pmod);
     }
 #endif
+    if (pmod == NULL && _PyLong_SameSign(v, w)) {
+        /* Floor division only.  long_divrem() gives the remainder the sign of
+           v, so the correction below can fire only when v and w have opposite
+           signs.  With matching signs the remainder is dead, and asking
+           long_divrem() not to build it saves an allocation and, in
+           x_divrem(), the O(size_w) pass that shifts it back down. */
+        if (long_divrem(v, w, &div, NULL) < 0)
+            return -1;
+        if (pdiv != NULL)
+            *pdiv = div;
+        else
+            Py_DECREF(div);
+        return 0;
+    }
     if (long_divrem(v, w, &div, &mod) < 0)
         return -1;
     if ((_PyLong_IsNegative(mod) && _PyLong_IsPositive(w)) ||
