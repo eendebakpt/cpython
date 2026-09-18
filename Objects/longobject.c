@@ -3314,16 +3314,28 @@ long_rem(PyLongObject *a, PyLongObject *b, PyLongObject **prem)
     return 0;
 }
 
+/* Digit i of `a` as it would be after shifting `a` left by d bits, for
+   0 <= d < PyLong_SHIFT.  Digits below a[0] read as zero. */
+static inline digit
+nrm_digit(const digit *a, Py_ssize_t i, int d)
+{
+    if (d == 0) {
+        return a[i];
+    }
+    digit low = i > 0 ? a[i-1] >> (PyLong_SHIFT - d) : 0;
+    return ((a[i] << d) | low) & PyLong_MASK;
+}
+
 /* Unsigned int division with remainder -- the algorithm.  The arguments v1
    and w1 should satisfy 2 <= _PyLong_DigitCount(w1) <= _PyLong_DigitCount(v1). */
 
-static PyLongObject *
-x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
+static inline Py_ALWAYS_INLINE PyLongObject *
+x_divrem_impl(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem, int lazy)
 {
     PyLongObject *v, *w, *a;
     Py_ssize_t i, k, size_v, size_w;
-    int d;
-    digit wm1, wm2, carry, q, r, vtop, *v0, *vk, *w0, *ak;
+    int d, s;
+    digit wm1, wm2, carry, q, r, vtop, vlow, *v0, *vk, *w0, *ak;
     twodigits vv;
     sdigit zhi;
     stwodigits z;
@@ -3350,18 +3362,41 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         return NULL;
     }
 
-    /* normalize: shift w1 left so that its top digit is >= PyLong_BASE/2.
-       shift v1 left by the same amount.  Results go into w and v. */
+    /* normalize: the quotient digit estimates below need the top digit of
+       the divisor to be >= PyLong_BASE/2, which takes a left shift by d bits.
+
+       The textbook way is to shift both operands, and to shift the remainder
+       back at the end: three passes over the digits, which dominate the cost
+       when the quotient is short.  In that case we don't shift at all.  Only
+       the three digits that feed each estimate have to be normalized, and
+       they are formed on the fly; everything else is exact arithmetic, which
+       works on the unshifted digits just as well.  With a long quotient the
+       per-digit cost of that would outweigh the shifts saved. */
     d = PyLong_SHIFT - bit_length_digit(w1->long_value.ob_digit[size_w-1]);
-    carry = v_lshift(w->long_value.ob_digit, w1->long_value.ob_digit, size_w, d);
-    assert(carry == 0);
-    carry = v_lshift(v->long_value.ob_digit, v1->long_value.ob_digit, size_v, d);
-    if (carry != 0 || v->long_value.ob_digit[size_v-1] >= w->long_value.ob_digit[size_w-1]) {
-        v->long_value.ob_digit[size_v] = carry;
+    v0 = v->long_value.ob_digit;
+    if (lazy) {
+        /* s is the shift still to be applied to the digits we look at */
+        s = d;
+        w0 = w1->long_value.ob_digit;
+        memcpy(v0, v1->long_value.ob_digit, size_v * sizeof(digit));
+        carry = v0[size_v-1] >> (PyLong_SHIFT - d);
+    }
+    else {
+        s = 0;
+        w0 = w->long_value.ob_digit;
+        carry = v_lshift(w0, w1->long_value.ob_digit, size_w, d);
+        assert(carry == 0);
+        carry = v_lshift(v0, v1->long_value.ob_digit, size_v, d);
+    }
+    wm1 = nrm_digit(w0, size_w-1, s);
+    wm2 = nrm_digit(w0, size_w-2, s);
+    if (carry != 0 || nrm_digit(v0, size_v-1, s) >= wm1) {
+        /* unshifted, the extra digit is zero: carry is its normalized form */
+        v0[size_v] = lazy ? 0 : carry;
         size_v++;
     }
 
-    /* Now v->long_value.ob_digit[size_v-1] < w->long_value.ob_digit[size_w-1], so quotient has
+    /* Now the normalized v0[size_v-1] < wm1, so quotient has
        at most (and usually exactly) k = size_v - size_w digits. */
     k = size_v - size_w;
     assert(k >= 0);
@@ -3373,10 +3408,6 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         return NULL;
     }
     a->long_value.ob_digit[0] = 0;
-    v0 = v->long_value.ob_digit;
-    w0 = w->long_value.ob_digit;
-    wm1 = w0[size_w-1];
-    wm2 = w0[size_w-2];
     for (vk = v0+k, ak = a->long_value.ob_digit + k; vk-- > v0;) {
         /* inner loop: divide vk[0:size_w+1] by w0[0:size_w], giving
            single-digit quotient q, remainder in vk[0:size_w]. */
@@ -3391,8 +3422,14 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
 
         /* estimate quotient digit q; may overestimate by 1 (rare) */
         vtop = vk[size_w];
-        assert(vtop <= wm1);
         vv = ((twodigits)vtop << PyLong_SHIFT) | vk[size_w-1];
+        vlow = vk[size_w-2];
+        if (s != 0) {
+            /* normalize the three digits the estimate looks at */
+            vv = (vv << s) | (vlow >> (PyLong_SHIFT - s));
+            vlow = nrm_digit(v0, (vk - v0) + size_w-2, s);
+        }
+        assert((vv >> PyLong_SHIFT) <= wm1);
         /* The code used to compute the remainder via
          *     r = (digit)(vv - (twodigits)wm1 * q);
          * and compilers generally generated code to do the * and -.
@@ -3403,7 +3440,7 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         q = (digit)(vv / wm1);
         r = (digit)(vv % wm1);
         while ((twodigits)wm2 * q > (((twodigits)r << PyLong_SHIFT)
-                                     | vk[size_w-2])) {
+                                     | vlow)) {
             --q;
             r += wm1;
             if (r >= PyLong_BASE)
@@ -3440,13 +3477,35 @@ x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
         *--ak = q;
     }
 
-    /* unshift remainder; we reuse w to store the result */
-    carry = v_rshift(w0, v0, size_w, d);
-    assert(carry==0);
+    /* the remainder is v0[0:size_w], to be unshifted unless we never
+       shifted; we reuse w to store the result */
+    if (lazy) {
+        memcpy(w->long_value.ob_digit, v0, size_w * sizeof(digit));
+    }
+    else {
+        carry = v_rshift(w0, v0, size_w, d);
+        assert(carry==0);
+    }
     Py_DECREF(v);
 
     *prem = long_normalize(w);
     return long_normalize(a);
+}
+
+static PyLongObject *
+x_divrem(PyLongObject *v1, PyLongObject *w1, PyLongObject **prem)
+{
+    Py_ssize_t size_v = _PyLong_DigitCount(v1);
+    Py_ssize_t size_w = _PyLong_DigitCount(w1);
+
+    /* Not shifting pays off when the quotient is shorter than the divisor,
+       unless the divisor is too short for the shifts to matter.  `lazy` is a
+       constant in each of the two inlined copies, so the other case runs
+       exactly the textbook code. */
+    if (size_w >= 4 && size_v - size_w < size_w) {
+        return x_divrem_impl(v1, w1, prem, 1);
+    }
+    return x_divrem_impl(v1, w1, prem, 0);
 }
 
 /* For a nonzero PyLong a, express a in the form x * 2**e, with 0.5 <=
