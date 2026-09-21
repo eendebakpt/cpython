@@ -1889,15 +1889,56 @@ find_empty_slot(PyDictKeysObject *keys, Py_hash_t hash)
     return i;
 }
 
+/* Like unicodekeys_lookup_unicode(), but if the key is not found, also store
+   in *hashpos the slot of the index table that find_empty_slot() would
+   return, so that an insertion does not need to probe again. */
+static inline Py_ssize_t
+unicodekeys_lookup_unicode_pos(PyDictKeysObject *dk, PyObject *key,
+                               Py_hash_t hash, Py_ssize_t *hashpos)
+{
+    assert(dk->dk_kind == DICT_KEYS_UNICODE);
+    PyDictUnicodeEntry *ep0 = DK_UNICODE_ENTRIES(dk);
+    size_t mask = DK_MASK(dk);
+    size_t perturb = (size_t)hash;
+    size_t i = (size_t)hash & mask;
+    Py_ssize_t freeslot = -1;
+    for (;;) {
+        Py_ssize_t ix = dictkeys_get_index(dk, i);
+        if (ix >= 0) {
+            PyObject *ep_key = ep0[ix].me_key;
+            if (ep_key == key ||
+                (unicode_get_hash(ep_key) == hash && unicode_eq(ep_key, key)))
+            {
+                return ix;
+            }
+        }
+        else if (ix == DKIX_EMPTY) {
+            *hashpos = freeslot >= 0 ? freeslot : (Py_ssize_t)i;
+            return DKIX_EMPTY;
+        }
+        else if (freeslot < 0 && !is_unusable_slot(ix)) {
+            // Reuse the first dummy slot, otherwise repeated insertions
+            // and deletions would make the probe sequence longer.
+            freeslot = (Py_ssize_t)i;
+        }
+        perturb >>= PERTURB_SHIFT;
+        i = mask & (i*5 + perturb + 1);
+    }
+    Py_UNREACHABLE();
+}
+
 static int
 insertion_resize(PyDictObject *mp, int unicode)
 {
     return dictresize(mp, calculate_log2_keysize(GROWTH_RATE(mp)), unicode);
 }
 
+/* hashpos is the slot of the index table found by
+   unicodekeys_lookup_unicode_pos(), or -1 if it is not known. */
 static inline int
 insert_combined_dict(PyDictObject *mp,
-                     Py_hash_t hash, PyObject *key, PyObject *value)
+                     Py_hash_t hash, PyObject *key, PyObject *value,
+                     Py_ssize_t hashpos)
 {
     // gh-140551: If dict was cleared in _Py_dict_lookup,
     // we have to resize one more time to force general key kind.
@@ -1905,6 +1946,7 @@ insert_combined_dict(PyDictObject *mp,
         if (insertion_resize(mp, 0) < 0)
             return -1;
         assert(mp->ma_keys->dk_kind == DICT_KEYS_GENERAL);
+        hashpos = -1;
     }
 
     if (mp->ma_keys->dk_usable <= 0) {
@@ -1912,12 +1954,16 @@ insert_combined_dict(PyDictObject *mp,
         if (insertion_resize(mp, 1) < 0) {
             return -1;
         }
+        hashpos = -1;
     }
 
     _PyDict_NotifyEvent(PyDict_EVENT_ADDED, mp, key, value);
     FT_ATOMIC_STORE_UINT32_RELAXED(mp->ma_keys->dk_version, 0);
 
-    Py_ssize_t hashpos = find_empty_slot(mp->ma_keys, hash);
+    if (hashpos < 0) {
+        hashpos = find_empty_slot(mp->ma_keys, hash);
+    }
+    assert(hashpos == find_empty_slot(mp->ma_keys, hash));
     dictkeys_set_index(mp->ma_keys, hashpos, mp->ma_keys->dk_nentries);
 
     if (DK_IS_UNICODE(mp->ma_keys)) {
@@ -2023,6 +2069,7 @@ insertdict(PyDictObject *mp,
 
     PyObject *old_value = NULL;
     Py_ssize_t ix;
+    Py_ssize_t hashpos = -1;
 
     if (_PyDict_HasSplitTable(mp) && PyUnicode_CheckExact(key)) {
         ix = insert_split_key(mp->ma_keys, key, hash);
@@ -2033,6 +2080,16 @@ insertdict(PyDictObject *mp,
             return 0;
         }
         // No space in shared keys. Go to insert_combined_dict() below.
+    }
+    else if (mp->ma_keys->dk_kind == DICT_KEYS_UNICODE
+             && PyUnicode_CheckExact(key))
+    {
+        // Fast path for the most common case: remember where the lookup
+        // ended, so insert_combined_dict() doesn't need to probe again.
+        ix = unicodekeys_lookup_unicode_pos(mp->ma_keys, key, hash, &hashpos);
+        if (ix >= 0) {
+            old_value = DK_UNICODE_ENTRIES(mp->ma_keys)[ix].me_value;
+        }
     }
     else {
         ix = _Py_dict_lookup(mp, key, hash, &old_value);
@@ -2048,7 +2105,7 @@ insertdict(PyDictObject *mp,
         //
         // NOTE: ix may not be DKIX_EMPTY because split table may have key
         // without value.
-        if (insert_combined_dict(mp, hash, key, value) < 0) {
+        if (insert_combined_dict(mp, hash, key, value, hashpos) < 0) {
             goto Fail;
         }
         STORE_USED(mp, mp->ma_used + 1);
@@ -4883,7 +4940,7 @@ dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_valu
         value = default_value;
 
         // See comment to this function in insertdict.
-        if (insert_combined_dict(mp, hash, Py_NewRef(key), Py_NewRef(value)) < 0) {
+        if (insert_combined_dict(mp, hash, Py_NewRef(key), Py_NewRef(value), -1) < 0) {
             Py_DECREF(key);
             Py_DECREF(value);
             if (result) {
