@@ -169,8 +169,8 @@ long_alloc(Py_ssize_t size)
      * assume that there is always at least one digit present. */
     Py_ssize_t ndigits = size ? size : 1;
 
-    if (ndigits == 1) {
-        result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
+    if (ndigits < PyLong_MAXSAVESIZE) {
+        result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[ndigits]);
     }
     if (result == NULL) {
         /* Number of bytes needed is: offsetof(PyLongObject, ob_digit) +
@@ -253,7 +253,7 @@ _PyLong_FromMedium(sdigit x)
     assert(!IS_SMALL_INT(x));
     assert(is_medium_int(x));
 
-    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
+    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[1]);
     if (v == NULL) {
         v = PyObject_Malloc(sizeof(PyLongObject));
         if (v == NULL) {
@@ -334,7 +334,7 @@ medium_from_stwodigits(stwodigits x)
     if(!is_medium_int(x)) {
         return PyStackRef_NULL;
     }
-    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints);
+    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[1]);
     if (v == NULL) {
         v = PyObject_Malloc(sizeof(PyLongObject));
         if (v == NULL) {
@@ -3638,22 +3638,8 @@ void
 _PyLong_ExactDealloc(PyObject *self)
 {
     assert(PyLong_CheckExact(self));
-    if (_PyLong_IsSmallInt((PyLongObject *)self)) {
-        // See PEP 683, section Accidental De-Immortalizing for details
-        _Py_SetImmortal(self);
-        return;
-    }
-    if (_PyLong_IsCompact((PyLongObject *)self)) {
-        _Py_FREELIST_FREE(ints, self, PyObject_Free);
-        return;
-    }
-    PyObject_Free(self);
-}
-
-static void
-long_dealloc(PyObject *self)
-{
-    if (_PyLong_IsSmallInt((PyLongObject *)self)) {
+    PyLongObject *op = (PyLongObject *)self;
+    if (_PyLong_IsSmallInt(op)) {
         /* This should never get called, but we also don't want to SEGV if
          * we accidentally decref small Ints out of existence. Instead,
          * since small Ints are immortal, re-set the reference count.
@@ -3663,8 +3649,22 @@ long_dealloc(PyObject *self)
         _Py_SetImmortal(self);
         return;
     }
-    if (PyLong_CheckExact(self) && _PyLong_IsCompact((PyLongObject *)self)) {
-        _Py_FREELIST_FREE(ints, self, PyObject_Free);
+    /* A compact int (zero or one digit) always owns at least one digit
+     * (see long_alloc), so zero shares the freelist of 1-digit ints. */
+    Py_ssize_t ndigits = _PyLong_IsCompact(op) ? 1 : _PyLong_DigitCount(op);
+    if (ndigits < PyLong_MAXSAVESIZE
+        && _Py_FREELIST_PUSH(ints[ndigits], self, Py_ints_MAXFREELIST))
+    {
+        return;
+    }
+    PyObject_Free(self);
+}
+
+static void
+long_dealloc(PyObject *self)
+{
+    if (PyLong_CheckExact(self)) {
+        _PyLong_ExactDealloc(self);
         return;
     }
     Py_TYPE(self)->tp_free(self);

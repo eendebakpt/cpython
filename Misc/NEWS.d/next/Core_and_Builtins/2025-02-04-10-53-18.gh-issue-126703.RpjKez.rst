@@ -1,0 +1,1 @@
+Extend the :class:`int` freelist from single-digit integers to integers with up to five internal 30-bit digits (about 150 bits), reducing allocations in integer arithmetic.
