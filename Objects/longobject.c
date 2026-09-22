@@ -170,7 +170,8 @@ long_alloc(Py_ssize_t size)
     Py_ssize_t ndigits = size ? size : 1;
 
     if (ndigits < PyLong_MAXSAVESIZE) {
-        result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[ndigits]);
+        /* Zero-valued ints are kept in ints[0]; they own one digit. */
+        result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[size]);
     }
     if (result == NULL) {
         /* Number of bytes needed is: offsetof(PyLongObject, ob_digit) +
@@ -3649,9 +3650,7 @@ _PyLong_ExactDealloc(PyObject *self)
         _Py_SetImmortal(self);
         return;
     }
-    /* A compact int (zero or one digit) always owns at least one digit
-     * (see long_alloc), so zero shares the freelist of 1-digit ints. */
-    Py_ssize_t ndigits = _PyLong_IsCompact(op) ? 1 : _PyLong_DigitCount(op);
+    Py_ssize_t ndigits = _PyLong_DigitCount(op);
     if (ndigits < PyLong_MAXSAVESIZE
         && _Py_FREELIST_PUSH(ints[ndigits], self, Py_ints_MAXFREELIST))
     {

@@ -47,7 +47,7 @@ struct _Py_freelist {
 struct _Py_freelists {
     struct _Py_freelist floats;
     struct _Py_freelist complexes;
-    // ints[n] holds ints with n digits (n >= 1); ints[0] is unused
+    // ints[n] holds ints with n digits; ints[0] holds zero-valued ints
     struct _Py_freelist ints[PyLong_MAXSAVESIZE];
     struct _Py_freelist tuples[PyTuple_MAXSAVESIZE];
     struct _Py_freelist lists;
