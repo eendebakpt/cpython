@@ -3948,14 +3948,15 @@ x_mul(PyLongObject *a, PyLongObject *b)
     Py_ssize_t size_b = _PyLong_DigitCount(b);
     Py_ssize_t i;
 
-    /* a*b < (a_top+1)*(b_top+1)*B**(size_a+size_b-2), so when
-       (a_top+1)*(b_top+1) <= B the product has at most size_a+size_b-1
-       digits and the top digit does not need to be allocated. */
+    /* a*b < (a_top+1)*(b_top+1)*B**(size_a+size_b-2) and
+       (a_top+1)*(b_top+1) <= 2*a_top*b_top + 2 for a_top, b_top >= 1, so when
+       a_top*b_top < B/2 the product has at most size_a+size_b-1 digits and
+       the top digit does not need to be allocated. */
     Py_ssize_t size_z = size_a + size_b;
     if (size_a > 0 && size_b > 0) {
-        twodigits top = ((twodigits)a->long_value.ob_digit[size_a-1] + 1)
-                        * (b->long_value.ob_digit[size_b-1] + 1);
-        if (top <= PyLong_BASE) {
+        twodigits top = (twodigits)a->long_value.ob_digit[size_a-1]
+                        * b->long_value.ob_digit[size_b-1];
+        if (top < (PyLong_BASE >> 1)) {
             size_z--;
         }
     }
