@@ -1921,7 +1921,7 @@ find_empty_slot(PyDictKeysObject *keys, Py_hash_t hash)
 /* Like _Py_dict_lookup(), for callers which are about to insert or delete
    the key. *hashpos is set as by do_lookup() for the most common case
    (exact str key in a combined unicode table), else to -1. */
-static inline Py_ssize_t
+static inline Py_ALWAYS_INLINE Py_ssize_t
 dict_lookup_pos(PyDictObject *mp, PyObject *key, Py_hash_t hash,
                 PyObject **value_addr, Py_ssize_t *hashpos)
 {
