@@ -3949,11 +3949,22 @@ x_mul(PyLongObject *a, PyLongObject *b)
     Py_ssize_t size_b = _PyLong_DigitCount(b);
     Py_ssize_t i;
 
-    z = long_alloc(size_a + size_b);
+    /* a*b < (a_top+1)*(b_top+1)*B**(size_a+size_b-2), so when
+       (a_top+1)*(b_top+1) <= B the product has at most size_a+size_b-1
+       digits and the top digit does not need to be allocated. */
+    Py_ssize_t size_z = size_a + size_b;
+    if (size_a > 0 && size_b > 0) {
+        twodigits top = ((twodigits)a->long_value.ob_digit[size_a-1] + 1)
+                        * (b->long_value.ob_digit[size_b-1] + 1);
+        if (top <= PyLong_BASE) {
+            size_z--;
+        }
+    }
+    z = long_alloc(size_z);
     if (z == NULL)
         return NULL;
 
-    memset(z->long_value.ob_digit, 0, _PyLong_DigitCount(z) * sizeof(digit));
+    memset(z->long_value.ob_digit, 0, size_z * sizeof(digit));
     if (a == b) {
         /* Efficient squaring per HAC, Algorithm 14.16:
          * https://cacr.uwaterloo.ca/hac/about/chap14.pdf

@@ -1,0 +1,1 @@
+Avoid allocating an unneeded top digit for most multi-digit :class:`int` multiplications.
