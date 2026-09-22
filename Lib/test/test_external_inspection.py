@@ -1,3 +1,4 @@
+import asyncio
 import unittest
 import os
 import textwrap
@@ -436,6 +437,73 @@ class RemoteInspectionTestBase(unittest.TestCase):
 # ============================================================================
 # Test classes
 # ============================================================================
+
+
+@requires_remote_subprocess_debugging()
+class TestSelfStackTrace(RemoteInspectionTestBase):
+    @skip_if_not_supported
+    def test_long_task_name_is_truncated(self):
+        # gh-157788
+        async def main():
+            asyncio.create_task(asyncio.sleep(10_000), name="x" * 300)
+            await asyncio.sleep(0)
+            names = [
+                task.task_name
+                for info in RemoteUnwinder(os.getpid()).get_all_awaited_by()
+                for task in info.awaited_by
+            ]
+            return asyncio.current_task().get_name(), names
+
+        main_name, names = asyncio.run(main())
+        self.assertIn(main_name, names)
+        self.assertEqual([len(n) for n in names if n.startswith("x")], [255])
+
+    @skip_if_not_supported
+    @unittest.skipIf(
+        sys.platform == "linux" and not PROCESS_VM_READV_SUPPORTED,
+        "Test only runs on Linux with process_vm_readv support",
+    )
+    def test_self_trace_with_large_linetable(self):
+        script = textwrap.dedent("""\
+            import os
+            import _remote_debugging
+
+            assignments = "\\n".join(
+                f"value_{i} = {i}" for i in range(1000)
+            )
+            expected_lineno = len(assignments.splitlines()) + 1
+            source = (
+                f"{assignments}\\n"
+                "stack_trace = "
+                "_remote_debugging.RemoteUnwinder(os.getpid()).get_stack_trace()\\n"
+            )
+            code = compile(source, "large_linetable.py", "exec")
+            assert len(code.co_linetable) > 4096, len(code.co_linetable)
+            namespace = {"os": os, "_remote_debugging": _remote_debugging}
+            exec(code, namespace)
+            large_linetable_frames = [
+                frame
+                for interpreter in namespace["stack_trace"]
+                for thread in interpreter.threads
+                for frame in thread.frame_info
+                if frame.filename == "large_linetable.py"
+            ]
+            assert len(large_linetable_frames) == 1, large_linetable_frames
+            assert large_linetable_frames[0].location.lineno == expected_lineno, (
+                large_linetable_frames[0]
+            )
+            """)
+
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=SHORT_TIMEOUT,
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            f"stdout: {result.stdout}\nstderr: {result.stderr}"
+        )
 
 
 @requires_remote_subprocess_debugging()
