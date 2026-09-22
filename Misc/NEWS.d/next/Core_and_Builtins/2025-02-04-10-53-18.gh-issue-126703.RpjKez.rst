@@ -1,1 +1,1 @@
-Extend the :class:`int` freelist from single-digit integers to integers with up to five internal 30-bit digits (about 150 bits), reducing allocations in integer arithmetic.
+Add freelists for :class:`int` objects with up to five internal digits (about 150 bits), and allocate the exact result size in most multi-digit additions and multiplications so the results can be reused from those freelists.
