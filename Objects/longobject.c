@@ -3760,7 +3760,13 @@ x_add(PyLongObject *a, PyLongObject *b)
             size_a = size_b;
             size_b = size_temp; }
     }
-    z = long_alloc(size_a+1);
+    assert(size_a >= 1);
+    /* A carry out of the top digit is only possible if the top digits sum
+       to at least PyLong_MASK; only then allocate a digit for it. */
+    digit top_sum = a->long_value.ob_digit[size_a - 1]
+        + (size_b == size_a ? b->long_value.ob_digit[size_b - 1] : (digit)0);
+    int extra_digit = top_sum >= PyLong_MASK;
+    z = long_alloc(size_a + extra_digit);
     if (z == NULL)
         return NULL;
     for (i = 0; i < size_b; ++i) {
@@ -3773,8 +3779,13 @@ x_add(PyLongObject *a, PyLongObject *b)
         z->long_value.ob_digit[i] = carry & PyLong_MASK;
         carry >>= PyLong_SHIFT;
     }
-    z->long_value.ob_digit[i] = carry;
-    return long_normalize(z);
+    if (extra_digit) {
+        z->long_value.ob_digit[i] = carry;
+        return long_normalize(z);
+    }
+    /* No carry, and the top digit is at least a's top digit: normalized. */
+    assert(carry == 0);
+    return z;
 }
 
 /* Subtract the absolute values of two integers. */
@@ -3938,11 +3949,21 @@ x_mul(PyLongObject *a, PyLongObject *b)
     Py_ssize_t size_b = _PyLong_DigitCount(b);
     Py_ssize_t i;
 
-    z = long_alloc(size_a + size_b);
+    /* a*b < (a_top+1)*(b_top+1)*B**(size_a+size_b-2) <= B**(size_a+size_b-1)
+       when a_top*b_top < B/2 (also for an unnormalized slice with a_top == 0
+       from k_lopsided_mul), so the top digit need not be allocated then. */
+    assert(size_a > 0 && size_b > 0);
+    Py_ssize_t size_z = size_a + size_b;
+    twodigits top = (twodigits)a->long_value.ob_digit[size_a-1]
+                    * b->long_value.ob_digit[size_b-1];
+    if (top < (PyLong_BASE >> 1)) {
+        size_z--;
+    }
+    z = long_alloc(size_z);
     if (z == NULL)
         return NULL;
 
-    memset(z->long_value.ob_digit, 0, _PyLong_DigitCount(z) * sizeof(digit));
+    memset(z->long_value.ob_digit, 0, size_z * sizeof(digit));
     if (a == b) {
         /* Efficient squaring per HAC, Algorithm 14.16:
          * https://cacr.uwaterloo.ca/hac/about/chap14.pdf

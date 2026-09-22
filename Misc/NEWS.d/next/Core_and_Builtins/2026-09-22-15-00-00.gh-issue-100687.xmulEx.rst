@@ -1,0 +1,1 @@
+Allocate the exact result size in most multi-digit :class:`int` additions, subtractions and multiplications instead of an extra top digit that is then normalized away.
