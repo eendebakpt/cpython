@@ -1957,11 +1957,11 @@ v_rshift(digit *z, digit *a, Py_ssize_t m, int d)
      python -m timeit -s 'x = 10**1000; r=x//10; assert r == 10**999, r' 'x//17'
 */
 static digit
-inplace_divrem1(digit *pout, digit *pin, Py_ssize_t size, digit n)
+inplace_divrem1(digit *pout, digit *pin, Py_ssize_t size, digit n,
+                digit remainder)
 {
-    digit remainder = 0;
-
     assert(n > 0 && n <= PyLong_MASK);
+    assert(remainder < n);
     while (--size >= 0) {
         twodigits dividend;
         dividend = ((twodigits)remainder << PyLong_SHIFT) | pin[size];
@@ -1981,14 +1981,19 @@ inplace_divrem1(digit *pout, digit *pin, Py_ssize_t size, digit n)
 static PyLongObject *
 divrem1(PyLongObject *a, digit n, digit *prem)
 {
-    const Py_ssize_t size = _PyLong_DigitCount(a);
+    Py_ssize_t size = _PyLong_DigitCount(a);
     PyLongObject *z;
+    digit rem = 0;
 
     assert(n > 0 && n <= PyLong_MASK);
+    if (size > 0 && a->long_value.ob_digit[size-1] < n) {
+        /* The top quotient digit would be zero: don't allocate it. */
+        rem = a->long_value.ob_digit[--size];
+    }
     z = long_alloc(size);
     if (z == NULL)
         return NULL;
-    *prem = inplace_divrem1(z->long_value.ob_digit, a->long_value.ob_digit, size, n);
+    *prem = inplace_divrem1(z->long_value.ob_digit, a->long_value.ob_digit, size, n, rem);
     return long_normalize(z);
 }
 
@@ -3760,7 +3765,21 @@ x_add(PyLongObject *a, PyLongObject *b)
             size_a = size_b;
             size_b = size_temp; }
     }
-    z = long_alloc(size_a+1);
+    /* Only allocate a digit for the final carry when the top digits can
+       actually produce one; otherwise the result would be normalized to
+       size_a digits and could not be reused from the freelist for the
+       next size_a+1 digit request. */
+    Py_ssize_t size_z = size_a + 1;
+    if (size_a > 0) {
+        twodigits top = a->long_value.ob_digit[size_a-1];
+        if (size_b == size_a) {
+            top += b->long_value.ob_digit[size_a-1];
+        }
+        if (top + 1 < PyLong_BASE) {
+            size_z = size_a;
+        }
+    }
+    z = long_alloc(size_z);
     if (z == NULL)
         return NULL;
     for (i = 0; i < size_b; ++i) {
@@ -3773,7 +3792,12 @@ x_add(PyLongObject *a, PyLongObject *b)
         z->long_value.ob_digit[i] = carry & PyLong_MASK;
         carry >>= PyLong_SHIFT;
     }
-    z->long_value.ob_digit[i] = carry;
+    if (size_z > size_a) {
+        z->long_value.ob_digit[i] = carry;
+    }
+    else {
+        assert(carry == 0);
+    }
     return long_normalize(z);
 }
 
@@ -3938,11 +3962,22 @@ x_mul(PyLongObject *a, PyLongObject *b)
     Py_ssize_t size_b = _PyLong_DigitCount(b);
     Py_ssize_t i;
 
-    z = long_alloc(size_a + size_b);
+    /* a*b < (a_top+1)*(b_top+1)*B**(size_a+size_b-2), so when
+       (a_top+1)*(b_top+1) <= B the product has at most size_a+size_b-1
+       digits and the top digit does not need to be allocated. */
+    Py_ssize_t size_z = size_a + size_b;
+    if (size_a > 0 && size_b > 0) {
+        twodigits top = ((twodigits)a->long_value.ob_digit[size_a-1] + 1)
+                        * (b->long_value.ob_digit[size_b-1] + 1);
+        if (top <= PyLong_BASE) {
+            size_z--;
+        }
+    }
+    z = long_alloc(size_z);
     if (z == NULL)
         return NULL;
 
-    memset(z->long_value.ob_digit, 0, _PyLong_DigitCount(z) * sizeof(digit));
+    memset(z->long_value.ob_digit, 0, size_z * sizeof(digit));
     if (a == b) {
         /* Efficient squaring per HAC, Algorithm 14.16:
          * https://cacr.uwaterloo.ca/hac/about/chap14.pdf
@@ -4805,7 +4840,7 @@ long_true_divide(PyObject *v, PyObject *w)
        reference to x, so it's safe to modify it in-place. */
     if (b_size == 1) {
         digit rem = inplace_divrem1(x->long_value.ob_digit, x->long_value.ob_digit, x_size,
-                              b->long_value.ob_digit[0]);
+                              b->long_value.ob_digit[0], 0);
         long_normalize(x);
         if (rem)
             inexact = 1;
@@ -5468,8 +5503,15 @@ long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
 
     oldsize = _PyLong_DigitCount(a);
     newsize = oldsize + wordshift;
-    if (remshift)
-        ++newsize;
+    /* The top digit is (a_top >> (SHIFT - remshift)); only allocate it if
+       it is nonzero. */
+    int has_top = remshift != 0;
+    if (remshift && oldsize > 0
+        && (a->long_value.ob_digit[oldsize-1] >> (PyLong_SHIFT - remshift)) == 0)
+    {
+        has_top = 0;
+    }
+    newsize += has_top;
     z = long_alloc(newsize);
     if (z == NULL)
         return NULL;
@@ -5485,7 +5527,7 @@ long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
         z->long_value.ob_digit[i] = (digit)(accum & PyLong_MASK);
         accum >>= PyLong_SHIFT;
     }
-    if (remshift)
+    if (has_top)
         z->long_value.ob_digit[newsize-1] = (digit)accum;
     else
         assert(!accum);
