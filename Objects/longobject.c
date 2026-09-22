@@ -155,29 +155,6 @@ long_normalize(PyLongObject *v)
 # define MAX_LONG_DIGITS ((INT64_MAX-1) / PyLong_SHIFT)
 #endif
 
-static inline int
-maybe_freelist_push(PyObject *self)
-{
-    assert(PyLong_CheckExact(self));
-
-    PyLongObject *op = (PyLongObject *)self;
-    Py_ssize_t ndigits = _PyLong_DigitCount(op);
-
-    /* A value that normalized to zero still owns a buffer of at least one
-     * digit (long_alloc always allocates max(size, 1) digits), so it can be
-     * reused as a 1-digit int.  Bucketing it at index 0 would strand it:
-     * long_alloc never requests bucket 0 (it clamps ndigits to >= 1). */
-    if (ndigits == 0) {
-        ndigits = 1;
-    }
-
-    if (ndigits < PyLong_MAXSAVESIZE) {
-        return _Py_FREELIST_PUSH(ints[ndigits], self, Py_ints_MAXFREELIST);
-    }
-    return 0;
-}
-
-
 static PyLongObject *
 long_alloc(Py_ssize_t size)
 {
@@ -192,7 +169,7 @@ long_alloc(Py_ssize_t size)
      * assume that there is always at least one digit present. */
     Py_ssize_t ndigits = size ? size : 1;
 
-    if (ndigits < PyLong_MAXSAVESIZE ) {
+    if (ndigits < PyLong_MAXSAVESIZE) {
         result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[ndigits]);
     }
     if (result == NULL) {
@@ -3661,21 +3638,8 @@ void
 _PyLong_ExactDealloc(PyObject *self)
 {
     assert(PyLong_CheckExact(self));
-    if (_PyLong_IsSmallInt((PyLongObject *)self)) {
-        // See PEP 683, section Accidental De-Immortalizing for details
-        _Py_SetImmortal(self);
-        return;
-    }
-
-    if (!maybe_freelist_push(self)) {
-        PyObject_Free(self);
-    }
-}
-
-static void
-long_dealloc(PyObject *self)
-{
-    if (_PyLong_IsSmallInt((PyLongObject *)self)) {
+    PyLongObject *op = (PyLongObject *)self;
+    if (_PyLong_IsSmallInt(op)) {
         /* This should never get called, but we also don't want to SEGV if
          * we accidentally decref small Ints out of existence. Instead,
          * since small Ints are immortal, re-set the reference count.
@@ -3685,13 +3649,24 @@ long_dealloc(PyObject *self)
         _Py_SetImmortal(self);
         return;
     }
-    if (PyLong_CheckExact(self))  {
-        if (!maybe_freelist_push(self)) {
-            PyObject_Free(self);
-        }
+    /* A compact int (zero or one digit) always owns at least one digit
+     * (see long_alloc), so zero shares the freelist of 1-digit ints. */
+    Py_ssize_t ndigits = _PyLong_IsCompact(op) ? 1 : _PyLong_DigitCount(op);
+    if (ndigits < PyLong_MAXSAVESIZE
+        && _Py_FREELIST_PUSH(ints[ndigits], self, Py_ints_MAXFREELIST))
+    {
         return;
     }
+    PyObject_Free(self);
+}
 
+static void
+long_dealloc(PyObject *self)
+{
+    if (PyLong_CheckExact(self)) {
+        _PyLong_ExactDealloc(self);
+        return;
+    }
     Py_TYPE(self)->tp_free(self);
 }
 
