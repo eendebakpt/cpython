@@ -3759,6 +3759,8 @@ x_add(PyLongObject *a, PyLongObject *b)
             size_a = size_b;
             size_b = size_temp; }
     }
+    /* The larger operand is nonzero: its top digit is read below. */
+    assert(size_a >= 1);
 
     /* Allocate sufficient space for the result. In the majority of cases
        we allocate exactly the right number of digits, but in the (relatively
