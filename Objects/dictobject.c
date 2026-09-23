@@ -3046,7 +3046,6 @@ delitem_common(PyDictObject *mp, Py_hash_t hash, Py_ssize_t ix,
             old_key = ep->me_key;
             STORE_KEY(ep, NULL);
             STORE_VALUE(ep, NULL);
-            STORE_HASH(ep, 0);
         }
         Py_DECREF(old_key);
     }
@@ -5129,7 +5128,6 @@ dict_popitem_impl(PyDictObject *self)
         hash = ep0[i].me_hash;
         value = ep0[i].me_value;
         STORE_KEY(&ep0[i], NULL);
-        STORE_HASH(&ep0[i], -1);
         STORE_VALUE(&ep0[i], NULL);
     }
 
