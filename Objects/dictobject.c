@@ -1119,13 +1119,57 @@ is_unusable_slot(Py_ssize_t ix)
 #endif
 }
 
-/* If hashpos is not NULL, also store in *hashpos the slot of the index table
+static inline Py_ALWAYS_INLINE Py_ssize_t
+do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash,
+          int (*check_lookup)(PyDictObject *, PyDictKeysObject *, void *, Py_ssize_t ix, PyObject *key, Py_hash_t))
+{
+    void *ep0 = _DK_ENTRIES(dk);
+    size_t mask = DK_MASK(dk);
+    size_t perturb = hash;
+    size_t i = (size_t)hash & mask;
+    Py_ssize_t ix;
+    for (;;) {
+        ix = dictkeys_get_index(dk, i);
+        if (ix >= 0) {
+            int cmp = check_lookup(mp, dk, ep0, ix, key, hash);
+            if (cmp < 0) {
+                return cmp;
+            } else if (cmp) {
+                return ix;
+            }
+        }
+        else if (ix == DKIX_EMPTY) {
+            return DKIX_EMPTY;
+        }
+        perturb >>= PERTURB_SHIFT;
+        i = mask & (i*5 + perturb + 1);
+
+        // Manual loop unrolling
+        ix = dictkeys_get_index(dk, i);
+        if (ix >= 0) {
+            int cmp = check_lookup(mp, dk, ep0, ix, key, hash);
+            if (cmp < 0) {
+                return cmp;
+            } else if (cmp) {
+                return ix;
+            }
+        }
+        else if (ix == DKIX_EMPTY) {
+            return DKIX_EMPTY;
+        }
+        perturb >>= PERTURB_SHIFT;
+        i = mask & (i*5 + perturb + 1);
+    }
+    Py_UNREACHABLE();
+}
+
+/* Like do_lookup(), but also store in *hashpos the slot of the index table
    an insertion or deletion of the key needs, so that the caller does not have
    to probe again: if the key is found, the slot that refers to its entry (see
    lookdict_index()), otherwise the slot find_empty_slot() would return.
    Only valid if check_lookup() cannot mutate the dict. */
 static inline Py_ALWAYS_INLINE Py_ssize_t
-do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash,
+do_lookup_pos(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash,
           int (*check_lookup)(PyDictObject *, PyDictKeysObject *, void *, Py_ssize_t ix, PyObject *key, Py_hash_t),
           Py_ssize_t *hashpos)
 {
@@ -1142,19 +1186,15 @@ do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash,
             if (cmp < 0) {
                 return cmp;
             } else if (cmp) {
-                if (hashpos) {
-                    *hashpos = (Py_ssize_t)i;
-                }
+                *hashpos = (Py_ssize_t)i;
                 return ix;
             }
         }
         else if (ix == DKIX_EMPTY) {
-            if (hashpos) {
-                *hashpos = freeslot >= 0 ? freeslot : (Py_ssize_t)i;
-            }
+            *hashpos = freeslot >= 0 ? freeslot : (Py_ssize_t)i;
             return DKIX_EMPTY;
         }
-        else if (hashpos && freeslot < 0 && !is_unusable_slot(ix)) {
+        else if (freeslot < 0 && !is_unusable_slot(ix)) {
             // Reuse the first dummy slot, otherwise repeated insertions
             // and deletions would make the probe sequence longer.
             freeslot = (Py_ssize_t)i;
@@ -1169,19 +1209,15 @@ do_lookup(PyDictObject *mp, PyDictKeysObject *dk, PyObject *key, Py_hash_t hash,
             if (cmp < 0) {
                 return cmp;
             } else if (cmp) {
-                if (hashpos) {
-                    *hashpos = (Py_ssize_t)i;
-                }
+                *hashpos = (Py_ssize_t)i;
                 return ix;
             }
         }
         else if (ix == DKIX_EMPTY) {
-            if (hashpos) {
-                *hashpos = freeslot >= 0 ? freeslot : (Py_ssize_t)i;
-            }
+            *hashpos = freeslot >= 0 ? freeslot : (Py_ssize_t)i;
             return DKIX_EMPTY;
         }
-        else if (hashpos && freeslot < 0 && !is_unusable_slot(ix)) {
+        else if (freeslot < 0 && !is_unusable_slot(ix)) {
             // Reuse the first dummy slot, otherwise repeated insertions
             // and deletions would make the probe sequence longer.
             freeslot = (Py_ssize_t)i;
@@ -1224,7 +1260,7 @@ compare_unicode_generic(PyDictObject *mp, PyDictKeysObject *dk,
 static Py_ssize_t
 unicodekeys_lookup_generic(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)
 {
-    return do_lookup(mp, dk, key, hash, compare_unicode_generic, NULL);
+    return do_lookup(mp, dk, key, hash, compare_unicode_generic);
 }
 
 static inline int
@@ -1245,7 +1281,7 @@ compare_unicode_unicode(PyDictObject *mp, PyDictKeysObject *dk,
 static Py_ssize_t _Py_HOT_FUNCTION
 unicodekeys_lookup_unicode(PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)
 {
-    return do_lookup(NULL, dk, key, hash, compare_unicode_unicode, NULL);
+    return do_lookup(NULL, dk, key, hash, compare_unicode_unicode);
 }
 
 static inline int
@@ -1279,7 +1315,7 @@ compare_generic(PyDictObject *mp, PyDictKeysObject *dk,
 static Py_ssize_t
 dictkeys_generic_lookup(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)
 {
-    return do_lookup(mp, dk, key, hash, compare_generic, NULL);
+    return do_lookup(mp, dk, key, hash, compare_generic);
 }
 
 static bool
@@ -1560,7 +1596,7 @@ compare_unicode_generic_threadsafe(PyDictObject *mp, PyDictKeysObject *dk,
 static Py_ssize_t
 unicodekeys_lookup_generic_threadsafe(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)
 {
-    return do_lookup(mp, dk, key, hash, compare_unicode_generic_threadsafe, NULL);
+    return do_lookup(mp, dk, key, hash, compare_unicode_generic_threadsafe);
 }
 
 static inline Py_ALWAYS_INLINE int
@@ -1596,7 +1632,7 @@ compare_unicode_unicode_threadsafe(PyDictObject *mp, PyDictKeysObject *dk,
 static Py_ssize_t _Py_HOT_FUNCTION
 unicodekeys_lookup_unicode_threadsafe(PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)
 {
-    return do_lookup(NULL, dk, key, hash, compare_unicode_unicode_threadsafe, NULL);
+    return do_lookup(NULL, dk, key, hash, compare_unicode_unicode_threadsafe);
 }
 
 static inline Py_ALWAYS_INLINE int
@@ -1633,7 +1669,7 @@ compare_generic_threadsafe(PyDictObject *mp, PyDictKeysObject *dk,
 static Py_ssize_t
 dictkeys_generic_lookup_threadsafe(PyDictObject *mp, PyDictKeysObject* dk, PyObject *key, Py_hash_t hash)
 {
-    return do_lookup(mp, dk, key, hash, compare_generic_threadsafe, NULL);
+    return do_lookup(mp, dk, key, hash, compare_generic_threadsafe);
 }
 
 Py_ssize_t
@@ -1919,7 +1955,7 @@ find_empty_slot(PyDictKeysObject *keys, Py_hash_t hash)
 }
 
 /* Like _Py_dict_lookup(), for callers which are about to insert or delete
-   the key. *hashpos is set as by do_lookup() for the most common case
+   the key. *hashpos is set as by do_lookup_pos() for the most common case
    (exact str key in a combined unicode table), else to -1. */
 static inline Py_ALWAYS_INLINE Py_ssize_t
 dict_lookup_pos(PyDictObject *mp, PyObject *key, Py_hash_t hash,
@@ -1928,7 +1964,7 @@ dict_lookup_pos(PyDictObject *mp, PyObject *key, Py_hash_t hash,
     _Py_CRITICAL_SECTION_ASSERT_OBJECT_LOCKED(mp);
     PyDictKeysObject *dk = mp->ma_keys;
     if (dk->dk_kind == DICT_KEYS_UNICODE && PyUnicode_CheckExact(key)) {
-        Py_ssize_t ix = do_lookup(NULL, dk, key, hash, compare_unicode_unicode, hashpos);
+        Py_ssize_t ix = do_lookup_pos(NULL, dk, key, hash, compare_unicode_unicode, hashpos);
         *value_addr = ix >= 0 ? DK_UNICODE_ENTRIES(dk)[ix].me_value : NULL;
         return ix;
     }
