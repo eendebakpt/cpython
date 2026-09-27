@@ -94,7 +94,6 @@ static PyObject *
 enum_vectorcall(PyObject *type, PyObject *const *args,
     size_t nargsf, PyObject *kwnames)
 {
-    PyObject *return_value = NULL;
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     PyObject *iterable;
     PyObject *start = 0;
@@ -114,9 +113,7 @@ enum_vectorcall(PyObject *type, PyObject *const *args,
     }
     start = args[1];
 skip_optional:
-    return_value = enum_new_impl(_PyType_CAST(type), iterable, start);
-
-    return return_value;
+    return enum_new_impl(_PyType_CAST(type), iterable, start);
 }
 
 PyDoc_STRVAR(reversed_new__doc__,
@@ -153,7 +150,6 @@ static PyObject *
 reversed_vectorcall(PyObject *type, PyObject *const *args,
     size_t nargsf, PyObject *kwnames)
 {
-    PyObject *return_value = NULL;
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     PyObject *seq;
 
@@ -168,9 +164,9 @@ reversed_vectorcall(PyObject *type, PyObject *const *args,
         goto exit;
     }
     seq = args[0];
-    return_value = reversed_new_impl(_PyType_CAST(type), seq);
+    return reversed_new_impl(_PyType_CAST(type), seq);
 
 exit:
-    return return_value;
+    return NULL;
 }
-/*[clinic end generated code: output=d0c066334eeb3b17 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=7bd22a63f68c4e46 input=a9049054013a1b77]*/

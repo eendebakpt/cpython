@@ -453,6 +453,25 @@ class CLanguage(Language):
         template_dict['lock'] = "\n".join(data.lock)
         template_dict['unlock'] = "\n".join(data.unlock)
 
+        # A __new__ vectorcall returns the impl's result unchanged.  When
+        # nothing has to run after the impl call, return it directly so the
+        # compiler can tail-call the impl; return_value is then not needed
+        # as every `goto exit` happens before the call and returns NULL.
+        vectorcall_new = f.vectorcall and f.kind is METHOD_NEW
+        if vectorcall_new:
+            impl_call = (f"{f.c_basename}_impl("
+                         f"{template_dict['vectorcall_impl_arguments']})")
+            after_call = ('unlock', 'return_conversion', 'post_parsing',
+                          'cleanup')
+            if any(template_dict[key] for key in after_call):
+                vc_return_value_declaration = "PyObject *return_value = NULL;"
+                vc_impl_call = f"return_value = {impl_call};"
+                vc_exit_return = "return return_value;"
+            else:
+                vc_return_value_declaration = ""
+                vc_impl_call = f"return {impl_call};"
+                vc_exit_return = "return NULL;"  # only reached by `goto exit`
+
         # used by unpack tuple code generator
         unpack_min = first_optional
         unpack_max = len(selfless)
@@ -475,8 +494,22 @@ class CLanguage(Language):
 
             # Only generate the "exit:" label
             # if we have any gotos
-            label = "exit:" if "goto exit;" in template else ""
+            has_exit = "goto exit;" in template
+            label = "exit:" if has_exit else ""
             template = libclinic.linear_format(template, exit_label=label)
+            if vectorcall_new and name == 'vectorcall_definition':
+                if not has_exit and not vc_return_value_declaration:
+                    # The direct return ends the function: drop the exit
+                    # block together with the blank line before it.
+                    vc_exit_return = ""
+                    template = template.replace(
+                        "\n\n    {vectorcall_exit_return}\n",
+                        "\n    {vectorcall_exit_return}\n")
+                template = libclinic.linear_format(
+                    template,
+                    vectorcall_return_value_declaration=vc_return_value_declaration,
+                    vectorcall_impl_call=vc_impl_call,
+                    vectorcall_exit_return=vc_exit_return)
 
             s = template.format_map(template_dict)
 

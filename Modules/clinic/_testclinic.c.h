@@ -5026,7 +5026,6 @@ static PyObject *
 vc_plain_vectorcall(PyObject *type, PyObject *const *args,
     size_t nargsf, PyObject *kwnames)
 {
-    PyObject *return_value = NULL;
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     PyObject *a = Py_None;
 
@@ -5044,9 +5043,7 @@ vc_plain_vectorcall(PyObject *type, PyObject *const *args,
     }
     a = args[0];
 skip_optional:
-    return_value = vc_plain_new_impl(_PyType_CAST(type), a);
-
-    return return_value;
+    return vc_plain_new_impl(_PyType_CAST(type), a);
 }
 
 static int
@@ -5243,7 +5240,6 @@ static PyObject *
 vc_base_vectorcall(PyObject *type, PyObject *const *args,
     size_t nargsf, PyObject *kwnames)
 {
-    PyObject *return_value = NULL;
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     PyObject *a;
     PyObject *b = Py_None;
@@ -5263,9 +5259,7 @@ vc_base_vectorcall(PyObject *type, PyObject *const *args,
     }
     b = args[1];
 skip_optional:
-    return_value = vc_base_new_impl(_PyType_CAST(type), a, b);
-
-    return return_value;
+    return vc_base_new_impl(_PyType_CAST(type), a, b);
 }
 
 static PyObject *
@@ -5349,4 +5343,4 @@ vc_kwonly_vectorcall(PyObject *type, PyObject *const *args,
         kwnames ? PyTuple_GET_SIZE(kwnames) : 0,
         NULL, kwnames);
 }
-/*[clinic end generated code: output=8a219f606f1296ac input=a9049054013a1b77]*/
+/*[clinic end generated code: output=904950e4abfaa76d input=a9049054013a1b77]*/

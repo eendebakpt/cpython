@@ -115,7 +115,6 @@ static PyObject *
 tuple_vectorcall(PyObject *type, PyObject *const *args,
     size_t nargsf, PyObject *kwnames)
 {
-    PyObject *return_value = NULL;
     Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
     PyObject *iterable = NULL;
 
@@ -134,10 +133,10 @@ tuple_vectorcall(PyObject *type, PyObject *const *args,
     }
     iterable = args[0];
 skip_optional:
-    return_value = tuple_new_impl(_PyType_CAST(type), iterable);
+    return tuple_new_impl(_PyType_CAST(type), iterable);
 
 exit:
-    return return_value;
+    return NULL;
 }
 
 PyDoc_STRVAR(tuple___getnewargs____doc__,
@@ -156,4 +155,4 @@ tuple___getnewargs__(PyObject *self, PyObject *Py_UNUSED(ignored))
 {
     return tuple___getnewargs___impl((PyTupleObject *)self);
 }
-/*[clinic end generated code: output=69cab12f1ecb03e9 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=8773ce51536f0338 input=a9049054013a1b77]*/

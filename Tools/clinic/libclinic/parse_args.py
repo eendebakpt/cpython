@@ -239,17 +239,26 @@ PARSER_FINALE_SKELETON: Final[str] = libclinic.normalize_snippet("""
         return {parser_retval};
     }}
 """)
+# The vectorcall finale: {vectorcall_exit_return} replaces the plain
+# `return return_value;` because CLanguage.render_function() decides how a
+# METHOD_NEW vectorcall returns (see there).
+VECTORCALL_FINALE_SKELETON: Final[str] = PARSER_FINALE_SKELETON.replace(
+    "return {parser_retval};", "{vectorcall_exit_return}")
+# METHOD_NEW: {vectorcall_return_value_declaration}, {vectorcall_impl_call}
+# and {vectorcall_exit_return} are filled in by CLanguage.render_function(),
+# which knows whether anything has to run after the impl call.
 VECTORCALL_FINALE_MARKERS_NEW: Final[dict[str, str]] = {
     "init_declarations": "",
     "self_alloc": "",
-    "impl_call":
-        "{return_value} = {c_basename}_impl({vectorcall_impl_arguments});",
+    "impl_call": "{vectorcall_impl_call}",
     "init_result_check": "",
 }
 # METHOD_INIT: Create self through tp_new. In vectorcall we have no tuple of
 # args and want to void constructing one so pass the empty tuple. This is okay
 # for PyType_GenericNew which ignores args.
 VECTORCALL_FINALE_MARKERS_INIT: Final[dict[str, str]] = {
+    "vectorcall_return_value_declaration": "PyObject *return_value = NULL;",
+    "vectorcall_exit_return": "return return_value;",
     "init_declarations": "PyObject *self;\nint _result;",
     "self_alloc": libclinic.normalize_snippet("""
         self = _PyType_CAST(type)->tp_new(_PyType_CAST(type),
@@ -1593,13 +1602,13 @@ class ParseArgsCodeGen:
         """
         preamble = libclinic.normalize_snippet("""
             {{
-                PyObject *return_value = NULL;
+                {vectorcall_return_value_declaration}
                 Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
                 {init_declarations}
                 {declarations}
                 {initializers}
         """) + "\n"
-        self._assemble_vectorcall(preamble, fields, PARSER_FINALE_SKELETON)
+        self._assemble_vectorcall(preamble, fields, VECTORCALL_FINALE_SKELETON)
 
     def parse_vectorcall_pos_only(self) -> None:
         """All positional sometimes optional arguments."""
