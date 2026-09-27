@@ -242,6 +242,11 @@ struct pyruntimestate {
     } gilstate;
     struct _getargs_runtime_state {
         struct _PyArg_Parser *static_parsers;
+        // _PyArg_KwParser objects with a kwtuple created at run time
+        PyMutex mutex;
+        struct _PyArg_KwParser **kwparsers;
+        Py_ssize_t nkwparsers;
+        Py_ssize_t kwparsers_allocated;
     } getargs;
     struct _fileutils_state fileutils;
     struct _faulthandler_runtime_state faulthandler;

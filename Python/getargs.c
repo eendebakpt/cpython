@@ -2045,21 +2045,11 @@ scan_keywords(const char * const *keywords, int *ptotal, int *pposonly)
 
 static int
 parse_format(const char *format, int total, int npos,
-             const char **pfname, const char **pcustommsg,
-             int *pmin, int *pmax)
+             const char **pfname, int *pmin, int *pmax)
 {
-    /* grab the function name or custom error msg first (mutually exclusive) */
-    const char *custommsg;
     const char *fname = strchr(format, ':');
     if (fname) {
         fname++;
-        custommsg = NULL;
-    }
-    else {
-        custommsg = strchr(format,';');
-        if (custommsg) {
-            custommsg++;
-        }
     }
 
     int min = INT_MAX;
@@ -2118,7 +2108,6 @@ parse_format(const char *format, int total, int npos,
     }
 
     *pfname = fname;
-    *pcustommsg = custommsg;
     *pmin = min;
     *pmax = max;
     return 0;
@@ -2146,15 +2135,87 @@ new_kwtuple(const char * const *keywords, int total, int pos)
     return kwtuple;
 }
 
+static PyObject *
+new_kwtuple_main_interp(const char * const *keywords, int total, int pos)
+{
+    /* We may temporarily switch to the main interpreter to avoid
+     * creating a tuple that could outlive its owning interpreter. */
+    PyThreadState *save_tstate = NULL;
+    PyThreadState *temp_tstate = NULL;
+    if (!_Py_IsMainInterpreter(PyInterpreterState_Get())) {
+        temp_tstate = PyThreadState_New(_PyInterpreterState_Main());
+        if (temp_tstate == NULL) {
+            return NULL;
+        }
+        save_tstate = PyThreadState_Swap(temp_tstate);
+    }
+    PyObject *kwtuple = new_kwtuple(keywords, total, pos);
+    if (temp_tstate != NULL) {
+        PyThreadState_Clear(temp_tstate);
+        (void)PyThreadState_Swap(save_tstate);
+        PyThreadState_Delete(temp_tstate);
+    }
+    return kwtuple;
+}
+
+/* Create the kwtuple of a _PyArg_KwParserDyn at run time.  A parser without
+   a kwtuple is always a _PyArg_KwParserDyn, and never const. */
+static PyObject *
+kwparser_init(const _PyArg_KwParser *base, int posonly)
+{
+    _PyArg_KwParserDyn *parser = _Py_CAST(_PyArg_KwParserDyn *, base);
+    const char * const *keywords = parser->keywords;
+    assert(keywords != NULL);
+
+    int len, pos;
+    if (scan_keywords(keywords, &len, &pos) < 0) {
+        return NULL;
+    }
+    assert(pos == posonly);
+
+    PyObject *kwtuple = new_kwtuple_main_interp(keywords, len, pos);
+    if (kwtuple == NULL) {
+        return NULL;
+    }
+
+    struct _getargs_runtime_state *state = &_PyRuntime.getargs;
+    PyMutex_Lock(&state->mutex);
+    PyObject *result = _Py_atomic_load_ptr(&parser->base.kwtuple);
+    if (result == NULL) {
+        // Register the parser, so that _PyArg_Fini() can clear the kwtuple.
+        if (state->nkwparsers >= state->kwparsers_allocated) {
+            // Typical processes register a few dozen parsers.
+            Py_ssize_t allocated = state->kwparsers_allocated + 128;
+            _PyArg_KwParser **kwparsers = PyMem_RawRealloc(
+                state->kwparsers, allocated * sizeof(_PyArg_KwParser *));
+            if (kwparsers == NULL) {
+                PyMutex_Unlock(&state->mutex);
+                Py_DECREF(kwtuple);
+                return PyErr_NoMemory();
+            }
+            state->kwparsers = kwparsers;
+            state->kwparsers_allocated = allocated;
+        }
+        state->kwparsers[state->nkwparsers++] = &parser->base;
+        result = kwtuple;
+        // See _PyArg_UnpackKeywords()
+        _Py_atomic_store_ptr_release(&parser->base.kwtuple, kwtuple);
+    }
+    PyMutex_Unlock(&state->mutex);
+    if (result != kwtuple) {
+        // Another thread initialized the parser first.
+        Py_DECREF(kwtuple);
+    }
+    return result;
+}
+
 static int
 _parser_init(void *arg)
 {
     struct _PyArg_Parser *parser = (struct _PyArg_Parser *)arg;
     const char * const *keywords = parser->keywords;
     assert(keywords != NULL);
-    assert(parser->pos == 0 &&
-           (parser->format == NULL || parser->fname == NULL) &&
-           parser->custom_msg == NULL &&
+    assert((parser->format == NULL || parser->fname == NULL) &&
            parser->min == 0 &&
            parser->max == 0);
 
@@ -2162,13 +2223,18 @@ _parser_init(void *arg)
     if (scan_keywords(keywords, &len, &pos) < 0) {
         return -1;
     }
+    if (len > UINT16_MAX) {
+        PyErr_SetString(PyExc_SystemError, "Too many keyword parameters");
+        return -1;
+    }
+    assert(parser->pos == 0 || parser->pos == pos);  // may be set statically
 
-    const char *fname, *custommsg = NULL;
+    const char *fname;
     int min = 0, max = 0;
     if (parser->format) {
         assert(parser->fname == NULL);
         if (parse_format(parser->format, len, pos,
-                         &fname, &custommsg, &min, &max) < 0) {
+                         &fname, &min, &max) < 0) {
             return -1;
         }
     }
@@ -2180,23 +2246,7 @@ _parser_init(void *arg)
     int owned;
     PyObject *kwtuple = parser->kwtuple;
     if (kwtuple == NULL) {
-        /* We may temporarily switch to the main interpreter to avoid
-         * creating a tuple that could outlive its owning interpreter. */
-        PyThreadState *save_tstate = NULL;
-        PyThreadState *temp_tstate = NULL;
-        if (!_Py_IsMainInterpreter(PyInterpreterState_Get())) {
-            temp_tstate = PyThreadState_New(_PyInterpreterState_Main());
-            if (temp_tstate == NULL) {
-                return -1;
-            }
-            save_tstate = PyThreadState_Swap(temp_tstate);
-        }
-        kwtuple = new_kwtuple(keywords, len, pos);
-        if (temp_tstate != NULL) {
-            PyThreadState_Clear(temp_tstate);
-            (void)PyThreadState_Swap(save_tstate);
-            PyThreadState_Delete(temp_tstate);
-        }
+        kwtuple = new_kwtuple_main_interp(keywords, len, pos);
         if (kwtuple == NULL) {
             return -1;
         }
@@ -2206,13 +2256,13 @@ _parser_init(void *arg)
         owned = 0;
     }
 
-    parser->pos = pos;
+    parser->pos = (uint16_t)pos;
     parser->fname = fname;
-    parser->custom_msg = custommsg;
-    parser->min = min;
-    parser->max = max;
-    parser->kwtuple = kwtuple;
+    parser->min = (uint16_t)min;
+    parser->max = (uint16_t)max;
     parser->is_kwtuple_owned = owned;
+    // Set last: see _PyArg_UnpackKeywords()
+    _Py_atomic_store_ptr_release(&parser->kwtuple, kwtuple);
 
     assert(parser->next == NULL);
     parser->next = _Py_atomic_load_ptr(&_PyRuntime.getargs.static_parsers);
@@ -2242,8 +2292,6 @@ parser_clear(struct _PyArg_Parser *parser)
     else {
         assert(parser->fname != NULL);
     }
-    parser->custom_msg = NULL;
-    parser->pos = 0;
     parser->min = 0;
     parser->max = 0;
     parser->is_kwtuple_owned = 0;
@@ -2412,7 +2460,15 @@ vgetargskeywordsfast_impl(PyObject *const *args, Py_ssize_t nargs,
                 levels, msgbuf, sizeof(msgbuf), &freelist);
             Py_DECREF(current_arg);
             if (msg) {
-                seterror(i+1, msg, levels, parser->fname, parser->custom_msg);
+                const char *custom_msg = NULL;
+                if (parser->fname == NULL) {
+                    // The format has ";message" instead of ":name"
+                    custom_msg = strchr(parser->format, ';');
+                    if (custom_msg != NULL) {
+                        custom_msg++;
+                    }
+                }
+                seterror(i+1, msg, levels, parser->fname, custom_msg);
                 return cleanreturn(0, &freelist);
             }
             continue;
@@ -2518,13 +2574,13 @@ vgetargskeywordsfast(PyObject *args, PyObject *keywords,
 PyObject * const *
 _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
                       PyObject *kwargs, PyObject *kwnames,
-                      struct _PyArg_Parser *parser,
+                      const _PyArg_KwParser *parser, int posonly,
                       int minpos, int maxpos, int minkw, int varpos,
                       PyObject **buf)
 {
     PyObject *kwtuple;
     PyObject *keyword;
-    int i, posonly, minposonly, maxargs;
+    int i, minposonly, maxargs;
     int reqlimit = minkw ? maxpos + minkw : minpos;
     Py_ssize_t nkwargs;
     PyObject * const *kwstack = NULL;
@@ -2546,12 +2602,14 @@ _PyArg_UnpackKeywords(PyObject *const *args, Py_ssize_t nargs,
         args = buf;
     }
 
-    if (parser_init(parser) < 0) {
-        return NULL;
+    // No initialization needed for a static kwtuple
+    kwtuple = _Py_atomic_load_ptr_acquire(&parser->kwtuple);
+    if (kwtuple == NULL) {
+        kwtuple = kwparser_init(parser, posonly);
+        if (kwtuple == NULL) {
+            return NULL;
+        }
     }
-
-    kwtuple = parser->kwtuple;
-    posonly = parser->pos;
     minposonly = Py_MIN(posonly, minpos);
     maxargs = posonly + (int)PyTuple_GET_SIZE(kwtuple);
 
@@ -3003,4 +3061,13 @@ _PyArg_Fini(void)
         s = tmp;
     }
     _PyRuntime.getargs.static_parsers = NULL;
+
+    struct _getargs_runtime_state *state = &_PyRuntime.getargs;
+    for (Py_ssize_t i = 0; i < state->nkwparsers; i++) {
+        Py_CLEAR(state->kwparsers[i]->kwtuple);
+    }
+    PyMem_RawFree(state->kwparsers);
+    state->kwparsers = NULL;
+    state->nkwparsers = 0;
+    state->kwparsers_allocated = 0;
 }

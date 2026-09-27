@@ -20,49 +20,34 @@ def declare_parser(
     f: Function,
     *,
     hasformat: bool = False,
+    pos_only: int = 0,
     codegen: CodeGen,
 ) -> str:
     """
-    Generates the code template for a static local PyArg_Parser variable,
-    with an initializer.  For core code (incl. builtin modules) the
-    kwtuple field is also statically initialized.  Otherwise
-    it is initialized at runtime.
+    Generates the code template for a static local _PyArg_KwParser variable
+    (or _PyArg_Parser if a format string is used), with an initializer.
+    For core code (incl. builtin modules) the kwtuple field is statically
+    initialized and the _PyArg_KwParser is const.  Otherwise the kwtuple
+    is created at runtime from the keywords.
     """
     limited_capi = codegen.limited_capi
-    if hasformat:
-        fname = ''
-        format_ = '.format = "{format_units}:{name}",'
-    else:
-        fname = '.fname = "{name}",'
-        format_ = ''
-
     num_keywords = len([
         p for p in f.parameters.values()
         if p.is_positional_or_keyword() or p.is_keyword_only()
     ])
 
     condition = '#if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)'
+    static_kwtuple: list[str] = []  # declarations for a static kwtuple
     if limited_capi:
-        declarations = """
-            #define KWTUPLE NULL
-        """
+        kwtuple = None
     elif num_keywords == 0:
-        declarations = """
-            #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-            #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-            #else
-            #  define KWTUPLE NULL
-            #endif
-        """
-
+        kwtuple = '(PyObject *)&_Py_SINGLETON(tuple_empty)'
         codegen.add_include('pycore_runtime.h', '_Py_SINGLETON()',
                             condition=condition)
     else:
         # XXX Why do we not statically allocate the tuple
         # for non-builtin modules?
-        declarations = """
-            #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-
+        static_kwtuple = libclinic.normalize_snippet("""
             #define NUM_KEYWORDS %d
             static struct {{
                 PyGC_Head _this_is_not_used;
@@ -75,28 +60,75 @@ def declare_parser(
                 .ob_item = {{ {keywords_py} }},
             }};
             #undef NUM_KEYWORDS
-            #define KWTUPLE (&_kwtuple.ob_base.ob_base)
-
-            #else  // !Py_BUILD_CORE
-            #  define KWTUPLE NULL
-            #endif  // !Py_BUILD_CORE
-        """ % num_keywords
-
+        """ % num_keywords).split('\n')
+        kwtuple = '(&_kwtuple.ob_base.ob_base)'
         codegen.add_include('pycore_gc.h', 'PyGC_Head',
                             condition=condition)
         codegen.add_include('pycore_runtime.h', '_Py_ID()',
                             condition=condition)
 
-    declarations += """
-            static const char * const _keywords[] = {{{keywords_c} NULL}};
-            static _PyArg_Parser _parser = {{
-                .keywords = _keywords,
-                %s
-                .kwtuple = KWTUPLE,
-            }};
-            #undef KWTUPLE
-    """ % (format_ or fname)
-    return libclinic.normalize_snippet(declarations)
+    keywords = 'static const char * const _keywords[] = {{{keywords_c} NULL}};'
+    lines: list[str] = []
+    if hasformat:
+        # _PyArg_Parser, initialized at runtime.
+        if kwtuple is None:
+            lines.append('#define KWTUPLE NULL')
+        elif not static_kwtuple:
+            lines += [condition,
+                      f'#  define KWTUPLE {kwtuple}',
+                      '#else',
+                      '#  define KWTUPLE NULL',
+                      '#endif']
+        else:
+            lines += [condition,
+                      '',
+                      *static_kwtuple,
+                      f'#define KWTUPLE {kwtuple}',
+                      '',
+                      '#else  // !Py_BUILD_CORE',
+                      '#  define KWTUPLE NULL',
+                      '#endif  // !Py_BUILD_CORE']
+        lines += [
+            '',
+            keywords,
+            'static _PyArg_Parser _parser = {{',
+            '    .keywords = _keywords,',
+            '    .format = "{format_units}:{name}",',
+            '    .kwtuple = KWTUPLE,',
+        ]
+        if pos_only:
+            lines.append(f'    .pos = {pos_only},')
+        lines += ['}};', '#undef KWTUPLE']
+        return '\n'.join(lines)
+
+    # _PyArg_KwParser: const with a static kwtuple, otherwise a
+    # _PyArg_KwParserDyn whose kwtuple is created at runtime from the
+    # keywords.  KWPARSER is used (and #undef'ed) in the parser code.
+    runtime = [
+        keywords,
+        'static _PyArg_KwParserDyn _parser = {{',
+        '    .base = {{.fname = "{name}"}},',
+        '    .keywords = _keywords,',
+        '}};',
+        '#define KWPARSER (&_parser.base)',
+    ]
+    if kwtuple is None:
+        return '\n'.join(runtime)
+    lines.append(condition)
+    if static_kwtuple:
+        lines += ['', *static_kwtuple]
+    lines += [
+        'static const _PyArg_KwParser _parser = {{',
+        f'    .kwtuple = {kwtuple},',
+        '    .fname = "{name}",',
+        '}};',
+        '#define KWPARSER (&_parser)',
+        '',
+        '#else  // !Py_BUILD_CORE',
+        *runtime,
+        '#endif  // !Py_BUILD_CORE',
+    ]
+    return '\n'.join(lines)
 
 
 NO_VARARG: Final[str] = "PY_SSIZE_T_MAX"
@@ -1195,7 +1227,8 @@ class ParseArgsCodeGen:
             if self.fastcall:
                 self.flags = "METH_FASTCALL|METH_KEYWORDS"
                 self.parser_prototype = PARSER_PROTOTYPE_FASTCALL_KEYWORDS
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 if self.varpos:
                     self.declarations += "\nPyObject * const *fastargs;"
@@ -1214,7 +1247,8 @@ class ParseArgsCodeGen:
                 self.parser_prototype = PARSER_PROTOTYPE_KEYWORD_HELPER
                 argsname = 'fastargs'
                 argname_fmt = 'fastargs[%d]'
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 self.declarations += "\nPyObject * const *fastargs;"
                 if has_optional_kw:
@@ -1228,7 +1262,8 @@ class ParseArgsCodeGen:
                 self.parser_prototype = PARSER_PROTOTYPE_KEYWORD
                 argsname = 'fastargs'
                 argname_fmt = 'fastargs[%d]'
-                self.declarations = declare_parser(self.func, codegen=self.codegen)
+                self.declarations = declare_parser(self.func, codegen=self.codegen,
+                                                   pos_only=self.pos_only)
                 self.declarations += "\nPyObject *argsbuf[%s];" % (len(self.converters) or 1)
                 self.declarations += "\nPyObject * const *fastargs;"
                 self.declarations += "\nPy_ssize_t nargs = PyTuple_GET_SIZE(args);"
@@ -1236,8 +1271,9 @@ class ParseArgsCodeGen:
                     self.declarations += "\nPy_ssize_t noptargs = %s + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - %d;" % (nargs, self.min_pos + self.min_kw_only)
                 unpack_args = '_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL'
             parser_code = [libclinic.normalize_snippet(f"""
-                {argsname} = _PyArg_UnpackKeywords({unpack_args}, &_parser,
-                        /*minpos*/ {self.min_pos}, /*maxpos*/ {self.max_pos}, /*minkw*/ {self.min_kw_only}, /*varpos*/ {1 if self.varpos else 0}, argsbuf);
+                {argsname} = _PyArg_UnpackKeywords({unpack_args}, KWPARSER,
+                        /*posonly*/ {self.pos_only}, /*minpos*/ {self.min_pos}, /*maxpos*/ {self.max_pos}, /*minkw*/ {self.min_kw_only}, /*varpos*/ {1 if self.varpos else 0}, argsbuf);
+                #undef KWPARSER
                 if (!{argsname}) {{{{
                     goto exit;
                 }}}}

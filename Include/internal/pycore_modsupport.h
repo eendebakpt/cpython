@@ -64,6 +64,19 @@ PyAPI_FUNC(void) _PyArg_BadArgument(
 
 // --- _PyArg_Parser API ---------------------------------------------------
 
+// Parser for _PyArg_UnpackKeywords(), const with a static kwtuple in core
+// code. Extension modules use _PyArg_KwParserDyn instead: kwtuple is NULL
+// and created from keywords on first use.
+typedef struct _PyArg_KwParser {
+    PyObject *kwtuple;             /* tuple of keyword parameter names */
+    const char *fname;             /* function name, for error messages */
+} _PyArg_KwParser;
+
+typedef struct {
+    _PyArg_KwParser base;
+    const char * const *keywords;  /* NULL-terminated */
+} _PyArg_KwParserDyn;
+
 // Export for '_dbm' shared extension
 PyAPI_FUNC(int) _PyArg_ParseStackAndKeywords(
     PyObject *const *args,
@@ -78,18 +91,19 @@ PyAPI_FUNC(PyObject * const *) _PyArg_UnpackKeywords(
     Py_ssize_t nargs,
     PyObject *kwargs,
     PyObject *kwnames,
-    struct _PyArg_Parser *parser,
+    const struct _PyArg_KwParser *parser,
+    int posonly,
     int minpos,
     int maxpos,
     int minkw,
     int varpos,
     PyObject **buf);
-#define _PyArg_UnpackKeywords(args, nargs, kwargs, kwnames, parser, minpos, maxpos, minkw, varpos, buf) \
+#define _PyArg_UnpackKeywords(args, nargs, kwargs, kwnames, parser, posonly, minpos, maxpos, minkw, varpos, buf) \
     (((minkw) == 0 && (kwargs) == NULL && (kwnames) == NULL && \
       (minpos) <= (nargs) && ((varpos) || (nargs) <= (maxpos)) && (args) != NULL) ? \
       (args) : \
      _PyArg_UnpackKeywords((args), (nargs), (kwargs), (kwnames), (parser), \
-                           (minpos), (maxpos), (minkw), (varpos), (buf)))
+                           (posonly), (minpos), (maxpos), (minkw), (varpos), (buf)))
 
 #ifdef __cplusplus
 }
