@@ -202,25 +202,27 @@ pysqlite_cursor_fetchmany(PyObject *self, PyObject *const *args, Py_ssize_t narg
         .ob_item = { &_Py_ID(size), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "fetchmany",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"size", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "fetchmany"},
         .keywords = _keywords,
-        .fname = "fetchmany",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     uint32_t maxrows = ((pysqlite_Cursor *)self)->arraysize;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -364,4 +366,4 @@ exit:
 }
 #define _SQLITE3_CURSOR_ARRAYSIZE_GETSETDEF {"arraysize", (getter)_sqlite3_Cursor_arraysize_get, (setter)_sqlite3_Cursor_arraysize_set, NULL},
 
-/*[clinic end generated code: output=e920343d84bd4976 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=6289924492392b40 input=a9049054013a1b77]*/

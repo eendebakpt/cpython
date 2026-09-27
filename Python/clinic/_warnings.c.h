@@ -89,19 +89,20 @@ warnings_warn(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
         .ob_item = { &_Py_ID(message), &_Py_ID(category), &_Py_ID(stacklevel), &_Py_ID(source), &_Py_ID(skip_file_prefixes), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "warn",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"message", "category", "stacklevel", "source", "skip_file_prefixes", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "warn"},
         .keywords = _keywords,
-        .fname = "warn",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[5];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 1;
     PyObject *message;
@@ -110,8 +111,9 @@ warnings_warn(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyObjec
     PyObject *source = Py_None;
     PyTupleObject *skip_file_prefixes = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -199,19 +201,20 @@ warnings_warn_explicit(PyObject *module, PyObject *const *args, Py_ssize_t nargs
         .ob_item = { &_Py_ID(message), &_Py_ID(category), &_Py_ID(filename), &_Py_ID(lineno), &_Py_ID(module), &_Py_ID(registry), &_Py_ID(module_globals), &_Py_ID(source), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "warn_explicit",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"message", "category", "filename", "lineno", "module", "registry", "module_globals", "source", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "warn_explicit"},
         .keywords = _keywords,
-        .fname = "warn_explicit",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[8];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 4;
     PyObject *message;
@@ -223,8 +226,9 @@ warnings_warn_explicit(PyObject *module, PyObject *const *args, Py_ssize_t nargs
     PyObject *module_globals = Py_None;
     PyObject *sourceobj = Py_None;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 4, /*maxpos*/ 8, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 4, /*maxpos*/ 8, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -284,4 +288,4 @@ warnings_filters_mutated_lock_held(PyObject *module, PyObject *Py_UNUSED(ignored
 {
     return warnings_filters_mutated_lock_held_impl(module);
 }
-/*[clinic end generated code: output=fc026d6a21e12170 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=42b765d63100ebf8 input=a9049054013a1b77]*/

@@ -56,24 +56,26 @@ _csv_unregister_dialect(PyObject *module, PyObject *const *args, Py_ssize_t narg
         .ob_item = { &_Py_ID(name), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "unregister_dialect",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"name", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "unregister_dialect"},
         .keywords = _keywords,
-        .fname = "unregister_dialect",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     PyObject *name;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -114,24 +116,26 @@ _csv_get_dialect(PyObject *module, PyObject *const *args, Py_ssize_t nargs, PyOb
         .ob_item = { &_Py_ID(name), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "get_dialect",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"name", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "get_dialect"},
         .keywords = _keywords,
-        .fname = "get_dialect",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     PyObject *name;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -175,25 +179,27 @@ _csv_field_size_limit(PyObject *module, PyObject *const *args, Py_ssize_t nargs,
         .ob_item = { &_Py_ID(new_limit), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "field_size_limit",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"new_limit", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "field_size_limit"},
         .keywords = _keywords,
-        .fname = "field_size_limit",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     PyObject *new_limit = NULL;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -207,4 +213,4 @@ skip_optional_pos:
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=ed77cb69fad9f3b4 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=a6599d54ccfe0cfa input=a9049054013a1b77]*/

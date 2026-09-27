@@ -73,19 +73,20 @@ _io__WindowsConsoleIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
         .ob_item = { &_Py_ID(file), &_Py_ID(mode), &_Py_ID(closefd), &_Py_ID(opener), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "_WindowsConsoleIO",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"file", "mode", "closefd", "opener", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "_WindowsConsoleIO"},
         .keywords = _keywords,
-        .fname = "_WindowsConsoleIO",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[4];
     PyObject * const *fastargs;
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
@@ -95,8 +96,9 @@ _io__WindowsConsoleIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     int closefd = 1;
     PyObject *opener = Py_None;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 1, /*maxpos*/ 4, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!fastargs) {
         goto exit;
     }
@@ -227,23 +229,26 @@ _io__WindowsConsoleIO_readinto(PyObject *self, PyTypeObject *cls, PyObject *cons
 {
     PyObject *return_value = NULL;
     #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
-    static const char * const _keywords[] = {"", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (PyObject *)&_Py_SINGLETON(tuple_empty),
         .fname = "readinto",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser)
+
+    #else  // !Py_BUILD_CORE
+    static const char * const _keywords[] = {"", NULL};
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "readinto"},
+        .keywords = _keywords,
+    };
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     Py_buffer buffer = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 1, /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -312,23 +317,26 @@ _io__WindowsConsoleIO_read(PyObject *self, PyTypeObject *cls, PyObject *const *a
 {
     PyObject *return_value = NULL;
     #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
-    static const char * const _keywords[] = {"", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (PyObject *)&_Py_SINGLETON(tuple_empty),
         .fname = "read",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser)
+
+    #else  // !Py_BUILD_CORE
+    static const char * const _keywords[] = {"", NULL};
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "read"},
+        .keywords = _keywords,
+    };
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     Py_ssize_t size = -1;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 1, /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -370,23 +378,26 @@ _io__WindowsConsoleIO_write(PyObject *self, PyTypeObject *cls, PyObject *const *
 {
     PyObject *return_value = NULL;
     #if defined(Py_BUILD_CORE) && !defined(Py_BUILD_CORE_MODULE)
-    #  define KWTUPLE (PyObject *)&_Py_SINGLETON(tuple_empty)
-    #else
-    #  define KWTUPLE NULL
-    #endif
-
-    static const char * const _keywords[] = {"", NULL};
-    static _PyArg_Parser _parser = {
-        .keywords = _keywords,
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (PyObject *)&_Py_SINGLETON(tuple_empty),
         .fname = "write",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser)
+
+    #else  // !Py_BUILD_CORE
+    static const char * const _keywords[] = {"", NULL};
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "write"},
+        .keywords = _keywords,
+    };
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     Py_buffer b = {NULL, NULL};
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 1, /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -594,4 +605,4 @@ _io__WindowsConsoleIO_mode_get(PyObject *self, void *Py_UNUSED(context))
 #  define _IO__WINDOWSCONSOLEIO_MODE_GETSETDEF
 #endif
 
-/*[clinic end generated code: output=24fe425795203cee input=a9049054013a1b77]*/
+/*[clinic end generated code: output=50ca5b871734b537 input=a9049054013a1b77]*/

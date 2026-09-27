@@ -467,27 +467,29 @@ _overlapped_Overlapped(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         .ob_item = { &_Py_ID(event), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "Overlapped",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"event", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "Overlapped"},
         .keywords = _keywords,
-        .fname = "Overlapped",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     PyObject * const *fastargs;
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
     Py_ssize_t noptargs = nargs + (kwargs ? PyDict_GET_SIZE(kwargs) : 0) - 0;
     HANDLE event = INVALID_HANDLE_VALUE;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!fastargs) {
         goto exit;
     }
@@ -1243,4 +1245,4 @@ exit:
 
     return return_value;
 }
-/*[clinic end generated code: output=0ecaf45a09539599 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=092578fc6cd36827 input=a9049054013a1b77]*/

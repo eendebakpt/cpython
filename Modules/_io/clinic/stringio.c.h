@@ -317,19 +317,20 @@ _io_StringIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
         .ob_item = { &_Py_ID(initial_value), &_Py_ID(newline), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "StringIO",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"initial_value", "newline", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "StringIO"},
         .keywords = _keywords,
-        .fname = "StringIO",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[2];
     PyObject * const *fastargs;
     Py_ssize_t nargs = PyTuple_GET_SIZE(args);
@@ -337,8 +338,9 @@ _io_StringIO___init__(PyObject *self, PyObject *args, PyObject *kwargs)
     PyObject *value = NULL;
     PyObject *newline_obj = NULL;
 
-    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    fastargs = _PyArg_UnpackKeywords(_PyTuple_CAST(args)->ob_item, nargs, kwargs, NULL, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 0, /*maxpos*/ 2, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!fastargs) {
         goto exit;
     }
@@ -539,4 +541,4 @@ _io_StringIO_newlines_get(PyObject *self, void *Py_UNUSED(context))
 
 #define _IO_STRINGIO_NEWLINES_GETSETDEF {"newlines", (getter)_io_StringIO_newlines_get, (setter)NULL, NULL},
 
-/*[clinic end generated code: output=4100afa5e4f295d7 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=eb61c4b764292894 input=a9049054013a1b77]*/

@@ -93,26 +93,28 @@ _testmultiphase_StateAccessType_increment_count_clinic(PyObject *self, PyTypeObj
         .ob_item = { _Py_LATIN1_CHR('n'), &_Py_ID(twice), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "increment_count_clinic",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"n", "twice", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "increment_count_clinic"},
         .keywords = _keywords,
-        .fname = "increment_count_clinic",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[2];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     int n = 1;
     int twice = 0;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 0, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -165,4 +167,4 @@ _testmultiphase_StateAccessType_get_count(PyObject *self, PyTypeObject *cls, PyO
     }
     return _testmultiphase_StateAccessType_get_count_impl((StateAccessTypeObject *)self, cls);
 }
-/*[clinic end generated code: output=aff91f6219a7baca input=a9049054013a1b77]*/
+/*[clinic end generated code: output=089225d95702d1ef input=a9049054013a1b77]*/

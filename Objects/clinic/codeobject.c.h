@@ -191,19 +191,20 @@ code_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *
         .ob_item = { &_Py_ID(co_argcount), &_Py_ID(co_posonlyargcount), &_Py_ID(co_kwonlyargcount), &_Py_ID(co_nlocals), &_Py_ID(co_stacksize), &_Py_ID(co_flags), &_Py_ID(co_firstlineno), &_Py_ID(co_code), &_Py_ID(co_consts), &_Py_ID(co_names), &_Py_ID(co_varnames), &_Py_ID(co_freevars), &_Py_ID(co_cellvars), &_Py_ID(co_filename), &_Py_ID(co_name), &_Py_ID(co_qualname), &_Py_ID(co_linetable), &_Py_ID(co_exceptiontable), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "replace",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"co_argcount", "co_posonlyargcount", "co_kwonlyargcount", "co_nlocals", "co_stacksize", "co_flags", "co_firstlineno", "co_code", "co_consts", "co_names", "co_varnames", "co_freevars", "co_cellvars", "co_filename", "co_name", "co_qualname", "co_linetable", "co_exceptiontable", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "replace"},
         .keywords = _keywords,
-        .fname = "replace",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[18];
     Py_ssize_t noptargs = nargs + (kwnames ? PyTuple_GET_SIZE(kwnames) : 0) - 0;
     int co_argcount = ((PyCodeObject *)self)->co_argcount;
@@ -225,8 +226,9 @@ code_replace(PyObject *self, PyObject *const *args, Py_ssize_t nargs, PyObject *
     PyObject *co_linetable = ((PyCodeObject *)self)->co_linetable;
     PyObject *co_exceptiontable = ((PyCodeObject *)self)->co_exceptiontable;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 0, /*maxpos*/ 0, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 0, /*maxpos*/ 0, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -441,24 +443,26 @@ code__varname_from_oparg(PyObject *self, PyObject *const *args, Py_ssize_t nargs
         .ob_item = { &_Py_ID(oparg), },
     };
     #undef NUM_KEYWORDS
-    #define KWTUPLE (&_kwtuple.ob_base.ob_base)
+    static const _PyArg_KwParser _parser = {
+        .kwtuple = (&_kwtuple.ob_base.ob_base),
+        .fname = "_varname_from_oparg",
+    };
+    #define KWPARSER (&_parser)
 
     #else  // !Py_BUILD_CORE
-    #  define KWTUPLE NULL
-    #endif  // !Py_BUILD_CORE
-
     static const char * const _keywords[] = {"oparg", NULL};
-    static _PyArg_Parser _parser = {
+    static _PyArg_KwParserDyn _parser = {
+        .base = {.fname = "_varname_from_oparg"},
         .keywords = _keywords,
-        .fname = "_varname_from_oparg",
-        .kwtuple = KWTUPLE,
     };
-    #undef KWTUPLE
+    #define KWPARSER (&_parser.base)
+    #endif  // !Py_BUILD_CORE
     PyObject *argsbuf[1];
     int oparg;
 
-    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, &_parser,
-            /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    args = _PyArg_UnpackKeywords(args, nargs, NULL, kwnames, KWPARSER,
+            /*posonly*/ 0, /*minpos*/ 1, /*maxpos*/ 1, /*minkw*/ 0, /*varpos*/ 0, argsbuf);
+    #undef KWPARSER
     if (!args) {
         goto exit;
     }
@@ -471,4 +475,4 @@ code__varname_from_oparg(PyObject *self, PyObject *const *args, Py_ssize_t nargs
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=5c22e29e430401b4 input=a9049054013a1b77]*/
+/*[clinic end generated code: output=0407ca3a36be8abb input=a9049054013a1b77]*/
