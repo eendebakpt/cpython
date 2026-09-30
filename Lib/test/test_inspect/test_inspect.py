@@ -771,6 +771,12 @@ class TestRetrievingSourceCode(GetSourceBase):
         ('\n\n\n  first paragraph\n\n   second paragraph\n\n',
          '\n\n\nfirst paragraph\n\n second paragraph\n\n'),
         ('   \n \n  \n   ', '\n \n  \n   '),
+        # the margin is the smallest indentation of the non-blank lines,
+        # wherever that line is.
+        ('doc\n      six\n    four\n  \n\n   three\n     five',
+         'doc\n   six\n four\n\n\nthree\n  five'),
+        ('doc\n    four\n  \n      six\nzero\n  two',
+         'doc\n    four\n  \n      six\nzero\n  two'),
     ]
 
     def test_cleandoc(self):

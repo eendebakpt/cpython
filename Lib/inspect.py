@@ -827,17 +827,23 @@ def cleandoc(doc, *, dedent=True):
     lines = doc.expandtabs().split('\n')
 
     # Find minimum indentation of any non-blank lines after first line.
-    margin = sys.maxsize
+    margin = 0
     if dedent:
+        indent = '\t'  # no line starts with a tab after expandtabs()
         for line in lines[1:]:
-            content = len(line.lstrip(' '))
-            if content:
-                indent = len(line) - content
-                margin = min(margin, indent)
+            # A line starting with the smallest indentation found so far
+            # cannot lower it.
+            if not line.startswith(indent):
+                content = line.lstrip(' ')
+                if content:
+                    margin = len(line) - len(content)
+                    if not margin:
+                        break
+                    indent = line[:margin]
     # Remove indentation.
     if lines:
         lines[0] = lines[0].lstrip(' ')
-    if margin < sys.maxsize:
+    if margin:
         for i in range(1, len(lines)):
             lines[i] = lines[i][margin:]
     # Remove any trailing or leading blank lines.
