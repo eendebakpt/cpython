@@ -12023,24 +12023,37 @@ static PyObject *
 unicode_expandtabs_impl(PyObject *self, int tabsize)
 /*[clinic end generated code: output=3457c5dcee26928f input=8a01914034af4c85]*/
 {
-    Py_ssize_t i, j, line_pos, src_len, incr;
+    Py_ssize_t i, j, line_pos, src_len, incr, start, start_line_pos;
     Py_UCS4 ch;
     PyObject *u;
     const void *src_data;
     void *dest_data;
     int kind;
-    int found;
 
-    /* First pass: determine size of output string */
     src_len = PyUnicode_GET_LENGTH(self);
-    i = j = line_pos = 0;
     kind = PyUnicode_KIND(self);
     src_data = PyUnicode_DATA(self);
-    found = 0;
+
+    /* The text before the first tab is copied unchanged. */
+    start = findchar(src_data, kind, src_len, '\t', 1);
+    if (start < 0)
+        return unicode_result_unchanged(self);
+
+    /* Column of the first tab */
+    start_line_pos = 0;
+    while (start_line_pos < start) {
+        ch = PyUnicode_READ(kind, src_data, start - start_line_pos - 1);
+        if (ch == '\n' || ch == '\r')
+            break;
+        start_line_pos++;
+    }
+
+    /* First pass: determine size of output string */
+    i = j = start;
+    line_pos = start_line_pos;
     for (; i < src_len; i++) {
         ch = PyUnicode_READ(kind, src_data, i);
         if (ch == '\t') {
-            found = 1;
             if (tabsize > 0) {
                 incr = tabsize - (line_pos % tabsize); /* cannot overflow */
                 if (j > PY_SSIZE_T_MAX - incr)
@@ -12058,17 +12071,15 @@ unicode_expandtabs_impl(PyObject *self, int tabsize)
                 line_pos = 0;
         }
     }
-    if (!found)
-        return unicode_result_unchanged(self);
-
     /* Second pass: create output string and fill it */
     u = PyUnicode_New(j, PyUnicode_MAX_CHAR_VALUE(self));
     if (!u)
         return NULL;
     dest_data = PyUnicode_DATA(u);
 
-    i = j = line_pos = 0;
-
+    memcpy(dest_data, src_data, start * kind);
+    i = j = start;
+    line_pos = start_line_pos;
     for (; i < src_len; i++) {
         ch = PyUnicode_READ(kind, src_data, i);
         if (ch == '\t') {

@@ -480,6 +480,14 @@ class BaseTest:
                         'expandtabs', tabsize=4)
 
         self.checkequal('  a\n b', ' \ta\n\tb', 'expandtabs', 1)
+        # the column of the first tab depends on the text before it
+        self.checkequal('abcdefghij  k', 'abcdefghij\tk', 'expandtabs', 4)
+        self.checkequal('ab\ncdefghij    k', 'ab\ncdefghij\tk', 'expandtabs', 4)
+        self.checkequal('ab\rcdefghij    k\n    ', 'ab\rcdefghij\tk\n\t',
+                        'expandtabs', 4)
+        self.checkequal('abc\n    ', 'abc\n\t', 'expandtabs', 4)
+        self.checkequal('abc', 'abc', 'expandtabs')
+        self.checkequal('', '', 'expandtabs')
 
         self.checkraises(TypeError, 'hello', 'expandtabs', 42, 42)
         # This test is only valid when sizeof(int) == sizeof(void*) == 4.
