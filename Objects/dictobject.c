@@ -3654,10 +3654,14 @@ static void
 dict_dealloc(PyObject *self)
 {
     PyDictObject *mp = (PyDictObject *)self;
-    _PyObject_ResurrectStart(self);
-    _PyDict_NotifyEvent(PyDict_EVENT_DEALLOCATED, mp, NULL, NULL);
-    if (_PyObject_ResurrectEnd(self)) {
-        return;
+    if (FT_ATOMIC_LOAD_UINT64_ACQUIRE(mp->_ma_watcher_tag) & DICT_WATCHER_MASK) {
+        /* Only watched dicts need the temporary resurrection around the
+           callback; for all others skip the refcount dance entirely. */
+        _PyObject_ResurrectStart(self);
+        _PyDict_NotifyEvent(PyDict_EVENT_DEALLOCATED, mp, NULL, NULL);
+        if (_PyObject_ResurrectEnd(self)) {
+            return;
+        }
     }
     PyDictValues *values = mp->ma_values;
     PyDictKeysObject *keys = mp->ma_keys;
