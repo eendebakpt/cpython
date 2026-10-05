@@ -3295,7 +3295,9 @@ _PyList_FromStackRefStealOnSuccess(const _PyStackRef *src, Py_ssize_t n)
         return PyList_New(0);
     }
 
-    PyListObject *list = (PyListObject *)PyList_New(n);
+    /* list_new_prealloc() skips the zero-fill done by PyList_New();
+       every slot is written below before the size is set. */
+    PyListObject *list = (PyListObject *)list_new_prealloc(n);
     if (list == NULL) {
         return NULL;
     }
@@ -3304,6 +3306,7 @@ _PyList_FromStackRefStealOnSuccess(const _PyStackRef *src, Py_ssize_t n)
     for (Py_ssize_t i = 0; i < n; i++) {
         dst[i] = PyStackRef_AsPyObjectSteal(src[i]);
     }
+    Py_SET_SIZE(list, n);
 
     return (PyObject *)list;
 }
