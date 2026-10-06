@@ -18,7 +18,12 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
     Py_buffer *buffers = NULL;
 #define NB_STATIC_BUFFERS 10
     Py_buffer static_buffers[NB_STATIC_BUFFERS];
-#define GIL_THRESHOLD 1048576
+#ifdef Py_GIL_DISABLED
+    /* No GIL to release: the fast path takes results of any size. */
+#  define GIL_THRESHOLD PY_SSIZE_T_MAX
+#else
+#  define GIL_THRESHOLD 1048576
+#endif
     int drop_gil = 1;
     PyThreadState *save = NULL;
 
@@ -34,6 +39,42 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
         }
     }
 #endif
+
+    /* Fast path: all items are exact bytes and the GIL is not released.
+     * No other code can run, so copy straight from the items. */
+    Py_ssize_t limit = GIL_THRESHOLD - seplen;
+    for (i = 0; i < seqlen; i++) {
+        item = PySequence_Fast_GET_ITEM(seq, i);
+        if (!PyBytes_CheckExact(item)
+            || PyBytes_GET_SIZE(item) >= limit - sz) {
+            break;
+        }
+        sz += PyBytes_GET_SIZE(item) + seplen;
+    }
+    if (i == seqlen) {
+        res = STRINGLIB_NEW(NULL, sz - seplen);
+        if (res == NULL) {
+            return NULL;
+        }
+        p = STRINGLIB_STR(res);
+        for (i = 0; i < seqlen; i++) {
+            if (i != 0 && seplen != 0) {
+                if (seplen == 1) {
+                    *p++ = *sepstr;
+                }
+                else {
+                    memcpy(p, sepstr, seplen);
+                    p += seplen;
+                }
+            }
+            item = PySequence_Fast_GET_ITEM(seq, i);
+            memcpy(p, PyBytes_AS_STRING(item), PyBytes_GET_SIZE(item));
+            p += PyBytes_GET_SIZE(item);
+        }
+        return res;
+    }
+    sz = 0;
+
     if (seqlen > NB_STATIC_BUFFERS) {
         buffers = PyMem_NEW(Py_buffer, seqlen);
         if (buffers == NULL) {
@@ -148,8 +189,16 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
 error:
     res = NULL;
 done:
-    for (i = 0; i < nbufs; i++)
-        PyBuffer_Release(&buffers[i]);
+    for (i = 0; i < nbufs; i++) {
+        PyObject *obj = buffers[i].obj;
+        if (obj != NULL && PyBytes_CheckExact(obj)) {
+            /* bytes has no bf_releasebuffer */
+            Py_DECREF(obj);
+        }
+        else {
+            PyBuffer_Release(&buffers[i]);
+        }
+    }
     if (buffers != static_buffers)
         PyMem_Free(buffers);
     return res;
