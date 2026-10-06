@@ -438,6 +438,10 @@ setitem_lock_held(PyDictObject *mp, PyObject *key, PyObject *value);
 static int
 dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value,
                     PyObject **result, int incref_result);
+static int
+setdefault_known_hash_lock_held(PyDictObject *mp, PyObject *key, Py_hash_t hash,
+                                PyObject *default_value, PyObject **result,
+                                int incref_result);
 
 #ifndef NDEBUG
 static int _PyObject_InlineValuesConsistencyCheck(PyObject *obj);
@@ -4275,11 +4279,9 @@ dict_dict_merge(PyDictObject *mp, PyDictObject *other, int override, PyObject **
             err = insertdict(mp, Py_NewRef(key), hash, Py_NewRef(value));
         }
         else {
-            err = _PyDict_Contains_KnownHash((PyObject *)mp, key, hash);
-            if (err == 0) {
-                err = insertdict(mp, Py_NewRef(key), hash, Py_NewRef(value));
-            }
-            else if (err > 0) {
+            err = setdefault_known_hash_lock_held(mp, key, hash, value,
+                                                  NULL, 0);
+            if (err > 0) {
                 if (dupkey != NULL) {
                     *dupkey = key;
                     Py_DECREF(value);
@@ -4833,12 +4835,7 @@ dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_valu
     }
     assert(can_modify_dict((PyDictObject*)d));
 
-    PyDictObject *mp = (PyDictObject *)d;
-    PyObject *value;
-    Py_hash_t hash;
-    Py_ssize_t ix;
-
-    hash = _PyObject_HashDictKey(key);
+    Py_hash_t hash = _PyObject_HashDictKey(key);
     if (hash == -1) {
         dict_unhashable_type(d, key);
         if (result) {
@@ -4846,6 +4843,22 @@ dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_valu
         }
         return -1;
     }
+    return setdefault_known_hash_lock_held((PyDictObject *)d, key, hash,
+                                           default_value, result,
+                                           incref_result);
+}
+
+/* Insert default_value under key, unless the key is already present.
+   Return 1 if the key was present, 0 if it was inserted, -1 on error. */
+static int
+setdefault_known_hash_lock_held(PyDictObject *mp, PyObject *key, Py_hash_t hash,
+                                PyObject *default_value, PyObject **result,
+                                int incref_result)
+{
+    assert(can_modify_dict(mp));
+
+    PyObject *value;
+    Py_ssize_t ix;
 
     if (mp->ma_keys == Py_EMPTY_KEYS) {
         if (insert_to_emptydict(mp, Py_NewRef(key), hash,

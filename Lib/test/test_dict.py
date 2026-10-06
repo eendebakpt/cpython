@@ -1277,6 +1277,25 @@ class DictTest(unittest.TestCase):
         d = {X(): 0, 1: 1}
         self.assertRaises(RuntimeError, d.update, other)
 
+    def test_merge_kwargs_and_mutate(self):
+        # f(**a, **b) merges b without overriding: the lookup of each key
+        # can call __eq__, which may mutate b.
+        class Key(str):
+            def __hash__(self):
+                return 0
+
+            def __eq__(self, o):
+                other.clear()
+                return False
+
+        def f(**kwargs):
+            return kwargs
+
+        first = {Key('x'): 1}
+        other = {Key('y'): object()}
+        with self.assertRaises(RuntimeError):
+            f(**first, **other)
+
     def test_free_after_iterating(self):
         support.check_free_after_iterating(self, iter, dict)
         support.check_free_after_iterating(self, lambda d: iter(d.keys()), dict)

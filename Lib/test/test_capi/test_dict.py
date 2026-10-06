@@ -479,6 +479,44 @@ class CAPITest(unittest.TestCase):
         self.assertRaises(SystemError, merge, {}, NULL, 0)
         self.assertRaises(SystemError, merge, NULL, {}, 0)
 
+    def test_dict_merge_no_override_hash_and_eq(self):
+        # PyDict_Merge() with override=0 reuses the hashes stored in the
+        # source dict and copes with an __eq__ that mutates the source.
+        merge = _testlimitedcapi.dict_merge
+        hash_calls = 0
+
+        class Key:
+            def __init__(self, name):
+                self.name = name
+
+            def __hash__(self):
+                nonlocal hash_calls
+                hash_calls += 1
+                return hash(self.name)
+
+            def __eq__(self, other):
+                return self.name == other.name
+
+        dct = {Key('a'): 1, Key('b'): 2}
+        other = {Key('b'): 3, Key('c'): 4}
+        hash_calls = 0
+        merge(dct, other, 0)
+        self.assertEqual(hash_calls, 0)
+        self.assertEqual({key.name: value for key, value in dct.items()},
+                         {'a': 1, 'b': 2, 'c': 4})
+
+        class Evil:
+            def __hash__(self):
+                return 0
+
+            def __eq__(self, other_key):
+                other.clear()
+                return False
+
+        dct = {Evil(): 1}
+        other = {Evil(): object()}
+        self.assertRaises(RuntimeError, merge, dct, other, 0)
+
     def test_dict_mergefromseq2(self):
         # Test PyDict_MergeFromSeq2()
         mergefromseq2 = _testlimitedcapi.dict_mergefromseq2

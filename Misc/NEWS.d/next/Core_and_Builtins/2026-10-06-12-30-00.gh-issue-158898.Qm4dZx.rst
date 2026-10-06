@@ -1,0 +1,4 @@
+Speed up merging dictionaries without overriding existing keys, as done by
+calls such as ``f(**a, **b)`` and ``f(x=1, **kwargs)`` and by
+:c:func:`PyDict_Merge` with *override* set to 0: each key is now looked up
+once instead of twice. Patch by Pieter Eendebak.
