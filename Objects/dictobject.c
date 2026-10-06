@@ -439,9 +439,8 @@ static int
 dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value,
                     PyObject **result, int incref_result);
 static int
-setdefault_known_hash_lock_held(PyDictObject *mp, PyObject *key, Py_hash_t hash,
-                                PyObject *default_value, PyObject **result,
-                                int incref_result);
+insert_if_absent_known_hash(PyDictObject *mp, PyObject *key, Py_hash_t hash,
+                            PyObject *value);
 
 #ifndef NDEBUG
 static int _PyObject_InlineValuesConsistencyCheck(PyObject *obj);
@@ -4279,8 +4278,7 @@ dict_dict_merge(PyDictObject *mp, PyDictObject *other, int override, PyObject **
             err = insertdict(mp, Py_NewRef(key), hash, Py_NewRef(value));
         }
         else {
-            err = setdefault_known_hash_lock_held(mp, key, hash, value,
-                                                  NULL, 0);
+            err = insert_if_absent_known_hash(mp, key, hash, value);
             if (err > 0) {
                 if (dupkey != NULL) {
                     *dupkey = key;
@@ -4817,40 +4815,9 @@ dict_get_impl(PyDictObject *self, PyObject *key, PyObject *default_value)
     return val;
 }
 
-static int
-dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value,
-                    PyObject **result, int incref_result)
-{
-    if (!PyDict_Check(d)) {
-        if (PyFrozenDict_Check(d)) {
-            frozendict_does_not_support("assignment");
-        }
-        else {
-            PyErr_BadInternalCall();
-        }
-        if (result) {
-            *result = NULL;
-        }
-        return -1;
-    }
-    assert(can_modify_dict((PyDictObject*)d));
-
-    Py_hash_t hash = _PyObject_HashDictKey(key);
-    if (hash == -1) {
-        dict_unhashable_type(d, key);
-        if (result) {
-            *result = NULL;
-        }
-        return -1;
-    }
-    return setdefault_known_hash_lock_held((PyDictObject *)d, key, hash,
-                                           default_value, result,
-                                           incref_result);
-}
-
 /* Insert default_value under key, unless the key is already present.
    Return 1 if the key was present, 0 if it was inserted, -1 on error. */
-static int
+static inline Py_ALWAYS_INLINE int
 setdefault_known_hash_lock_held(PyDictObject *mp, PyObject *key, Py_hash_t hash,
                                 PyObject *default_value, PyObject **result,
                                 int incref_result)
@@ -4928,6 +4895,46 @@ setdefault_known_hash_lock_held(PyDictObject *mp, PyObject *key, Py_hash_t hash,
         *result = incref_result ? Py_NewRef(value) : value;
     }
     return 1;
+}
+
+static int
+dict_setdefault_ref_lock_held(PyObject *d, PyObject *key, PyObject *default_value,
+                    PyObject **result, int incref_result)
+{
+    if (!PyDict_Check(d)) {
+        if (PyFrozenDict_Check(d)) {
+            frozendict_does_not_support("assignment");
+        }
+        else {
+            PyErr_BadInternalCall();
+        }
+        if (result) {
+            *result = NULL;
+        }
+        return -1;
+    }
+    assert(can_modify_dict((PyDictObject*)d));
+
+    Py_hash_t hash = _PyObject_HashDictKey(key);
+    if (hash == -1) {
+        dict_unhashable_type(d, key);
+        if (result) {
+            *result = NULL;
+        }
+        return -1;
+    }
+    return setdefault_known_hash_lock_held((PyDictObject *)d, key, hash,
+                                           default_value, result,
+                                           incref_result);
+}
+
+/* Insert value under key, unless the key is already present.
+   Used by dict_dict_merge(), which already knows the hash. */
+static int
+insert_if_absent_known_hash(PyDictObject *mp, PyObject *key, Py_hash_t hash,
+                            PyObject *value)
+{
+    return setdefault_known_hash_lock_held(mp, key, hash, value, NULL, 0);
 }
 
 int
