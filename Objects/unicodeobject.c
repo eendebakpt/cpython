@@ -10526,12 +10526,11 @@ _PyUnicode_JoinArray(PyObject *separator, PyObject *const *items, Py_ssize_t seq
                          i, Py_TYPE(item)->tp_name);
             goto onError;
         }
-        add_sz = PyUnicode_GET_LENGTH(item);
+        /* Count a separator for every item, including the first one,
+           and remove the extra one after the loop. */
+        add_sz = (size_t)PyUnicode_GET_LENGTH(item) + (size_t)seplen;
         kinds |= PyUnicode_KIND(item);
         all_ascii &= PyUnicode_IS_ASCII(item);
-        if (i != 0) {
-            add_sz += seplen;
-        }
         if (add_sz > (size_t)(PY_SSIZE_T_MAX - sz)) {
             PyErr_SetString(PyExc_OverflowError,
                             "join() result is too long for a Python string");
@@ -10544,6 +10543,7 @@ _PyUnicode_JoinArray(PyObject *separator, PyObject *const *items, Py_ssize_t seq
         }
         last_obj = item;
     }
+    sz -= seplen;
     if (all_ascii) {
         maxchar = 0x7f;
     }
