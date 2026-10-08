@@ -8,37 +8,12 @@
 /* Release the GIL while copying results of at least this size. */
 #define GIL_THRESHOLD 1048576
 
-/* Join a sequence of exact bytes objects without creating buffer views.
-
-   Return 1 and set *result (NULL with an exception set if the allocation
-   failed) if all items are exact bytes objects and the result is shorter
-   than GIL_THRESHOLD, so that no Python code runs and the GIL is not
-   released while the items are read. Otherwise return 0. */
-static int
-STRINGLIB(bytes_join_exact)(const char *sepstr, Py_ssize_t seplen,
-                            PyObject *seq, Py_ssize_t seqlen,
-                            PyObject **result)
+/* Copy the exact bytes objects items, separated by sep, to p. */
+static inline void
+STRINGLIB(bytes_join_copy)(char *p, const char *sepstr, Py_ssize_t seplen,
+                           PyObject *const *items, Py_ssize_t seqlen)
 {
-    PyObject *item;
-    Py_ssize_t i;
-    /* sz counts a separator per item; the result length is sz - seplen. */
-    Py_ssize_t sz = 0;
-    for (i = 0; i < seqlen; i++) {
-        item = PySequence_Fast_GET_ITEM(seq, i);
-        if (!PyBytes_CheckExact(item)
-            || PyBytes_GET_SIZE(item) >= GIL_THRESHOLD - sz) {
-            return 0;
-        }
-        sz += PyBytes_GET_SIZE(item) + seplen;
-    }
-
-    PyObject *res = STRINGLIB_NEW(NULL, sz - seplen);
-    if (res == NULL) {
-        *result = NULL;
-        return 1;
-    }
-    char *p = STRINGLIB_STR(res);
-    for (i = 0; i < seqlen; i++) {
+    for (Py_ssize_t i = 0; i < seqlen; i++) {
         if (i != 0 && seplen != 0) {
             if (seplen == 1) {
                 *p++ = *sepstr;
@@ -48,9 +23,65 @@ STRINGLIB(bytes_join_exact)(const char *sepstr, Py_ssize_t seplen,
                 p += seplen;
             }
         }
-        item = PySequence_Fast_GET_ITEM(seq, i);
+        PyObject *item = items[i];
         memcpy(p, PyBytes_AS_STRING(item), PyBytes_GET_SIZE(item));
         p += PyBytes_GET_SIZE(item);
+    }
+}
+
+/* Join a sequence of exact bytes objects without creating buffer views.
+
+   Return 1 and set *result (NULL with an exception set on error) if all
+   items are exact bytes objects. Return 0 if an item is not an exact bytes
+   object: the caller then uses the general path. */
+static int
+STRINGLIB(bytes_join_exact)(const char *sepstr, Py_ssize_t seplen,
+                            PyObject *seq, Py_ssize_t seqlen,
+                            PyObject **result)
+{
+    PyObject *const *items = PySequence_Fast_ITEMS(seq);
+    /* sz counts a separator per item: the result length is sz - seplen. */
+    Py_ssize_t sz = 0;
+    for (Py_ssize_t i = 0; i < seqlen; i++) {
+        PyObject *item = items[i];
+        if (!PyBytes_CheckExact(item)) {
+            return 0;
+        }
+        if (PyBytes_GET_SIZE(item) > PY_SSIZE_T_MAX - seplen - sz) {
+            PyErr_SetString(PyExc_OverflowError,
+                            "join() result is too long");
+            *result = NULL;
+            return 1;
+        }
+        sz += PyBytes_GET_SIZE(item) + seplen;
+    }
+    sz -= seplen;
+
+    PyObject *res = STRINGLIB_NEW(NULL, sz);
+    if (res == NULL) {
+        *result = NULL;
+        return 1;
+    }
+    char *p = STRINGLIB_STR(res);
+    if (sz < GIL_THRESHOLD) {
+        /* No Python code runs until the copy is done, so the sequence and
+           its (immutable) items cannot change. */
+        STRINGLIB(bytes_join_copy)(p, sepstr, seplen, items, seqlen);
+    }
+    else {
+        /* Release the GIL while copying. Other threads can then mutate the
+           sequence, so copy from a tuple which owns the items. */
+        PyObject *tuple = PySequence_Tuple(seq);
+        if (tuple == NULL) {
+            Py_DECREF(res);
+            *result = NULL;
+            return 1;
+        }
+        PyThreadState *save = PyEval_SaveThread();
+        STRINGLIB(bytes_join_copy)(p, sepstr, seplen,
+                                   PySequence_Fast_ITEMS(tuple), seqlen);
+        PyEval_RestoreThread(save);
+        Py_DECREF(tuple);
     }
     *result = res;
     return 1;
@@ -69,8 +100,6 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
     PyObject *item;
     Py_buffer *buffers = NULL;
     Py_buffer static_buffers[NB_STATIC_BUFFERS];
-    int drop_gil = 1;
-    PyThreadState *save = NULL;
 
     seqlen = PySequence_Fast_GET_SIZE(seq);
     if (seqlen == 0) {
@@ -126,13 +155,6 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
                 goto error;
             }
             Py_DECREF(item);
-            /* If the backing objects are mutable, then dropping the GIL
-             * opens up race conditions where another thread tries to modify
-             * the object which we hold a buffer on it. Such code has data
-             * races anyway, but this is a conservative approach that avoids
-             * changing the behaviour of that data race.
-             */
-            drop_gil = 0;
         }
         nbufs = i + 1;  /* for error cleanup */
         itemlen = buffers[i].len;
@@ -164,12 +186,6 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
 
     /* Catenate everything. */
     p = STRINGLIB_STR(res);
-    if (sz < GIL_THRESHOLD) {
-        drop_gil = 0;   /* Benefits are likely outweighed by the overheads */
-    }
-    if (drop_gil) {
-        save = PyEval_SaveThread();
-    }
     if (!seplen) {
         /* fast path */
         for (i = 0; i < nbufs; i++) {
@@ -194,9 +210,6 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
             memcpy(p, q, n);
             p += n;
         }
-    }
-    if (drop_gil) {
-        PyEval_RestoreThread(save);
     }
     goto done;
 
