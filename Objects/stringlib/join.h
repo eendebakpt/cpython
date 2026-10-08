@@ -4,6 +4,58 @@
 #error join.h only compatible with byte-wise strings
 #endif
 
+#define NB_STATIC_BUFFERS 10
+/* Release the GIL while copying results of at least this size. */
+#define GIL_THRESHOLD 1048576
+
+/* Join a sequence of exact bytes objects without creating buffer views.
+
+   Return 1 and set *result (NULL with an exception set if the allocation
+   failed) if all items are exact bytes objects and the result is shorter
+   than GIL_THRESHOLD, so that no Python code runs and the GIL is not
+   released while the items are read. Otherwise return 0. */
+static int
+STRINGLIB(bytes_join_exact)(const char *sepstr, Py_ssize_t seplen,
+                            PyObject *seq, Py_ssize_t seqlen,
+                            PyObject **result)
+{
+    PyObject *item;
+    Py_ssize_t i;
+    /* sz counts a separator per item; the result length is sz - seplen. */
+    Py_ssize_t sz = 0;
+    for (i = 0; i < seqlen; i++) {
+        item = PySequence_Fast_GET_ITEM(seq, i);
+        if (!PyBytes_CheckExact(item)
+            || PyBytes_GET_SIZE(item) >= GIL_THRESHOLD - sz) {
+            return 0;
+        }
+        sz += PyBytes_GET_SIZE(item) + seplen;
+    }
+
+    PyObject *res = STRINGLIB_NEW(NULL, sz - seplen);
+    if (res == NULL) {
+        *result = NULL;
+        return 1;
+    }
+    char *p = STRINGLIB_STR(res);
+    for (i = 0; i < seqlen; i++) {
+        if (i != 0 && seplen != 0) {
+            if (seplen == 1) {
+                *p++ = *sepstr;
+            }
+            else {
+                memcpy(p, sepstr, seplen);
+                p += seplen;
+            }
+        }
+        item = PySequence_Fast_GET_ITEM(seq, i);
+        memcpy(p, PyBytes_AS_STRING(item), PyBytes_GET_SIZE(item));
+        p += PyBytes_GET_SIZE(item);
+    }
+    *result = res;
+    return 1;
+}
+
 Py_LOCAL_INLINE(PyObject *)
 STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
 {
@@ -16,14 +68,7 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
     Py_ssize_t i, nbufs;
     PyObject *item;
     Py_buffer *buffers = NULL;
-#define NB_STATIC_BUFFERS 10
     Py_buffer static_buffers[NB_STATIC_BUFFERS];
-#ifdef Py_GIL_DISABLED
-    /* No GIL to release: the fast path takes results of any size. */
-#  define GIL_THRESHOLD PY_SSIZE_T_MAX
-#else
-#  define GIL_THRESHOLD 1048576
-#endif
     int drop_gil = 1;
     PyThreadState *save = NULL;
 
@@ -40,40 +85,9 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
     }
 #endif
 
-    /* Fast path: all items are exact bytes and the GIL is not released.
-     * No other code can run, so copy straight from the items. */
-    Py_ssize_t limit = GIL_THRESHOLD - seplen;
-    for (i = 0; i < seqlen; i++) {
-        item = PySequence_Fast_GET_ITEM(seq, i);
-        if (!PyBytes_CheckExact(item)
-            || PyBytes_GET_SIZE(item) >= limit - sz) {
-            break;
-        }
-        sz += PyBytes_GET_SIZE(item) + seplen;
-    }
-    if (i == seqlen) {
-        res = STRINGLIB_NEW(NULL, sz - seplen);
-        if (res == NULL) {
-            return NULL;
-        }
-        p = STRINGLIB_STR(res);
-        for (i = 0; i < seqlen; i++) {
-            if (i != 0 && seplen != 0) {
-                if (seplen == 1) {
-                    *p++ = *sepstr;
-                }
-                else {
-                    memcpy(p, sepstr, seplen);
-                    p += seplen;
-                }
-            }
-            item = PySequence_Fast_GET_ITEM(seq, i);
-            memcpy(p, PyBytes_AS_STRING(item), PyBytes_GET_SIZE(item));
-            p += PyBytes_GET_SIZE(item);
-        }
+    if (STRINGLIB(bytes_join_exact)(sepstr, seplen, seq, seqlen, &res)) {
         return res;
     }
-    sz = 0;
 
     if (seqlen > NB_STATIC_BUFFERS) {
         buffers = PyMem_NEW(Py_buffer, seqlen);
@@ -94,7 +108,7 @@ STRINGLIB(bytes_join_lock_held)(PyObject *sep, PyObject *seq)
         Py_ssize_t itemlen;
         item = PySequence_Fast_GET_ITEM(seq, i);
         if (PyBytes_CheckExact(item)) {
-            /* Fast path. */
+            /* Use the bytes object's buffer directly. */
             buffers[i].obj = Py_NewRef(item);
             buffers[i].buf = PyBytes_AS_STRING(item);
             buffers[i].len = PyBytes_GET_SIZE(item);
@@ -192,7 +206,7 @@ done:
     for (i = 0; i < nbufs; i++) {
         PyObject *obj = buffers[i].obj;
         if (obj != NULL && PyBytes_CheckExact(obj)) {
-            /* bytes has no bf_releasebuffer */
+            /* bytes has no bf_releasebuffer: skip PyBuffer_Release() */
             Py_DECREF(obj);
         }
         else {
