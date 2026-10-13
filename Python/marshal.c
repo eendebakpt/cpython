@@ -1350,15 +1350,17 @@ r_object(RFILE *p)
             ptr = r_string(n, p);
             if (ptr == NULL)
                 break;
-            v = PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, ptr, n);
-            if (v == NULL)
-                break;
             if (is_interned) {
                 // marshal is meant to serialize .pyc files with code
                 // objects, and code-related strings are currently immortal.
                 PyInterpreterState *interp = _PyInterpreterState_GET();
-                _PyUnicode_InternImmortal(interp, &v);
+                v = _PyUnicode_InternedFromASCII(interp, ptr, n, 1);
             }
+            else {
+                v = PyUnicode_FromKindAndData(PyUnicode_1BYTE_KIND, ptr, n);
+            }
+            if (v == NULL)
+                break;
             retval = v;
             R_REF(retval);
             break;
