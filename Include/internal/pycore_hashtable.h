@@ -111,6 +111,10 @@ PyAPI_FUNC(size_t) _Py_hashtable_len(const _Py_hashtable_t *ht);
 
 /* Add a new entry to the hash. The key must not be present in the hash table.
    Return 0 on success, -1 on memory error. */
+/* Grow the bucket array so that it can hold at least 'nentries' entries
+   without a rehash. Returns 0 on success, -1 on memory allocation failure. */
+PyAPI_FUNC(int) _Py_hashtable_reserve(_Py_hashtable_t *ht, size_t nentries);
+
 PyAPI_FUNC(int) _Py_hashtable_set(
     _Py_hashtable_t *ht,
     const void *key,

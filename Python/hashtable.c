@@ -284,12 +284,8 @@ _Py_hashtable_foreach(_Py_hashtable_t *ht,
 
 
 static int
-hashtable_rehash(_Py_hashtable_t *ht)
+hashtable_resize(_Py_hashtable_t *ht, size_t new_size)
 {
-    size_t new_size = round_size((size_t)(ht->nentries * HASHTABLE_REHASH_FACTOR));
-    if (new_size == ht->nbuckets) {
-        return 0;
-    }
 
     size_t buckets_size = new_size * sizeof(ht->buckets[0]);
     _Py_slist_t *new_buckets = ht->alloc.malloc(buckets_size);
@@ -316,6 +312,26 @@ hashtable_rehash(_Py_hashtable_t *ht)
     ht->nbuckets = new_size;
     ht->buckets = new_buckets;
     return 0;
+}
+
+static int
+hashtable_rehash(_Py_hashtable_t *ht)
+{
+    size_t new_size = round_size((size_t)(ht->nentries * HASHTABLE_REHASH_FACTOR));
+    if (new_size == ht->nbuckets) {
+        return 0;
+    }
+    return hashtable_resize(ht, new_size);
+}
+
+int
+_Py_hashtable_reserve(_Py_hashtable_t *ht, size_t nentries)
+{
+    size_t new_size = round_size((size_t)(nentries * HASHTABLE_REHASH_FACTOR));
+    if (new_size <= ht->nbuckets) {
+        return 0;
+    }
+    return hashtable_resize(ht, new_size);
 }
 
 

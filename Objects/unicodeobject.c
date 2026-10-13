@@ -323,11 +323,48 @@ clear_interned_dict(PyInterpreterState *interp)
     }
 }
 
+/* The global interned-string table only ever holds the statically allocated
+   strings (identifiers from pycore_global_strings.h and the 256 latin-1
+   singletons), all inserted during runtime initialization. Allocate their
+   hashtable entries from a static arena instead of one raw malloc per
+   entry; the arena falls back to malloc if it ever fills up. */
+#define STATIC_INTERNED_ARENA_ENTRIES 1536
+static char static_interned_arena[
+    STATIC_INTERNED_ARENA_ENTRIES * sizeof(_Py_hashtable_entry_t)];
+static size_t static_interned_arena_used = 0;
+
+static void *
+static_interned_malloc(size_t size)
+{
+    if (size == sizeof(_Py_hashtable_entry_t)
+        && static_interned_arena_used + size <= sizeof(static_interned_arena))
+    {
+        void *p = static_interned_arena + static_interned_arena_used;
+        static_interned_arena_used += size;
+        return p;
+    }
+    return PyMem_RawMalloc(size);
+}
+
+static void
+static_interned_free(void *p)
+{
+    char *cp = (char *)p;
+    if (cp >= static_interned_arena
+        && cp < static_interned_arena + sizeof(static_interned_arena))
+    {
+        return;
+    }
+    PyMem_RawFree(p);
+}
+
 static PyStatus
 init_global_interned_strings(PyInterpreterState *interp)
 {
     assert(INTERNED_STRINGS == NULL);
-    _Py_hashtable_allocator_t hashtable_alloc = {PyMem_RawMalloc, PyMem_RawFree};
+    static_interned_arena_used = 0;
+    _Py_hashtable_allocator_t hashtable_alloc = {
+        static_interned_malloc, static_interned_free};
 
     INTERNED_STRINGS = _Py_hashtable_new_full(
         hashtable_unicode_hash,
@@ -341,6 +378,12 @@ init_global_interned_strings(PyInterpreterState *interp)
     if (INTERNED_STRINGS == NULL) {
         PyErr_Clear();
         return _PyStatus_ERR("failed to create global interned dict");
+    }
+    /* Size the table for the static strings up front: this replaces the
+       cascade of rehashes from the 16-bucket minimum size. */
+    if (_Py_hashtable_reserve(INTERNED_STRINGS,
+                              STATIC_INTERNED_ARENA_ENTRIES) < 0) {
+        return _PyStatus_NO_MEMORY();
     }
 
     /* Intern statically allocated string identifiers, deepfreeze strings,
