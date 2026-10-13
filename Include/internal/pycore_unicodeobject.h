@@ -379,6 +379,12 @@ extern PyTypeObject _PyUnicodeASCIIIter_Type;
 
 // Explicit interning routines:
 PyAPI_FUNC(void) _PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **);
+/* Intern an ASCII string given as bytes. Returns a new reference to the
+   interned string, looking it up among the static strings first
+   without allocating a temporary str. */
+extern PyObject *_PyUnicode_InternedFromASCII(PyInterpreterState *interp,
+                                             const char *s, Py_ssize_t n,
+                                             int immortal);
 PyAPI_FUNC(void) _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **);
 // Left here to help backporting:
 PyAPI_FUNC(void) _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p);

@@ -14779,6 +14779,62 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
     return s;
 }
 
+/* Look up an ASCII string in the table of statically allocated interned
+   strings without creating a str object for it. On a miss, the hash of
+   the bytes (equal to the hash of the equivalent str) is stored in
+   *hash_out so that the caller can reuse it. Returns a borrowed
+   reference to an immortal string, or NULL. */
+static PyObject *
+lookup_static_ascii(const char *s, Py_ssize_t n, Py_hash_t *hash_out)
+{
+    Py_uhash_t h = (Py_uhash_t)Py_HashBuffer(s, n);
+    *hash_out = (Py_hash_t)h;
+    _Py_hashtable_t *ht = INTERNED_STRINGS;
+    size_t index = h & (ht->nbuckets - 1);
+    _Py_hashtable_entry_t *entry = (_Py_hashtable_entry_t *)ht->buckets[index].head;
+    for (; entry != NULL;
+         entry = (_Py_hashtable_entry_t *)entry->_Py_slist_item.next)
+    {
+        if (entry->key_hash != h) {
+            continue;
+        }
+        PyObject *k = (PyObject *)entry->key;
+        if (PyUnicode_GET_LENGTH(k) == n
+            && PyUnicode_KIND(k) == PyUnicode_1BYTE_KIND
+            && memcmp(PyUnicode_1BYTE_DATA(k), s, n) == 0)
+        {
+            return k;
+        }
+    }
+    return NULL;
+}
+
+PyObject *
+_PyUnicode_InternedFromASCII(PyInterpreterState *interp,
+                             const char *s, Py_ssize_t n, int immortal)
+{
+    Py_hash_t hash;
+    PyObject *r = lookup_static_ascii(s, n, &hash);
+    if (r != NULL) {
+        assert(_Py_IsImmortal(r));
+        return Py_NewRef(r);
+    }
+    r = _PyUnicode_FromASCII(s, n);
+    if (r == NULL) {
+        return NULL;
+    }
+    if (_PyUnicode_HASH(r) == -1) {
+        PyUnicode_SET_HASH(r, hash);
+    }
+    if (immortal) {
+        _PyUnicode_InternImmortal(interp, &r);
+    }
+    else {
+        _PyUnicode_InternMortal(interp, &r);
+    }
+    return r;
+}
+
 void
 _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
 {
@@ -14820,6 +14876,16 @@ PyUnicode_InternImmortal(PyObject **p)
 PyObject *
 PyUnicode_InternFromString(const char *cp)
 {
+    size_t n = strlen(cp);
+    const unsigned char *u = (const unsigned char *)cp;
+    size_t i = 0;
+    while (i < n && u[i] < 128) {
+        i++;
+    }
+    if (i == n) {
+        PyInterpreterState *interp = _PyInterpreterState_GET();
+        return _PyUnicode_InternedFromASCII(interp, cp, (Py_ssize_t)n, 0);
+    }
     PyObject *s = PyUnicode_FromString(cp);
     if (s == NULL) {
         return NULL;
