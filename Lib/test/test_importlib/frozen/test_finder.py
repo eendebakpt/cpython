@@ -3,9 +3,13 @@ from test.test_importlib import abc, util
 machinery = util.import_importlib('importlib.machinery')
 
 import os.path
+import sys
+import tempfile
 import unittest
+import zipfile
 
-from test.support import import_helper, REPO_ROOT, STDLIB_DIR
+from test import support
+from test.support import import_helper, os_helper, REPO_ROOT, STDLIB_DIR
 
 
 def resolve_stdlib_file(name, ispkg=False):
@@ -177,6 +181,52 @@ class FindSpecTests(abc.FinderTests):
 (Frozen_FindSpecTests,
  Source_FindSpecTests
  ) = util.test_both(FindSpecTests, machinery=machinery)
+
+
+class PackagePathTests(unittest.TestCase):
+
+    """Test __path__ of frozen packages when the stdlib is not on disk."""
+
+    def setUp(self):
+        tmpdir = tempfile.mkdtemp()
+        self.addCleanup(os_helper.rmtree, tmpdir)
+        self.zipname = os.path.join(tmpdir, 'stdlib.zip')
+        with zipfile.ZipFile(self.zipname, 'w') as zf:
+            zf.writestr('__phello__/__init__.py', '')
+            zf.writestr('__phello__/notfrozen.py', 'value = 42\n')
+        self.missing_dir = os.path.join(tmpdir, 'does-not-exist')
+
+    def check_submodule_from_zip(self):
+        imported = ('__phello__', '__phello__.notfrozen')
+        with (import_helper.CleanImport(*imported, usefrozen=True),
+              support.swap_attr(sys, 'path', [self.zipname, *sys.path]),
+              support.captured_stdout()):
+            import __phello__
+            self.assertEqual(__phello__.__spec__.origin, 'frozen')
+            self.assertEqual(__phello__.__path__,
+                             [os.path.join(self.zipname, '__phello__')])
+            from __phello__ import notfrozen
+            self.assertEqual(notfrozen.value, 42)
+            # frozen submodules still come from the frozen importer
+            from __phello__ import spam
+            self.assertEqual(spam.__spec__.origin, 'frozen')
+
+    def test_no_stdlib_dir(self):
+        with support.swap_attr(sys, '_stdlib_dir', None):
+            self.check_submodule_from_zip()
+
+    def test_missing_stdlib_dir(self):
+        with support.swap_attr(sys, '_stdlib_dir', self.missing_dir):
+            self.check_submodule_from_zip()
+
+    def test_stdlib_dir(self):
+        # The regular case: __path__ is the package directory in the stdlib.
+        with (import_helper.CleanImport('__phello__', usefrozen=True),
+              support.captured_stdout()):
+            import __phello__
+            self.assertEqual(__phello__.__spec__.origin, 'frozen')
+            self.assertEqual(__phello__.__path__,
+                             [os.path.join(STDLIB_DIR, '__phello__')])
 
 
 if __name__ == '__main__':

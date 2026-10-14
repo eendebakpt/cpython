@@ -1022,8 +1022,7 @@ class FrozenImporter:
             __path__ = spec.submodule_search_locations
             if ispkg:
                 assert __path__ == [], __path__
-                if pkgdir:
-                    spec.submodule_search_locations.insert(0, pkgdir)
+                __path__.extend(cls._package_path(spec.name, pkgdir))
             else:
                 assert __path__ is None, __path__
 
@@ -1050,10 +1049,7 @@ class FrozenImporter:
                 (__file__, pkgdir,
                  ) = cls._resolve_filename(state.origname, spec.name, ispkg)
                 assert state.filename == __file__, (state.filename, __file__)
-                if pkgdir:
-                    assert __path__ == [pkgdir], (__path__, pkgdir)
-                else:
-                    assert __path__ == ([] if ispkg else None), __path__
+                assert (__path__ is not None) == ispkg, __path__
             else:
                 __file__ = None
                 assert state.filename is None, state.filename
@@ -1097,6 +1093,31 @@ class FrozenImporter:
         return filename, pkgdir
 
     @classmethod
+    def _package_path(cls, fullname, pkgdir):
+        """Return the __path__ for the frozen package 'fullname'.
+
+        Normally this is the package's directory in the standard library,
+        so that submodules which were not frozen are found there.  When
+        that directory is not available (e.g. the standard library is
+        zipped), ask the path-based finders where the package lives.
+        """
+        if _bootstrap_external is None:
+            return [pkgdir] if pkgdir else []
+        if pkgdir and _bootstrap_external._path_isdir(pkgdir):
+            return [pkgdir]
+        for finder in sys.meta_path:
+            if finder is cls or finder is BuiltinImporter:
+                continue
+            try:
+                find_spec = finder.find_spec
+            except AttributeError:
+                continue
+            spec = find_spec(fullname, None)
+            if spec is not None and spec.submodule_search_locations:
+                return list(spec.submodule_search_locations)
+        return []
+
+    @classmethod
     def find_spec(cls, fullname, path=None, target=None):
         info = _call_with_frames_removed(_imp.find_frozen, fullname)
         if info is None:
@@ -1122,8 +1143,9 @@ class FrozenImporter:
             filename=filename,
             origname=origname,
         )
-        if pkgdir:
-            spec.submodule_search_locations.insert(0, pkgdir)
+        if ispkg:
+            spec.submodule_search_locations.extend(
+                cls._package_path(fullname, pkgdir))
         return spec
 
     @staticmethod
