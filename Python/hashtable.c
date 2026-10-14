@@ -155,6 +155,23 @@ _Py_hashtable_get_entry_generic(_Py_hashtable_t *ht, const void *key)
 }
 
 
+_Py_hashtable_entry_t *
+_Py_hashtable_get_entry_hash(_Py_hashtable_t *ht, Py_uhash_t key_hash,
+                             const void *key,
+                             _Py_hashtable_compare_func compare)
+{
+    size_t index = key_hash & (ht->nbuckets - 1);
+    _Py_hashtable_entry_t *entry = TABLE_HEAD(ht, index);
+    while (entry != NULL) {
+        if (entry->key_hash == key_hash && compare(key, entry->key)) {
+            return entry;
+        }
+        entry = ENTRY_NEXT(entry);
+    }
+    return NULL;
+}
+
+
 // Specialized for:
 // hash_func == _Py_hashtable_hash_ptr
 // compare_func == _Py_hashtable_compare_direct

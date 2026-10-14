@@ -14779,34 +14779,41 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
     return s;
 }
 
+/* Probe key for looking up an ASCII string in INTERNED_STRINGS by its raw
+   bytes, see lookup_static_ascii(). */
+struct static_ascii_probe {
+    const char *s;
+    Py_ssize_t n;
+};
+
+static int
+static_ascii_compare(const void *probe_key, const void *entry_key)
+{
+    const struct static_ascii_probe *probe = probe_key;
+    PyObject *k = (PyObject *)entry_key;
+    return (PyUnicode_GET_LENGTH(k) == probe->n
+            && PyUnicode_KIND(k) == PyUnicode_1BYTE_KIND
+            && memcmp(PyUnicode_1BYTE_DATA(k), probe->s, probe->n) == 0);
+}
+
 /* Look up an ASCII string in the table of statically allocated interned
-   strings without creating a str object for it. On a miss, the hash of
-   the bytes (equal to the hash of the equivalent str) is stored in
-   *hash_out so that the caller can reuse it. Returns a borrowed
-   reference to an immortal string, or NULL. */
+   strings without creating a str object for it. The hash of the bytes is
+   equal to the hash of the equivalent str, so the table can be probed
+   directly. On a miss, that hash is stored in *hash_out so that the
+   caller can reuse it. Returns a borrowed reference to an immortal
+   string, or NULL. */
 static PyObject *
 lookup_static_ascii(const char *s, Py_ssize_t n, Py_hash_t *hash_out)
 {
     Py_uhash_t h = (Py_uhash_t)Py_HashBuffer(s, n);
     *hash_out = (Py_hash_t)h;
-    _Py_hashtable_t *ht = INTERNED_STRINGS;
-    size_t index = h & (ht->nbuckets - 1);
-    _Py_hashtable_entry_t *entry = (_Py_hashtable_entry_t *)ht->buckets[index].head;
-    for (; entry != NULL;
-         entry = (_Py_hashtable_entry_t *)entry->_Py_slist_item.next)
-    {
-        if (entry->key_hash != h) {
-            continue;
-        }
-        PyObject *k = (PyObject *)entry->key;
-        if (PyUnicode_GET_LENGTH(k) == n
-            && PyUnicode_KIND(k) == PyUnicode_1BYTE_KIND
-            && memcmp(PyUnicode_1BYTE_DATA(k), s, n) == 0)
-        {
-            return k;
-        }
+    struct static_ascii_probe probe = {s, n};
+    _Py_hashtable_entry_t *entry = _Py_hashtable_get_entry_hash(
+        INTERNED_STRINGS, h, &probe, static_ascii_compare);
+    if (entry == NULL) {
+        return NULL;
     }
-    return NULL;
+    return (PyObject *)entry->key;
 }
 
 PyObject *

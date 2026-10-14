@@ -126,6 +126,20 @@ _Py_hashtable_get_entry(_Py_hashtable_t *ht, const void *key)
 }
 
 
+/* Get an entry using a precomputed hash and a caller-supplied comparison
+   function instead of the table's own hash_func and compare_func.
+
+   'key' is only ever passed as the first argument of compare(), so it does
+   not need to have the same type as the keys stored in the table. This
+   allows probing the table without first constructing a key object.
+   Return NULL if no entry matches. */
+PyAPI_FUNC(_Py_hashtable_entry_t *) _Py_hashtable_get_entry_hash(
+    _Py_hashtable_t *ht,
+    Py_uhash_t key_hash,
+    const void *key,
+    _Py_hashtable_compare_func compare);
+
+
 /* Get value from an entry.
    Return NULL if the entry is not found.
 
