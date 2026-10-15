@@ -1122,26 +1122,20 @@ complex_subtype_from_string(PyTypeObject *type, PyObject *v)
  * not as by the 'real' keyword.  But Argument Clinic does not allow
  * to distinguish between argument passed positionally and by keyword.
  * So the constructor must be split into two parts: actual_complex_new()
- * handles the case of no arguments and one positional argument, and calls
- * complex_new(), implemented with Argument Clinic, to handle the remaining
- * cases: 'real' and 'imag' arguments.  This separation is well suited
- * for different constructor roles: converting a string or number to a complex
- * number and constructing a complex number from real and imaginary parts.
+ * (tp_new) and complex_type_vectorcall() (tp_vectorcall) handle the case of
+ * no arguments and one positional argument via complex_from_single_arg(),
+ * and call complex_new() resp. complex_vectorcall(), implemented with
+ * Argument Clinic, to handle the remaining cases: 'real' and 'imag'
+ * arguments.  This separation is well suited for different constructor
+ * roles: converting a string or number to a complex number and constructing
+ * a complex number from real and imaginary parts.
  */
 static PyObject *
-actual_complex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+complex_from_single_arg(PyTypeObject *type, PyObject *arg)
 {
     PyObject *res = NULL;
     PyNumberMethods *nbr;
 
-    if (PyTuple_GET_SIZE(args) > 1 || (kwargs != NULL && PyDict_GET_SIZE(kwargs))) {
-        return complex_new(type, args, kwargs);
-    }
-    if (!PyTuple_GET_SIZE(args)) {
-        return complex_subtype_from_doubles(type, 0, 0);
-    }
-
-    PyObject *arg = PyTuple_GET_ITEM(args, 0);
     /* Special-case for a single argument when type(arg) is complex. */
     if (PyComplex_CheckExact(arg) && type == &PyComplex_Type) {
         /* Note that we can't know whether it's safe to return
@@ -1189,8 +1183,37 @@ actual_complex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     return res;
 }
 
+static PyObject *
+actual_complex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
+{
+    if (PyTuple_GET_SIZE(args) > 1 || (kwargs != NULL && PyDict_GET_SIZE(kwargs))) {
+        return complex_new(type, args, kwargs);
+    }
+    if (!PyTuple_GET_SIZE(args)) {
+        return complex_subtype_from_doubles(type, 0, 0);
+    }
+    return complex_from_single_arg(type, PyTuple_GET_ITEM(args, 0));
+}
+
+/* Vectorcall entry point: handle complex() and complex(arg) inline,
+   leave everything else to the Argument Clinic generated parser. */
+static PyObject *
+complex_type_vectorcall(PyObject *type, PyObject *const *args,
+                        size_t nargsf, PyObject *kwnames)
+{
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    if (kwnames == NULL && nargs <= 1) {
+        if (nargs == 0) {
+            return complex_subtype_from_doubles(_PyType_CAST(type), 0, 0);
+        }
+        return complex_from_single_arg(_PyType_CAST(type), args[0]);
+    }
+    return complex_vectorcall(type, args, nargsf, kwnames);
+}
+
 /*[clinic input]
 @classmethod
+@vectorcall
 complex.__new__ as complex_new
     real as r: object(c_default="NULL") = 0
     imag as i: object(c_default="NULL") = 0
@@ -1205,7 +1228,7 @@ with the specified real and imaginary components.
 
 static PyObject *
 complex_new_impl(PyTypeObject *type, PyObject *r, PyObject *i)
-/*[clinic end generated code: output=b6c7dd577b537dc1 input=ff4268dc540958a4]*/
+/*[clinic end generated code: output=b6c7dd577b537dc1 input=22ffeff904bc520c]*/
 {
     PyObject *tmp;
     PyNumberMethods *nbr, *nbi = NULL;
@@ -1457,4 +1480,5 @@ PyTypeObject PyComplex_Type = {
     actual_complex_new,                         /* tp_new */
     PyObject_Free,                              /* tp_free */
     .tp_version_tag = _Py_TYPE_VERSION_COMPLEX,
+    .tp_vectorcall = complex_type_vectorcall,
 };
