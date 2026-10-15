@@ -462,6 +462,11 @@ class CLanguage(Language):
         # buffers, not destination
         for name, destination in clinic.destination_buffers.items():
             template = templates[name]
+            lock = template_dict['lock']
+            if name == 'vectorcall_definition' and f.kind is METHOD_INIT:
+                # The generated __init__ vectorcall creates the object as
+                # 'self', whatever the self parameter is called.
+                lock = lock.replace('{self_name}', 'self')
             template = libclinic.linear_format(template,
                 declarations=template_dict['declarations'],
                 return_conversion=template_dict['return_conversion'],
@@ -469,7 +474,7 @@ class CLanguage(Language):
                 modifications=template_dict['modifications'],
                 post_parsing=template_dict['post_parsing'],
                 cleanup=template_dict['cleanup'],
-                lock=template_dict['lock'],
+                lock=lock,
                 unlock=template_dict['unlock'],
                 )
 

@@ -5010,10 +5010,10 @@ skip_optional:
 }
 
 static int
-vc_posorkw_init_impl(PyObject *self, PyObject *a, PyObject *b);
+vc_posorkw_init_impl(PyObject *obj, PyObject *a, PyObject *b);
 
 static int
-vc_posorkw_init_helper(PyObject *self, PyObject *const *args,
+vc_posorkw_init_helper(PyObject *obj, PyObject *const *args,
     Py_ssize_t nargs, Py_ssize_t nkw, PyObject *kwargs, PyObject *kwnames)
 {
     int return_value = -1;
@@ -5061,8 +5061,8 @@ vc_posorkw_init_helper(PyObject *self, PyObject *const *args,
     }
     b = fastargs[1];
 skip_optional_pos:
-    Py_BEGIN_CRITICAL_SECTION(self);
-    return_value = vc_posorkw_init_impl(self, a, b);
+    Py_BEGIN_CRITICAL_SECTION(obj);
+    return_value = vc_posorkw_init_impl(obj, a, b);
     Py_END_CRITICAL_SECTION();
 
 exit:
@@ -5070,9 +5070,9 @@ exit:
 }
 
 static int
-vc_posorkw_init(PyObject *self, PyObject *args, PyObject *kwargs)
+vc_posorkw_init(PyObject *obj, PyObject *args, PyObject *kwargs)
 {
-    return vc_posorkw_init_helper(self, _PyTuple_CAST(args)->ob_item,
+    return vc_posorkw_init_helper(obj, _PyTuple_CAST(args)->ob_item,
         PyTuple_GET_SIZE(args),
         kwargs ? PyDict_GET_SIZE(kwargs) : 0,
         kwargs, NULL);
@@ -5309,4 +5309,4 @@ vc_kwonly_vectorcall(PyObject *type, PyObject *const *args,
         kwnames ? PyTuple_GET_SIZE(kwnames) : 0,
         NULL, kwnames);
 }
-/*[clinic end generated code: output=17b9ff8218a250fe input=a9049054013a1b77]*/
+/*[clinic end generated code: output=e23cea52637564cf input=a9049054013a1b77]*/

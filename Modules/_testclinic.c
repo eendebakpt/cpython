@@ -2536,21 +2536,23 @@ static PyTypeObject VcNew_Type = {
 
 /* VcInit: __init__ with one required positional-only and one optional keyword
  * arg.  Uses @critical_section to exercise the {lock}/impl/{unlock} placement
- * in both the helper body and the vectorcall fast-path inner block. */
+ * in both the helper body and the vectorcall fast-path inner block.  The self
+ * parameter is renamed: the vectorcall must still lock its own 'self'. */
 
 /*[clinic input]
 class _testclinic.VcInit "PyObject *" "&VcInit_Type"
 @vectorcall
 @critical_section
 _testclinic.VcInit.__init__ as vc_posorkw_init
+    obj: self(type="PyObject *")
     a: object
     /
     b: object = None
 [clinic start generated code]*/
 
 static int
-vc_posorkw_init_impl(PyObject *self, PyObject *a, PyObject *b)
-/*[clinic end generated code: output=6018424ba9fb0744 input=7a4513f78dd42b57]*/
+vc_posorkw_init_impl(PyObject *obj, PyObject *a, PyObject *b)
+/*[clinic end generated code: output=be50e365e997f6ab input=7bfee62f49b20812]*/
 {
     return 0;
 }

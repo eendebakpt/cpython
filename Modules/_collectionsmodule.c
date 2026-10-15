@@ -54,7 +54,7 @@ typedef struct dequeobject dequeobject;
 
 /* We can safely assume type to be the defining class,
  * since tuplegetter is not a base type */
-#define clinic_state() (get_module_state_by_cls(type))
+#define clinic_state() (get_module_state_by_cls(_PyType_CAST(type)))
 #include "clinic/_collectionsmodule.c.h"
 #undef clinic_state
 
@@ -1741,6 +1741,7 @@ done:
 
 /*[clinic input]
 @critical_section
+@vectorcall
 @text_signature "([iterable[, maxlen]])"
 _collections.deque.__init__ as deque_init
 
@@ -1753,7 +1754,7 @@ A list-like sequence optimized for data accesses near its endpoints.
 
 static int
 deque_init_impl(dequeobject *deque, PyObject *iterable, PyObject *maxlenobj)
-/*[clinic end generated code: output=7084a39d71218dcd input=2b9e37af1fd73143]*/
+/*[clinic end generated code: output=7084a39d71218dcd input=f803f3026ce12e40]*/
 {
     Py_ssize_t maxlen = -1;
     if (maxlenobj != NULL && maxlenobj != Py_None) {
@@ -1878,6 +1879,7 @@ static PyType_Slot deque_slots[] = {
     {Py_tp_init, deque_init},
     {Py_tp_alloc, PyType_GenericAlloc},
     {Py_tp_new, deque_new},
+    {Py_tp_vectorcall, deque_vectorcall},
     {Py_tp_free, PyObject_GC_Del},
     {Py_tp_methods, deque_methods},
     {Py_tp_members, deque_members},
