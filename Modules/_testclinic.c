@@ -27,6 +27,7 @@ static PyTypeObject VcNew_Type;
 static PyTypeObject VcInit_Type;
 static PyTypeObject VcNewBase_Type;
 static PyTypeObject VcKwOnly_Type;
+static PyTypeObject VcVarPos_Type;
 #include "clinic/_testclinic.c.h"
 
 
@@ -2628,6 +2629,42 @@ static PyTypeObject VcKwOnly_Type = {
     .tp_vectorcall = vc_kwonly_vectorcall,
 };
 
+/* VcVarPos: @vectorcall + var-positional + keyword-only arg.
+ * The vectorcall delegates to the helper, which receives the arguments as an
+ * array; the var-positional parameter must be read from that array rather
+ * than from an args tuple.  __new__ returns the parsed arguments so the test
+ * can check them. */
+
+/*[clinic input]
+class _testclinic.VcVarPos "PyObject *" "&VcVarPos_Type"
+@classmethod
+@vectorcall
+_testclinic.VcVarPos.__new__ as vc_varpos_new
+    *args: array
+    b: object = None
+[clinic start generated code]*/
+
+static PyObject *
+vc_varpos_new_impl(PyTypeObject *type, PyObject * const *args,
+                   Py_ssize_t args_length, PyObject *b)
+/*[clinic end generated code: output=151dca570d655aea input=ba4974bacb9e8dc8]*/
+{
+    PyObject *varargs = PyTuple_FromArray(args, args_length);
+    if (varargs == NULL) {
+        return NULL;
+    }
+    return Py_BuildValue("(NO)", varargs, b);
+}
+
+static PyTypeObject VcVarPos_Type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_testclinic.VcVarPos",
+    .tp_basicsize = sizeof(PyObject),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = vc_varpos_new,
+    .tp_vectorcall = vc_varpos_vectorcall,
+};
+
 
 
 /*[clinic input]
@@ -2887,6 +2924,9 @@ PyInit__testclinic(void)
         goto error;
     }
     if (PyModule_AddType(m, &VcKwOnly_Type) < 0) {
+        goto error;
+    }
+    if (PyModule_AddType(m, &VcVarPos_Type) < 0) {
         goto error;
     }
     return m;

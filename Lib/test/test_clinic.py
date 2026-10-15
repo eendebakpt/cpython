@@ -5645,6 +5645,23 @@ class VectorcallFunctionalTest(unittest.TestCase):
         with self.assertRaises(TypeError):
             ac_tester.VcKwOnly()
 
+    def test_vc_varpos(self):
+        # var-positional 'args' plus keyword-only 'b': the vectorcall
+        # delegates to the helper, which must read the var-positional
+        # arguments from the argument array, not from a tuple.
+        self.assertEqual(ac_tester.VcVarPos(), ((), None))
+        self.assertEqual(ac_tester.VcVarPos(1), ((1,), None))
+        self.assertEqual(ac_tester.VcVarPos(1, 2, 3), ((1, 2, 3), None))
+        self.assertEqual(ac_tester.VcVarPos(1, 2, b=3), ((1, 2), 3))
+        self.assertEqual(ac_tester.VcVarPos(b=3), ((), 3))
+        # The tp_new slot must agree with the vectorcall.
+        self.assertEqual(ac_tester.VcVarPos.__new__(ac_tester.VcVarPos, 1, 2, b=3),
+                         ((1, 2), 3))
+
+    def test_vc_varpos_unknown_keyword(self):
+        with self.assertRaises(TypeError):
+            ac_tester.VcVarPos(1, c=2)
+
     def test_parse_errors_match_slot(self):
         # tp_vectorcall and tp_new/tp_init slot should match in argument parsing
         # error messages. Explicit calls to __new__ and __init__, as well as
@@ -5670,6 +5687,7 @@ class VectorcallFunctionalTest(unittest.TestCase):
             through_new(ac_tester.VcNew),
             through_new(ac_tester.VcNewBase),
             through_new(ac_tester.VcKwOnly),
+            through_new(ac_tester.VcVarPos),
             through_init(ac_tester.VcInit),
         ]
         invalid_calls = [

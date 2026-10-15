@@ -3159,40 +3159,37 @@ typedef struct {
 
 #define _zipobject_CAST(op)     ((zipobject *)(op))
 
+/*[clinic input]
+class zip "zipobject *" "&PyZip_Type"
+[clinic start generated code]*/
+/*[clinic end generated code: output=da39a3ee5e6b4b0d input=ce1381626b0ad41d]*/
+
+/*[clinic input]
+@classmethod
+@vectorcall
+zip.__new__ as zip_new
+
+    *iterables: array
+    strict: bool = False
+[clinic start generated code]*/
+
 static PyObject *
-zip_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+zip_new_impl(PyTypeObject *type, PyObject * const *iterables,
+             Py_ssize_t iterables_length, int strict)
+/*[clinic end generated code: output=5e1a30829ce1f6ab input=5e96bb88c7510fd7]*/
 {
     zipobject *lz;
     Py_ssize_t i;
     PyObject *ittuple;  /* tuple of iterators */
     PyObject *result;
-    Py_ssize_t tuplesize;
-    int strict = 0;
-
-    if (kwds) {
-        PyObject *empty = PyTuple_New(0);
-        if (empty == NULL) {
-            return NULL;
-        }
-        static char *kwlist[] = {"strict", NULL};
-        int parsed = PyArg_ParseTupleAndKeywords(
-                empty, kwds, "|$p:zip", kwlist, &strict);
-        Py_DECREF(empty);
-        if (!parsed) {
-            return NULL;
-        }
-    }
-
-    /* args must be a tuple */
-    assert(PyTuple_Check(args));
-    tuplesize = PyTuple_GET_SIZE(args);
+    Py_ssize_t tuplesize = iterables_length;
 
     /* obtain iterators */
     ittuple = PyTuple_New(tuplesize);
     if (ittuple == NULL)
         return NULL;
     for (i=0; i < tuplesize; ++i) {
-        PyObject *item = PyTuple_GET_ITEM(args, i);
+        PyObject *item = iterables[i];
         PyObject *it = PyObject_GetIter(item);
         if (it == NULL) {
             Py_DECREF(ittuple);
@@ -3422,6 +3419,7 @@ PyTypeObject PyZip_Type = {
     PyType_GenericAlloc,                /* tp_alloc */
     zip_new,                            /* tp_new */
     PyObject_GC_Del,                    /* tp_free */
+    .tp_vectorcall = zip_vectorcall
 };
 
 

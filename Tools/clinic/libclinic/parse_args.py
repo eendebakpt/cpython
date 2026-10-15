@@ -891,10 +891,14 @@ class ParseArgsCodeGen:
         assert self.varpos is not None
         c = self.varpos.converter
         assert isinstance(c, libclinic.converters.VarPosCConverter)
+        # The @vectorcall keyword helper receives the arguments as an
+        # array, like a fastcall function does.
+        fastcall = (self.fastcall or
+                    self.parser_prototype == PARSER_PROTOTYPE_KEYWORD_HELPER)
         return c.parse_vararg(pos_only=self.pos_only,
                               min_pos=self.min_pos,
                               max_pos=self.max_pos,
-                              fastcall=self.fastcall,
+                              fastcall=fastcall,
                               limited_capi=self.limited_capi)
 
     def _parse_kwarg(self) -> str:
