@@ -1036,6 +1036,7 @@ class DisTests(DisTestBase):
     def test_widths(self):
         long_opcodes = set(['JUMP_BACKWARD_NO_INTERRUPT',
                             'LOAD_FAST_BORROW_LOAD_FAST_BORROW',
+                            'STORE_FAST_LOAD_FAST_BORROW',
                             'INSTRUMENTED_CALL_FUNCTION_EX',
                             'YIELD_FROM_CORO_CHECK',
                             'ANNOTATIONS_PLACEHOLDER'])

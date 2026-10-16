@@ -2726,13 +2726,10 @@ insert_superinstructions(cfg_builder *g)
                     }
                     break;
                 case STORE_FAST:
-                    switch (nextop) {
-                        case LOAD_FAST:
-                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_LOAD_FAST);
-                            break;
-                        case STORE_FAST:
-                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_STORE_FAST);
-                            break;
+                    /* STORE_FAST; LOAD_FAST is fused in optimize_load_fast(),
+                     * once it is known whether the load can borrow. */
+                    if (nextop == STORE_FAST) {
+                        make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_STORE_FAST);
                     }
                     break;
             }
@@ -2862,6 +2859,30 @@ load_fast_push_block(basicblock ***sp, basicblock *target,
     }
 }
 
+/* Fuse STORE_FAST; LOAD_FAST_BORROW into STORE_FAST_LOAD_FAST_BORROW.
+ *
+ * Unlike the other superinstructions this one is created after
+ * optimize_load_fast() rather than in insert_superinstructions(), because
+ * it only exists in a borrowing form: a LOAD_FAST that must keep a strong
+ * reference is left unfused.
+ */
+static int
+fuse_store_fast_load_fast_borrow(cfg_builder *g)
+{
+    for (basicblock *b = g->g_entryblock; b != NULL; b = b->b_next) {
+        for (int i = 0; i + 1 < b->b_iused; i++) {
+            cfg_instr *inst = &b->b_instr[i];
+            if (inst->i_opcode == STORE_FAST &&
+                b->b_instr[i + 1].i_opcode == LOAD_FAST_BORROW)
+            {
+                make_super_instruction(inst, &b->b_instr[i + 1],
+                                       STORE_FAST_LOAD_FAST_BORROW);
+            }
+        }
+    }
+    return remove_redundant_nops(g);
+}
+
 /*
  * Strength reduce LOAD_FAST{_LOAD_FAST} instructions into faster variants that
  * load borrowed references onto the operand stack.
@@ -2984,7 +3005,7 @@ optimize_load_fast(cfg_builder *g)
                     break;
                 }
 
-                case STORE_FAST_LOAD_FAST: {
+                case STORE_FAST_LOAD_FAST_BORROW: {
                     // STORE_FAST
                     ref r = ref_stack_pop(&refs);
                     store_local(instr_flags, &refs, oparg >> 4, r);
@@ -3180,6 +3201,11 @@ optimize_load_fast(cfg_builder *g)
     }
 
     #undef PUSH_REF
+
+    if (fuse_store_fast_load_fast_borrow(g) < 0) {
+        status = ERROR;
+        goto done;
+    }
 
     status = SUCCESS;
 
