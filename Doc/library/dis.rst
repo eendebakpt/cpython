@@ -1506,6 +1506,17 @@ iterations of the loop.
 
    .. versionadded:: 3.13
 
+   .. versionremoved:: 3.16
+      Replaced by :opcode:`STORE_FAST_LOAD_FAST_BORROW`.
+
+.. opcode:: STORE_FAST_LOAD_FAST_BORROW (var_nums)
+
+   Stores ``STACK.pop()`` into the local ``co_varnames[var_nums >> 4]``
+   and pushes a borrowed reference to the local ``co_varnames[var_nums & 15]``
+   onto the stack.
+
+   .. versionadded:: 3.16
+
 .. opcode:: DELETE_FAST (var_num)
 
    Deletes local ``co_varnames[var_num]``.
