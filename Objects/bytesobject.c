@@ -1588,6 +1588,23 @@ bytes_length(PyObject *self)
     return Py_SIZE(a);
 }
 
+/* Fill *view with a read-only view of obj.  For an exact bytes object the
+   caller already owns a reference, so skip the buffer export and point
+   straight at the data; view->obj = NULL makes PyBuffer_Release() a no-op.
+   Subclasses go through the buffer protocol since they may define
+   __buffer__. */
+static inline int
+get_concat_buffer(PyObject *obj, Py_buffer *view)
+{
+    if (PyBytes_CheckExact(obj)) {
+        view->obj = NULL;
+        view->buf = PyBytes_AS_STRING(obj);
+        view->len = PyBytes_GET_SIZE(obj);
+        return 0;
+    }
+    return PyObject_GetBuffer(obj, view, PyBUF_SIMPLE);
+}
+
 /* This is also used by PyBytes_Concat() and the specializing interpreter. */
 PyObject *
 _PyBytes_Concat(PyObject *a, PyObject *b)
@@ -1597,8 +1614,8 @@ _PyBytes_Concat(PyObject *a, PyObject *b)
 
     va.len = -1;
     vb.len = -1;
-    if (PyObject_GetBuffer(a, &va, PyBUF_SIMPLE) != 0 ||
-        PyObject_GetBuffer(b, &vb, PyBUF_SIMPLE) != 0) {
+    if (get_concat_buffer(a, &va) != 0 ||
+        get_concat_buffer(b, &vb) != 0) {
         PyErr_Format(PyExc_TypeError, "can't concat %.100s to %.100s",
                      Py_TYPE(b)->tp_name, Py_TYPE(a)->tp_name);
         goto done;
