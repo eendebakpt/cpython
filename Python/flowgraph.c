@@ -2727,8 +2727,12 @@ insert_superinstructions(cfg_builder *g)
                     break;
                 case STORE_FAST:
                     switch (nextop) {
-                        case LOAD_FAST:
-                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_LOAD_FAST);
+                        case LOAD_FAST_BORROW:
+                            /* A LOAD_FAST that must keep a strong reference
+                             * is left unfused: the superinstruction only
+                             * exists in a borrowing form. */
+                            make_super_instruction(inst, &b->b_instr[i + 1],
+                                                   STORE_FAST_LOAD_FAST_BORROW);
                             break;
                         case STORE_FAST:
                             make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_STORE_FAST);
@@ -2984,7 +2988,7 @@ optimize_load_fast(cfg_builder *g)
                     break;
                 }
 
-                case STORE_FAST_LOAD_FAST: {
+                case STORE_FAST_LOAD_FAST_BORROW: {
                     // STORE_FAST
                     ref r = ref_stack_pop(&refs);
                     store_local(instr_flags, &refs, oparg >> 4, r);
