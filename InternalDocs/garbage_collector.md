@@ -729,6 +729,56 @@ True
 True
 ```
 
+Experimental: closure-sum cycle detection
+=========================================
+
+The default build has a second, experimental detector for the unreachable
+set, selected with the environment variable `PYTHON_GC_CLOSURE` (`0`: off,
+the default; `1`: used for every collection; `2`: used for generations 0 and
+1 only; `3`: alternate between the two detectors).  It is implemented by
+`closure_pass()` in `gc.c` and produces the same lists with the same flags as
+`deduce_unreachable()`, so the rest of the collection is unchanged.
+
+Let *S* be the set of candidate objects (the generation being collected, with
+all younger generations merged in).  For an object *x* in *S*, its *closure*
+*C(x)* is every member of *S* reachable from *x* through `tp_traverse` edges
+that stay inside *S*; edges that leave *S* are neither counted nor followed.
+Over the closure the pass accumulates
+
+- *R*, the sum of the reference counts of the members, and
+- *E*, the number of `tp_traverse` visits from a member to a member of *S*
+  (which, because the closure is closed, is always a member of *C(x)*).
+
+Every reference counted in *E* originates inside the closure, so *R - E* is
+the number of references into the closure from anywhere else: older
+generations, the C stack, untracked or non-GC holders, or references that a
+`tp_traverse` does not report.  If *R == E* the whole closure is unreachable
+and is moved to the unreachable list.  Otherwise the closure is *unknown* and
+its members are kept in place, exactly as `deduce_unreachable()` keeps
+reachable objects; any garbage inside it is found by a later collection that
+runs `deduce_unreachable()`.  This is trial deletion with a single aggregate
+counter: the per-object version is what `update_refs()`, `subtract_refs()`
+and `move_unreachable()` compute.
+
+Each object is traversed once and survivors are not moved, which is what the
+pass saves over `deduce_unreachable()`.  In generation 0 and 1 collections,
+references into older generations play the role that a mark-alive pass would
+play: an instance's reference to its class or to a module dictionary leaves
+*S* and does not contaminate the closure.  The limitation is granularity: a
+closure is a forward-reachable set, not a strongly connected component, so a
+garbage structure is only found whole when the pass starts from one of its
+sources.  A garbage instance references its (garbage) class; the class is
+older, is visited first, looks externally referenced and is kept, and the
+instance is collected on its own.  The class follows in the next collection.
+Weakref callbacks and finalizers of such pieces therefore run in separate
+collections, which is why the detector is not used for every collection.
+
+During the pass `PREV_MASK_COLLECTING` marks members of *S* that have not been
+retired yet, and the low bit of `_gc_next` (`NEXT_MASK_UNREACHABLE`) marks
+objects discovered by the current closure.  `gc_refs` is not used, so the
+`_gc_prev` pointers stay valid and garbage can be unlinked with the normal
+list operations.
+
 Differences between GC implementations
 ======================================
 

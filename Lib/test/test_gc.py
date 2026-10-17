@@ -1457,10 +1457,13 @@ class GCCallbackTests(unittest.TestCase):
         p.stdout.close()
         p.stderr.close()
         # Verify that stderr has a useful error message:
+        # deduce_unreachable() and the closure pass (PYTHON_GC_CLOSURE)
+        # report the broken tp_traverse with different assertions.
         self.assertRegex(stderr,
-            br'gc.*\.c:[0-9]+: .*: Assertion "gc_get_refs\(.+\) .*" failed.')
+            br'gc.*\.c:[0-9]+: .*: Assertion "(gc_get_refs\(.+\) .*'
+            br'|cs\.rc_sum >= cs\.edges)" failed.')
         self.assertRegex(stderr,
-            br'refcount is too small')
+            br'refcount is too small|closure edges exceed refcounts')
         # "address : 0x7fb5062efc18"
         # "address : 7FB5062EFC18"
         address_regex = br'[0-9a-fA-Fx]+'
@@ -1725,6 +1728,107 @@ class PythonFinalizationTests(unittest.TestCase):
 
         assert_python_ok("-c", code)
 
+
+@unittest.skipIf(Py_GIL_DISABLED, "closure-sum detection is default-build only")
+class ClosureSumTests(unittest.TestCase):
+    """The closure-sum detector is selected per process with PYTHON_GC_CLOSURE,
+    so these tests run the scenarios in a subprocess."""
+
+    def run_mode(self, mode, code):
+        rc, out, err = assert_python_ok("-c", textwrap.dedent(code),
+                                        PYTHON_GC_CLOSURE=str(mode))
+        self.assertEqual(err, b"", err)
+        return out
+
+    def test_cycles_are_collected(self):
+        # Cycles without external references are found by the closure pass
+        # in a generation 0 collection, in every mode.
+        code = """
+            import gc, weakref
+            class A:
+                pass
+            class L(list):
+                pass
+            def make():
+                a, b = A(), A()
+                a.other = b
+                b.other = a
+                l = L()
+                l.append(l)
+                def inner():
+                    return inner
+                return weakref.ref(a), weakref.ref(l), weakref.ref(inner)
+            gc.disable()
+            refs = make()
+            assert all(r() is not None for r in refs)
+            n = gc.collect(0)
+            assert n >= 5, n
+            assert all(r() is None for r in refs), [r() for r in refs]
+        """
+        for mode in (1, 2, 3):
+            with self.subTest(mode=mode):
+                self.run_mode(mode, code)
+
+    def test_unknown_closure_is_kept_until_old_algorithm_runs(self):
+        # Garbage that references a live young object forms an "unknown"
+        # closure: it survives the closure pass and is collected by the next
+        # collection that runs the old algorithm (the full collection in
+        # mode 2).  Candidates are visited in allocation order and a closure
+        # retires everything it reaches, so the live object is created after
+        # the cycle and its holder is made old first; otherwise the holder's
+        # closure would retire the live object before the cycle is looked at
+        # and the cycle would be pure on its own.
+        code = """
+            import gc, weakref
+            class A:
+                pass
+            keep = []
+            gc.collect()        # keep (and A) leave the young generation
+            def make():
+                a = A()
+                a.me = a
+                live = []
+                keep.append(live)
+                a.live = live
+                return weakref.ref(a)
+            gc.disable()
+            r = make()
+            gc.collect(0)
+            assert r() is not None
+            gc.collect()
+            assert r() is None
+        """
+        self.run_mode(2, code)
+
+    def test_finalizers_and_resurrection(self):
+        code = """
+            import gc
+            finalized = []
+            kept = []
+            class A:
+                def __del__(self):
+                    finalized.append(id(self))
+            class Z(A):
+                def __del__(self):
+                    super().__del__()
+                    kept.append(self)
+            gc.disable()
+            def make():
+                a, b = A(), Z()
+                a.other = b
+                b.other = a
+            make()
+            gc.collect()
+            assert len(finalized) == 2, finalized
+            assert len(kept) == 1
+            kept.clear()
+            gc.collect()
+            assert len(finalized) == 2, finalized   # finalized only once
+            assert not gc.garbage
+        """
+        for mode in (1, 2, 3):
+            with self.subTest(mode=mode):
+                self.run_mode(mode, code)
 
 def setUpModule():
     global enabled, debug
