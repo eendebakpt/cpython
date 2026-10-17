@@ -1830,6 +1830,58 @@ class ClosureSumTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.run_mode(mode, code)
 
+    def test_truth_mode_statistics(self):
+        # Mode 4 runs the closure pass and then the old algorithm as ground
+        # truth; gc._closure_stats() reports how the two compare.
+        code = """
+            import gc
+            gc.disable()
+            class A:
+                pass
+            keep = []
+            def make(n, contaminate):
+                for i in range(n):
+                    a, b = A(), A()
+                    a.other = b
+                    b.other = a
+                    if contaminate:
+                        # created after a and b, so it is visited after
+                        # them and is part of their closure
+                        shared = []
+                        keep.append(shared)
+                        a.shared = shared
+            def gen0():
+                gc.collect(0)
+                st = gc._closure_stats()[0]
+                assert st["truth_collections"] == 1, st
+                assert st["pure_but_live"] == 0, st
+                assert st["phantom_closures"] == 0, st
+                assert st["pure_objects"] + st["missed_garbage"] == st["true_garbage"], st
+                return st
+
+            assert gc._closure_mode() == 4
+            gc._closure_reset_stats()
+            make(100, False)
+            st = gen0()
+            assert st["true_garbage"] == 200, st
+            assert st["pure_objects"] == 200, st
+            assert st["pure_closures"] == 100, st
+
+            # The first collection promoted keep and A, so the shared lists
+            # are only reachable from the cycles and from an old object.
+            gc._closure_reset_stats()
+            make(100, True)
+            st = gen0()
+            assert st["true_garbage"] == 200, st
+            assert st["pure_objects"] == 0, st
+            assert st["unknown_with_garbage"] == 100, st
+            assert st["blockers"]["list"] == 100, st
+            assert st["missed_types"] == {"A": 200}, st
+            gc.collect()
+        """
+        self.run_mode(4, code)
+
+
 def setUpModule():
     global enabled, debug
     enabled = gc.isenabled()
