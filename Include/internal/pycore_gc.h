@@ -315,6 +315,47 @@ static inline void _PyObject_GC_UNTRACK(
 
 extern void _PyGC_InitState(struct _gc_runtime_state *);
 
+/* Statistics of the closure-sum cycle detector (default build only; see
+ * PYTHON_GC_CLOSURE_STATS in Python/gc.c). */
+#define _PyGC_CLOSURE_HIST 24
+#define _PyGC_CLOSURE_TYPES 24
+struct _gc_closure_type_count {
+    char name[48];
+    uint64_t count;
+};
+struct _gc_closure_gen_stats {
+    uint64_t collections;          /* collections of this generation */
+    uint64_t closure_collections;  /* ... that used the closure pass */
+    uint64_t truth_collections;    /* ... that also ran deduce_unreachable() */
+    uint64_t candidates;
+    uint64_t closures;
+    uint64_t pure_closures;
+    uint64_t pure_objects;         /* garbage found by the closure pass */
+    uint64_t true_garbage;         /* garbage found by deduce_unreachable() */
+    uint64_t missed_garbage;       /* true garbage inside unknown closures */
+    uint64_t unknown_with_garbage; /* unknown closures hiding garbage */
+    uint64_t phantom_closures;     /* closures with E > R (broken traverse) */
+    uint64_t pure_but_live;        /* pure closures not fully garbage: must be 0 */
+    uint64_t edges;                /* E over all closures */
+    uint64_t traversals_old;       /* tp_traverse calls by deduce_unreachable() */
+    uint64_t queue_high_water;
+    uint64_t fallbacks;            /* closure pass gave up (no memory) */
+    uint64_t log_oom;
+    PyTime_t closure_time;         /* spent in closure_pass() */
+    PyTime_t deduce_time;          /* spent in deduce_unreachable() */
+    uint64_t size_hist[_PyGC_CLOSURE_HIST];       /* log2 closure sizes */
+    uint64_t pure_size_hist[_PyGC_CLOSURE_HIST];
+    struct _gc_closure_type_count blockers[_PyGC_CLOSURE_TYPES];
+    struct _gc_closure_type_count missed_types[_PyGC_CLOSURE_TYPES];
+};
+struct _gc_closure_stats {
+    struct _gc_closure_gen_stats gens[3];   /* NUM_GENERATIONS */
+};
+#ifndef Py_GIL_DISABLED
+extern PyObject *_PyGC_ClosureStats(PyInterpreterState *interp);
+extern void _PyGC_ClosureResetStats(PyInterpreterState *interp);
+#endif
+
 extern Py_ssize_t _PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason);
 extern void _PyGC_CollectNoFail(PyThreadState *tstate);
 

@@ -58,7 +58,8 @@ typedef struct _gc_runtime_state GCState;
 #define GENERATION_AUTO (-1)
 
 // Closure-sum cycle detection (experimental); see find_unreachable().
-static int closure_mode_from_env(void);
+static void closure_init(GCState *gcstate);
+static void closure_fini(GCState *gcstate);
 
 static inline int
 gc_is_collecting(PyGC_Head *g)
@@ -154,8 +155,7 @@ _PyGC_Init(PyInterpreterState *interp)
         return _PyStatus_NO_MEMORY();
     }
 
-    gcstate->closure_mode = closure_mode_from_env();
-    gcstate->closure_counter = 0;
+    closure_init(gcstate);
 
     return _PyStatus_OK();
 }
@@ -1309,16 +1309,126 @@ enum closure_mode {
     CLOSURE_MODE_ALL = 1,        /* closure pass for every collection */
     CLOSURE_MODE_YOUNG = 2,      /* closure pass for generations 0 and 1 */
     CLOSURE_MODE_ALTERNATE = 3,  /* alternate between the two */
+    CLOSURE_MODE_TRUTH = 4,      /* closure pass for statistics, then
+                                    deduce_unreachable() for the result */
 };
 
 typedef struct {
     PyObject **queue;       /* breadth-first worklist; queue[0..len) is the closure */
     Py_ssize_t len;
     Py_ssize_t cap;
+    Py_ssize_t high_water;
     Py_ssize_t rc_sum;      /* R */
     Py_ssize_t edges;       /* E */
     int oom;
 } closure_state;
+
+/* Statistics (PYTHON_GC_CLOSURE_STATS=<file>, gc._closure_stats()).
+ *
+ * Any mode counts collections, candidates and time per detector.  In
+ * CLOSURE_MODE_TRUTH every collection runs the closure pass, records each
+ * closure in a closure_log, puts everything back and runs
+ * deduce_unreachable() as ground truth; the collection proceeds with the
+ * latter's result.  Comparing the log with the truth gives the recall of
+ * the closure pass, the types of the live objects that hide garbage from it
+ * (blockers) and the types of the garbage it misses. */
+
+typedef struct {
+    Py_ssize_t start;       /* offset into arena */
+    Py_ssize_t size;
+    int pure;
+} closure_record;
+
+typedef struct {
+    PyObject **arena;
+    Py_ssize_t arena_len, arena_cap;
+    closure_record *recs;
+    Py_ssize_t recs_len, recs_cap;
+    int oom;
+} closure_log;
+
+static int
+closure_log_add(closure_log *log, closure_state *cs, int pure)
+{
+    if (log->arena_len + cs->len > log->arena_cap) {
+        Py_ssize_t ncap = log->arena_cap ? log->arena_cap : 4096;
+        while (ncap < log->arena_len + cs->len) {
+            ncap *= 2;
+        }
+        PyObject **na = PyMem_Realloc(log->arena, ncap * sizeof(PyObject *));
+        if (na == NULL) {
+            log->oom = 1;
+            return -1;
+        }
+        log->arena = na;
+        log->arena_cap = ncap;
+    }
+    if (log->recs_len == log->recs_cap) {
+        Py_ssize_t ncap = log->recs_cap ? log->recs_cap * 2 : 256;
+        closure_record *nr = PyMem_Realloc(log->recs, ncap * sizeof(closure_record));
+        if (nr == NULL) {
+            log->oom = 1;
+            return -1;
+        }
+        log->recs = nr;
+        log->recs_cap = ncap;
+    }
+    closure_record *rec = &log->recs[log->recs_len++];
+    rec->start = log->arena_len;
+    rec->size = cs->len;
+    rec->pure = pure;
+    memcpy(log->arena + log->arena_len, cs->queue, cs->len * sizeof(PyObject *));
+    log->arena_len += cs->len;
+    return 0;
+}
+
+static inline int
+closure_size_bucket(Py_ssize_t n)
+{
+    int b = 0;
+    while (n > 1 && b < _PyGC_CLOSURE_HIST - 1) {
+        n >>= 1;
+        b++;
+    }
+    return b;
+}
+
+static void
+closure_count_type(struct _gc_closure_type_count *table, PyTypeObject *tp)
+{
+    const char *name = tp->tp_name;
+    int i;
+    for (i = 0; i < _PyGC_CLOSURE_TYPES - 1; i++) {
+        if (table[i].count == 0) {
+            strncpy(table[i].name, name, sizeof(table[i].name) - 1);
+            table[i].name[sizeof(table[i].name) - 1] = '\0';
+            break;
+        }
+        if (strncmp(table[i].name, name, sizeof(table[i].name) - 1) == 0) {
+            break;
+        }
+    }
+    if (i == _PyGC_CLOSURE_TYPES - 1 && table[i].count == 0) {
+        strcpy(table[i].name, "<other>");
+    }
+    table[i].count++;
+}
+
+static void
+closure_account(struct _gc_closure_gen_stats *st, closure_state *cs, int pure)
+{
+    st->closures++;
+    st->edges += cs->edges;
+    st->size_hist[closure_size_bucket(cs->len)]++;
+    if (pure) {
+        st->pure_closures++;
+        st->pure_objects += cs->len;
+        st->pure_size_hist[closure_size_bucket(cs->len)]++;
+    }
+    if (cs->rc_sum < cs->edges) {
+        st->phantom_closures++;
+    }
+}
 
 static int
 closure_discover(closure_state *cs, PyObject *op)
@@ -1335,6 +1445,9 @@ closure_discover(closure_state *cs, PyObject *op)
     }
     AS_GC(op)->_gc_next |= NEXT_MASK_UNREACHABLE;
     cs->queue[cs->len++] = op;
+    if (cs->len > cs->high_water) {
+        cs->high_water = cs->len;
+    }
     _PyObject_ASSERT(op, Py_REFCNT(op) > 0);
     cs->rc_sum += Py_REFCNT(op);
     return 0;
@@ -1454,9 +1567,11 @@ closure_abort(closure_state *cs, PyGC_Head *young, PyGC_Head *unreachable)
  * post-conditions: `unreachable` holds the garbage (PREV_MASK_COLLECTING and
  * NEXT_MASK_UNREACHABLE set), `young` the survivors (flags clear).
  * Returns the number of candidates, or -1 if memory ran out; in that case
- * all objects are back in `young` with plain flags. */
+ * all objects are back in `young` with plain flags.  `st` and `log` are
+ * only used for statistics (NULL otherwise). */
 static Py_ssize_t
-closure_pass(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable)
+closure_pass(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable,
+             struct _gc_closure_gen_stats *st, closure_log *log)
 {
     validate_list(young, collecting_clear_unreachable_clear);
     gc_list_init(unreachable);
@@ -1492,7 +1607,14 @@ closure_pass(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable)
          * bug.  Release builds treat the closure as unknown. */
         _PyObject_ASSERT_WITH_MSG(FROM_GC(start), cs.rc_sum >= cs.edges,
                                   "closure edges exceed refcounts");
-        if (cs.rc_sum == cs.edges) {
+        int pure = (cs.rc_sum == cs.edges);
+        if (st != NULL) {
+            closure_account(st, &cs, pure);
+            if (log != NULL && closure_log_add(log, &cs, pure) < 0) {
+                log = NULL;     /* keep collecting, statistics incomplete */
+            }
+        }
+        if (pure) {
             closure_collect(&cs, unreachable);
             /* start is unlinked; prev stays */
         }
@@ -1505,6 +1627,9 @@ closure_pass(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable)
         }
     }
 
+    if (st != NULL && cs.high_water > (Py_ssize_t)st->queue_high_water) {
+        st->queue_high_water = cs.high_water;
+    }
     if (cs.oom) {
         closure_abort(&cs, young, unreachable);
         PyMem_Free(cs.queue);
@@ -1532,36 +1657,378 @@ closure_pass_wanted(GCState *gcstate, int generation)
     }
 }
 
+/* CLOSURE_MODE_TRUTH: closure pass for the statistics, then everything
+ * back and deduce_unreachable() for the result; compare the two. */
+static Py_ssize_t
+closure_pass_with_truth(PyGC_Head *young, PyGC_Head *unreachable,
+                        Py_ssize_t *reachable, struct _gc_closure_gen_stats *st)
+{
+    closure_log log = { 0 };
+    PyTime_t t0, t1, t2;
+    (void)PyTime_PerfCounterRaw(&t0);
+    Py_ssize_t candidates = closure_pass(young, unreachable, reachable, st, &log);
+    (void)PyTime_PerfCounterRaw(&t1);
+    if (candidates < 0) {
+        st->fallbacks++;
+        PyMem_Free(log.arena);
+        PyMem_Free(log.recs);
+        return deduce_unreachable(young, unreachable, reachable);
+    }
+    st->closure_collections++;
+    st->truth_collections++;
+    st->closure_time += t1 - t0;
+    st->candidates += candidates;
+
+    /* Put the garbage back so that deduce_unreachable() sees the whole set.
+     * Survivor tuples untracked by the closure pass stay untracked; the old
+     * algorithm would have untracked them too. */
+    clear_unreachable_mask(unreachable);
+    gc_list_merge(unreachable, young);
+
+    (void)PyTime_PerfCounterRaw(&t1);
+    Py_ssize_t cand2 = update_refs(young);
+    assert(cand2 <= candidates);
+    (void)cand2;
+    subtract_refs(young);
+
+    /* Blockers: members of unknown closures with external references.
+     * gc_refs is final here: all references into a closure come from inside
+     * it or from outside S. */
+    if (!log.oom) {
+        for (Py_ssize_t r = 0; r < log.recs_len; r++) {
+            closure_record *rec = &log.recs[r];
+            if (rec->pure) {
+                continue;
+            }
+            for (Py_ssize_t i = 0; i < rec->size; i++) {
+                PyObject *op = log.arena[rec->start + i];
+                PyGC_Head *gc = AS_GC(op);
+                if (gc->_gc_next != 0 && gc_is_collecting(gc)
+                    && gc_get_refs(gc) > 0) {
+                    closure_count_type(st->blockers, Py_TYPE(op));
+                }
+            }
+        }
+    }
+
+    gc_list_init(unreachable);
+    *reachable = move_unreachable(young, unreachable);
+    (void)PyTime_PerfCounterRaw(&t2);
+    st->deduce_time += t2 - t1;
+    st->traversals_old += candidates + *reachable;
+
+    /* Attribute the truth to the recorded closures: members of
+     * `unreachable` still have PREV_MASK_COLLECTING set, survivors and
+     * untracked objects do not. */
+    for (PyGC_Head *gc = (PyGC_Head *)(unreachable->_gc_next & ~NEXT_MASK_UNREACHABLE);
+         gc != unreachable;
+         gc = (PyGC_Head *)(gc->_gc_next & ~NEXT_MASK_UNREACHABLE)) {
+        st->true_garbage++;
+    }
+    if (log.oom) {
+        st->log_oom++;
+    }
+    else {
+        for (Py_ssize_t r = 0; r < log.recs_len; r++) {
+            closure_record *rec = &log.recs[r];
+            Py_ssize_t garbage = 0;
+            for (Py_ssize_t i = 0; i < rec->size; i++) {
+                PyObject *op = log.arena[rec->start + i];
+                PyGC_Head *gc = AS_GC(op);
+                if (gc->_gc_next != 0 && gc_is_collecting(gc)) {
+                    garbage++;
+                    if (!rec->pure) {
+                        closure_count_type(st->missed_types, Py_TYPE(op));
+                    }
+                }
+            }
+            if (rec->pure) {
+                _PyObject_ASSERT_WITH_MSG(log.arena[rec->start],
+                                          garbage == rec->size,
+                                          "pure closure not fully garbage");
+                if (garbage != rec->size) {
+                    st->pure_but_live++;
+                }
+            }
+            else if (garbage > 0) {
+                st->unknown_with_garbage++;
+                st->missed_garbage += garbage;
+            }
+        }
+    }
+    PyMem_Free(log.arena);
+    PyMem_Free(log.recs);
+    return candidates;
+}
+
 /* Find the unreachable subset of young with the detector selected by
  * gcstate->closure_mode.  Same contract as deduce_unreachable(). */
 static Py_ssize_t
 find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
                  PyGC_Head *unreachable, Py_ssize_t *reachable)
 {
+    struct _gc_closure_gen_stats *st = NULL;
+    if (gcstate->closure_stats != NULL) {
+        st = &gcstate->closure_stats->gens[generation];
+        st->collections++;
+    }
+    if (gcstate->closure_mode == CLOSURE_MODE_TRUTH) {
+        assert(st != NULL);
+        return closure_pass_with_truth(young, unreachable, reachable, st);
+    }
+
+    PyTime_t t0 = 0, t1 = 0;
+    if (st != NULL) {
+        (void)PyTime_PerfCounterRaw(&t0);
+    }
+    Py_ssize_t candidates = -1;
     if (closure_pass_wanted(gcstate, generation)) {
-        Py_ssize_t candidates = closure_pass(young, unreachable, reachable);
-        if (candidates >= 0) {
-            return candidates;
+        candidates = closure_pass(young, unreachable, reachable, NULL, NULL);
+        if (st != NULL) {
+            (void)PyTime_PerfCounterRaw(&t1);
+            if (candidates >= 0) {
+                st->closure_collections++;
+                st->closure_time += t1 - t0;
+            }
+            else {
+                st->fallbacks++;
+            }
+            t0 = t1;
         }
     }
-    return deduce_unreachable(young, unreachable, reachable);
+    if (candidates < 0) {
+        candidates = deduce_unreachable(young, unreachable, reachable);
+        if (st != NULL) {
+            (void)PyTime_PerfCounterRaw(&t1);
+            st->deduce_time += t1 - t0;
+            st->traversals_old += candidates + *reachable;
+        }
+    }
+    if (st != NULL) {
+        st->candidates += candidates;
+    }
+    return candidates;
 }
 
-/* PYTHON_GC_CLOSURE selects the detector (see enum closure_mode).  Read
- * with getenv() on purpose: the variable must reach subprocesses too, and
- * -E/-I would hide it from them. */
-static int
-closure_mode_from_env(void)
+/* PYTHON_GC_CLOSURE selects the detector (see enum closure_mode) and
+ * PYTHON_GC_CLOSURE_STATS names a file that receives one JSON line of
+ * statistics per process at exit.  Both are read with getenv() on purpose:
+ * they must reach subprocesses too, and -E/-I would hide them. */
+static void
+closure_init(GCState *gcstate)
 {
+    gcstate->closure_mode = CLOSURE_MODE_OFF;
+    gcstate->closure_counter = 0;
+    gcstate->closure_stats = NULL;
+    gcstate->closure_stats_path = NULL;
+
     const char *mode = getenv("PYTHON_GC_CLOSURE");
-    if (mode == NULL || *mode == '\0') {
-        return CLOSURE_MODE_OFF;
+    if (mode != NULL && *mode != '\0') {
+        int value = atoi(mode);
+        if (value >= CLOSURE_MODE_OFF && value <= CLOSURE_MODE_TRUTH) {
+            gcstate->closure_mode = value;
+        }
     }
-    int value = atoi(mode);
-    if (value < CLOSURE_MODE_OFF || value > CLOSURE_MODE_ALTERNATE) {
-        return CLOSURE_MODE_OFF;
+    const char *path = getenv("PYTHON_GC_CLOSURE_STATS");
+    int want_path = (path != NULL && *path != '\0');
+    if (want_path || gcstate->closure_mode == CLOSURE_MODE_TRUTH) {
+        gcstate->closure_stats = PyMem_RawCalloc(1, sizeof(struct _gc_closure_stats));
+        if (gcstate->closure_stats == NULL) {
+            gcstate->closure_mode = CLOSURE_MODE_OFF;
+            return;
+        }
+        if (want_path) {
+            gcstate->closure_stats_path = _PyMem_RawStrdup(path);
+        }
     }
-    return value;
+}
+
+#define CLOSURE_GEN_COUNTERS(X) \
+    X(collections) X(closure_collections) X(truth_collections) \
+    X(candidates) X(closures) X(pure_closures) X(pure_objects) \
+    X(true_garbage) X(missed_garbage) X(unknown_with_garbage) \
+    X(phantom_closures) X(pure_but_live) X(edges) X(traversals_old) \
+    X(queue_high_water) X(fallbacks) X(log_oom)
+
+static void
+closure_stats_write_types(FILE *f, const struct _gc_closure_type_count *table)
+{
+    fputc('{', f);
+    const char *sep = "";
+    for (int i = 0; i < _PyGC_CLOSURE_TYPES; i++) {
+        if (table[i].count == 0) {
+            continue;
+        }
+        fprintf(f, "%s\"%s\": %llu", sep, table[i].name,
+                (unsigned long long)table[i].count);
+        sep = ", ";
+    }
+    fputc('}', f);
+}
+
+static void
+closure_stats_write_hist(FILE *f, const uint64_t *hist)
+{
+    fputc('[', f);
+    for (int i = 0; i < _PyGC_CLOSURE_HIST; i++) {
+        fprintf(f, "%s%llu", i ? ", " : "", (unsigned long long)hist[i]);
+    }
+    fputc(']', f);
+}
+
+/* Append one JSON line.  Only integers are printed: %f is locale dependent
+ * and benchmark harnesses do call setlocale(). */
+static void
+closure_stats_dump(GCState *gcstate)
+{
+    FILE *f = fopen(gcstate->closure_stats_path, "a");
+    if (f == NULL) {
+        return;
+    }
+    fprintf(f, "{\"mode\": %d, \"gens\": [", gcstate->closure_mode);
+    for (int g = 0; g < NUM_GENERATIONS; g++) {
+        struct _gc_closure_gen_stats *st = &gcstate->closure_stats->gens[g];
+        fprintf(f, "%s{", g ? ", " : "");
+#define WRITE_COUNTER(name) \
+        fprintf(f, "\"" #name "\": %llu, ", (unsigned long long)st->name);
+        CLOSURE_GEN_COUNTERS(WRITE_COUNTER)
+#undef WRITE_COUNTER
+        fprintf(f, "\"closure_time_ns\": %lld, \"deduce_time_ns\": %lld, ",
+                (long long)st->closure_time, (long long)st->deduce_time);
+        fprintf(f, "\"size_hist\": ");
+        closure_stats_write_hist(f, st->size_hist);
+        fprintf(f, ", \"pure_size_hist\": ");
+        closure_stats_write_hist(f, st->pure_size_hist);
+        fprintf(f, ", \"blockers\": ");
+        closure_stats_write_types(f, st->blockers);
+        fprintf(f, ", \"missed_types\": ");
+        closure_stats_write_types(f, st->missed_types);
+        fputc('}', f);
+    }
+    fprintf(f, "]}\n");
+    fclose(f);
+}
+
+static void
+closure_fini(GCState *gcstate)
+{
+    if (gcstate->closure_stats != NULL && gcstate->closure_stats_path != NULL) {
+        closure_stats_dump(gcstate);
+    }
+    PyMem_RawFree(gcstate->closure_stats);
+    gcstate->closure_stats = NULL;
+    PyMem_RawFree((void *)gcstate->closure_stats_path);
+    gcstate->closure_stats_path = NULL;
+}
+
+static PyObject *
+closure_types_dict(const struct _gc_closure_type_count *table)
+{
+    PyObject *d = PyDict_New();
+    if (d == NULL) {
+        return NULL;
+    }
+    for (int i = 0; i < _PyGC_CLOSURE_TYPES; i++) {
+        if (table[i].count == 0) {
+            continue;
+        }
+        PyObject *v = PyLong_FromUnsignedLongLong(table[i].count);
+        if (v == NULL || PyDict_SetItemString(d, table[i].name, v) < 0) {
+            Py_XDECREF(v);
+            Py_DECREF(d);
+            return NULL;
+        }
+        Py_DECREF(v);
+    }
+    return d;
+}
+
+static PyObject *
+closure_hist_list(const uint64_t *hist)
+{
+    PyObject *l = PyList_New(_PyGC_CLOSURE_HIST);
+    if (l == NULL) {
+        return NULL;
+    }
+    for (int i = 0; i < _PyGC_CLOSURE_HIST; i++) {
+        PyObject *v = PyLong_FromUnsignedLongLong(hist[i]);
+        if (v == NULL) {
+            Py_DECREF(l);
+            return NULL;
+        }
+        PyList_SET_ITEM(l, i, v);
+    }
+    return l;
+}
+
+static int
+closure_dict_set(PyObject *d, const char *key, PyObject *value)
+{
+    if (value == NULL) {
+        return -1;
+    }
+    int rc = PyDict_SetItemString(d, key, value);
+    Py_DECREF(value);
+    return rc;
+}
+
+/* gc._closure_stats(): list with one dict per generation, or None. */
+PyObject *
+_PyGC_ClosureStats(PyInterpreterState *interp)
+{
+    GCState *gcstate = &interp->gc;
+    if (gcstate->closure_stats == NULL) {
+        Py_RETURN_NONE;
+    }
+    PyObject *result = PyList_New(0);
+    if (result == NULL) {
+        return NULL;
+    }
+    for (int g = 0; g < NUM_GENERATIONS; g++) {
+        struct _gc_closure_gen_stats *st = &gcstate->closure_stats->gens[g];
+        PyObject *d = PyDict_New();
+        if (d == NULL) {
+            goto error;
+        }
+#define SET_COUNTER(name) \
+        if (closure_dict_set(d, #name, \
+                PyLong_FromUnsignedLongLong(st->name)) < 0) { \
+            Py_DECREF(d); \
+            goto error; \
+        }
+        CLOSURE_GEN_COUNTERS(SET_COUNTER)
+#undef SET_COUNTER
+        if (closure_dict_set(d, "closure_time_ns",
+                             PyLong_FromLongLong(st->closure_time)) < 0
+            || closure_dict_set(d, "deduce_time_ns",
+                                PyLong_FromLongLong(st->deduce_time)) < 0
+            || closure_dict_set(d, "size_hist",
+                                closure_hist_list(st->size_hist)) < 0
+            || closure_dict_set(d, "pure_size_hist",
+                                closure_hist_list(st->pure_size_hist)) < 0
+            || closure_dict_set(d, "blockers",
+                                closure_types_dict(st->blockers)) < 0
+            || closure_dict_set(d, "missed_types",
+                                closure_types_dict(st->missed_types)) < 0
+            || PyList_Append(result, d) < 0) {
+            Py_DECREF(d);
+            goto error;
+        }
+        Py_DECREF(d);
+    }
+    return result;
+error:
+    Py_DECREF(result);
+    return NULL;
+}
+
+void
+_PyGC_ClosureResetStats(PyInterpreterState *interp)
+{
+    GCState *gcstate = &interp->gc;
+    if (gcstate->closure_stats != NULL) {
+        memset(gcstate->closure_stats, 0, sizeof(struct _gc_closure_stats));
+    }
 }
 
 
@@ -2208,6 +2675,7 @@ void
 _PyGC_Fini(PyInterpreterState *interp)
 {
     GCState *gcstate = &interp->gc;
+    closure_fini(gcstate);
     Py_CLEAR(gcstate->garbage);
     Py_CLEAR(gcstate->callbacks);
     PyMem_RawFree(gcstate->generation_stats);

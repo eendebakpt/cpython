@@ -275,6 +275,8 @@ struct _gc_runtime_state {
     /* Closure-sum cycle detection (experimental, PYTHON_GC_CLOSURE). */
     int closure_mode;
     unsigned int closure_counter;
+    const char *closure_stats_path;
+    struct _gc_closure_stats *closure_stats;
 #endif
 };
 

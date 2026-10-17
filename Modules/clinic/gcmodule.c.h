@@ -583,4 +583,68 @@ gc_get_freeze_count(PyObject *module, PyObject *Py_UNUSED(ignored))
 exit:
     return return_value;
 }
-/*[clinic end generated code: output=d0cb000f41ffe433 input=a9049054013a1b77]*/
+
+PyDoc_STRVAR(gc__closure_mode__doc__,
+"_closure_mode($module, /)\n"
+"--\n"
+"\n"
+"Return the PYTHON_GC_CLOSURE mode of the closure-sum cycle detector.");
+
+#define GC__CLOSURE_MODE_METHODDEF    \
+    {"_closure_mode", (PyCFunction)gc__closure_mode, METH_NOARGS, gc__closure_mode__doc__},
+
+static int
+gc__closure_mode_impl(PyObject *module);
+
+static PyObject *
+gc__closure_mode(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    PyObject *return_value = NULL;
+    int _return_value;
+
+    _return_value = gc__closure_mode_impl(module);
+    if ((_return_value == -1) && PyErr_Occurred()) {
+        goto exit;
+    }
+    return_value = PyLong_FromLong((long)_return_value);
+
+exit:
+    return return_value;
+}
+
+PyDoc_STRVAR(gc__closure_stats__doc__,
+"_closure_stats($module, /)\n"
+"--\n"
+"\n"
+"Return per-generation statistics of the closure-sum detector, or None.");
+
+#define GC__CLOSURE_STATS_METHODDEF    \
+    {"_closure_stats", (PyCFunction)gc__closure_stats, METH_NOARGS, gc__closure_stats__doc__},
+
+static PyObject *
+gc__closure_stats_impl(PyObject *module);
+
+static PyObject *
+gc__closure_stats(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return gc__closure_stats_impl(module);
+}
+
+PyDoc_STRVAR(gc__closure_reset_stats__doc__,
+"_closure_reset_stats($module, /)\n"
+"--\n"
+"\n"
+"Reset the statistics of the closure-sum cycle detector.");
+
+#define GC__CLOSURE_RESET_STATS_METHODDEF    \
+    {"_closure_reset_stats", (PyCFunction)gc__closure_reset_stats, METH_NOARGS, gc__closure_reset_stats__doc__},
+
+static PyObject *
+gc__closure_reset_stats_impl(PyObject *module);
+
+static PyObject *
+gc__closure_reset_stats(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return gc__closure_reset_stats_impl(module);
+}
+/*[clinic end generated code: output=47bb3e5649a89340 input=a9049054013a1b77]*/

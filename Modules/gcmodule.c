@@ -503,6 +503,56 @@ gc_get_freeze_count_impl(PyObject *module)
     return _PyGC_GetFreezeCount(interp);
 }
 
+/*[clinic input]
+gc._closure_mode -> int
+
+Return the PYTHON_GC_CLOSURE mode of the closure-sum cycle detector.
+[clinic start generated code]*/
+
+static int
+gc__closure_mode_impl(PyObject *module)
+/*[clinic end generated code: output=141d28ee5d7c95b2 input=c9d9a3c1bf875fd5]*/
+{
+#ifdef Py_GIL_DISABLED
+    return 0;
+#else
+    return get_gc_state()->closure_mode;
+#endif
+}
+
+/*[clinic input]
+gc._closure_stats
+
+Return per-generation statistics of the closure-sum detector, or None.
+[clinic start generated code]*/
+
+static PyObject *
+gc__closure_stats_impl(PyObject *module)
+/*[clinic end generated code: output=ff7558a779638c5e input=2708e4117c3c8a3e]*/
+{
+#ifdef Py_GIL_DISABLED
+    Py_RETURN_NONE;
+#else
+    return _PyGC_ClosureStats(_PyInterpreterState_GET());
+#endif
+}
+
+/*[clinic input]
+gc._closure_reset_stats
+
+Reset the statistics of the closure-sum cycle detector.
+[clinic start generated code]*/
+
+static PyObject *
+gc__closure_reset_stats_impl(PyObject *module)
+/*[clinic end generated code: output=b4d9b19a3ec0b3c2 input=469503ec6874a9e0]*/
+{
+#ifndef Py_GIL_DISABLED
+    _PyGC_ClosureResetStats(_PyInterpreterState_GET());
+#endif
+    Py_RETURN_NONE;
+}
+
 
 PyDoc_STRVAR(gc__doc__,
 "This module provides access to the garbage collector for reference cycles.\n"
@@ -545,6 +595,9 @@ static PyMethodDef GcMethods[] = {
     GC_FREEZE_METHODDEF
     GC_UNFREEZE_METHODDEF
     GC_GET_FREEZE_COUNT_METHODDEF
+    GC__CLOSURE_MODE_METHODDEF
+    GC__CLOSURE_STATS_METHODDEF
+    GC__CLOSURE_RESET_STATS_METHODDEF
     {NULL,      NULL}           /* Sentinel */
 };
 
