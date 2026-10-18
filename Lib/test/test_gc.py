@@ -11,6 +11,7 @@ from test.support.script_helper import assert_python_ok, make_script
 from test.support import threading_helper, gc_threshold
 
 import gc
+import os
 import sys
 import textwrap
 import threading
@@ -1763,6 +1764,8 @@ class ClosureSumTests(unittest.TestCase):
             assert all(r() is None for r in refs), [r() for r in refs]
         """)
 
+    @unittest.skipIf(os.environ.get("PYTHON_GC_CLASSIC") == "1",
+                     "closure pass disabled")
     def test_unknown_closure_waits_for_full_collection(self):
         # Garbage that references a live young object forms an unknown
         # closure: the young collection keeps it, the full collection
