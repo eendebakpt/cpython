@@ -389,6 +389,11 @@ struct _gc_closure_config {
     int dag;                    /* PYTHON_GC_DAG: judge closures in a backward
                                    sweep over the record DAG (default build) */
     unsigned int counter;       /* for _PyGC_CLOSURE_ALTERNATE */
+    int classic_every;          /* PYTHON_GC_CLASSIC_EVERY=k: every k-th full
+                                   collection uses the classic algorithm, which
+                                   bounds the delay of garbage the closure pass
+                                   cannot decide (0: never) */
+    unsigned int full_counter;
     const char *stats_path;     /* PYTHON_GC_CLOSURE_STATS */
     struct _gc_closure_stats *stats;
 };

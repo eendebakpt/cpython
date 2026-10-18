@@ -38,6 +38,9 @@ _PyGC_ClosureInit(void)
     _PyGC_closure.mark_alive = (mark != NULL && atoi(mark) != 0);
     const char *dag = getenv("PYTHON_GC_DAG");
     _PyGC_closure.dag = (dag != NULL && atoi(dag) != 0);
+    const char *every = getenv("PYTHON_GC_CLASSIC_EVERY");
+    _PyGC_closure.classic_every = (every != NULL) ? atoi(every) : 0;
+    _PyGC_closure.full_counter = 0;
     const char *path = getenv("PYTHON_GC_CLOSURE_STATS");
     int want_path = (path != NULL && *path != '\0');
     if (want_path || _PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {
@@ -55,6 +58,10 @@ _PyGC_ClosureInit(void)
 int
 _PyGC_ClosureWanted(int generation)
 {
+    if (generation == NUM_GENERATIONS - 1 && _PyGC_closure.classic_every > 0
+        && (++_PyGC_closure.full_counter % _PyGC_closure.classic_every) == 0) {
+        return 0;   /* periodic classic full collection */
+    }
     switch (_PyGC_closure.mode) {
     case _PyGC_CLOSURE_ALL:
         return 1;
