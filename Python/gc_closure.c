@@ -36,8 +36,8 @@ _PyGC_ClosureInit(void)
     }
     const char *mark = getenv("PYTHON_GC_MARK");
     _PyGC_closure.mark_alive = (mark != NULL && atoi(mark) != 0);
-    const char *merge = getenv("PYTHON_GC_MERGE");
-    _PyGC_closure.merge = (merge != NULL && atoi(merge) != 0);
+    const char *dag = getenv("PYTHON_GC_DAG");
+    _PyGC_closure.dag = (dag != NULL && atoi(dag) != 0);
     const char *path = getenv("PYTHON_GC_CLOSURE_STATS");
     int want_path = (path != NULL && *path != '\0');
     if (want_path || _PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {

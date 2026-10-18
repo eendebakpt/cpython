@@ -1737,7 +1737,7 @@ class ClosureSumTests(unittest.TestCase):
         rc, out, err = assert_python_ok("-c", textwrap.dedent(code),
                                         PYTHON_GC_CLOSURE=str(mode),
                                         PYTHON_GC_MARK=str(mark),
-                                        PYTHON_GC_MERGE=str(merge))
+                                        PYTHON_GC_DAG=str(merge))
         self.assertEqual(err, b"", err)
         return out
 
@@ -1839,12 +1839,13 @@ class ClosureSumTests(unittest.TestCase):
                 self.run_mode(mode, code)
 
     @unittest.skipIf(Py_GIL_DISABLED, "closure merging is default-build only")
-    def test_merge_collects_class_with_instance(self):
+    def test_dag_collects_class_with_instance(self):
         # A garbage class is older than its garbage instance and is visited
         # first; it looks externally referenced (the instance points at it)
         # and the plain closure pass retires it, collecting the instance
-        # alone.  With PYTHON_GC_MERGE=1 the instance's closure absorbs the
-        # class's record and both go in the same collection.
+        # alone.  With PYTHON_GC_DAG=1 the backward sweep sees that the
+        # class's only external references come from the instance's garbage
+        # record, and both go in the same collection.
         code = """
             import gc, weakref
             def make():

@@ -386,8 +386,8 @@ struct _gc_closure_config {
     int mode;                   /* enum _PyGC_ClosureMode, PYTHON_GC_CLOSURE */
     int mark_alive;             /* PYTHON_GC_MARK: mark from the roots before a
                                    full collection (default build) */
-    int merge;                  /* PYTHON_GC_MERGE: merge closures instead of
-                                   retiring them (default build) */
+    int dag;                    /* PYTHON_GC_DAG: judge closures in a backward
+                                   sweep over the record DAG (default build) */
     unsigned int counter;       /* for _PyGC_CLOSURE_ALTERNATE */
     const char *stats_path;     /* PYTHON_GC_CLOSURE_STATS */
     struct _gc_closure_stats *stats;

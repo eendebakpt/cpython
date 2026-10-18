@@ -806,15 +806,21 @@ pays in full collections, which already traverse the live heap twice.
 `PYTHON_GC_CLOSURE=5` runs the closure pass for full collections only, the
 configuration that combines with marking.
 
-`PYTHON_GC_MERGE=1` (default build) replaces retiring with merging: each
-candidate carries the index of its closure record in the `gc_refs` bits of
-`_gc_prev`, the records form a union-find forest, and a closure that reaches
-a member of an earlier closure absorbs that record and counts the edge.
-Every record then stays closed under in-set edges and the verdict no longer
-depends on the visit order: a garbage class visited before its garbage
-instance is collected together with it.  Since `_gc_prev` no longer holds
-the list links during the pass, a final walk restores them and separates
-the garbage, as `move_unreachable()` does.  The switches live in a
+`PYTHON_GC_DAG=1` (default build) defers the verdict: each candidate carries
+the index of its closure record in the `gc_refs` bits of `_gc_prev`, and an
+edge from the closure being built into a member of an earlier (retired)
+record is recorded per target record instead of being ignored.  Such edges
+always point from a later record to an earlier one, so the records form a
+DAG in creation order, and one backward sweep judges each record: garbage
+iff its external references (*R − E*) are exactly the edges from records
+already judged garbage.  A garbage structure whose sink was visited before
+its source is then found whole in one collection, and the two
+weakref/finalizer ordering tests that the plain pass fails pass again,
+while a record never absorbs the live candidates it points at (union-find
+merging, tried first, did exactly that and lost most of the recall).  Since
+`_gc_prev` no longer holds the list links during the pass, a final walk
+restores them and separates the garbage, as `move_unreachable()` does.
+The switches live in a
 process-wide `struct _gc_closure_config` (`gc_closure.c`) rather than in the
 interpreter state, so that the experiment does not change the layout that
 extension modules depend on.
