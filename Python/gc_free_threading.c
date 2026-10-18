@@ -1598,6 +1598,10 @@ struct closure_state {
     int oom;
     struct _gc_closure_gen_stats *st;   /* statistics, or NULL */
     struct _gc_closure_log *log;        /* truth mode, or NULL */
+    /* PYTHON_GC_DAG: deferred verdicts; ob_tid then holds
+     * CLOSURE_DISCOVERED | record index (see closure_pass_dag() in gc.c) */
+    int use_dag;
+    struct _gc_dag dag;
 };
 
 static inline int
@@ -1631,8 +1635,14 @@ closure_discover(struct closure_state *cs, PyObject *op)
     _PyObject_ASSERT(op, refcount >= 0);
     uintptr_t stack_refs = op->ob_tid;
     assert((stack_refs & CLOSURE_DISCOVERED) == 0);
-    op->ob_tid = stack_refs | CLOSURE_DISCOVERED;
-    cs->rc_sum += refcount + (Py_ssize_t)stack_refs;
+    if (cs->use_dag) {
+        op->ob_tid = CLOSURE_DISCOVERED | (uintptr_t)cs->dag.cur;
+        cs->dag.rec[cs->dag.cur].rc_sum += refcount + (Py_ssize_t)stack_refs;
+    }
+    else {
+        op->ob_tid = stack_refs | CLOSURE_DISCOVERED;
+        cs->rc_sum += refcount + (Py_ssize_t)stack_refs;
+    }
     cs->queue[cs->len++] = op;
     return 0;
 }
@@ -1644,6 +1654,22 @@ visit_closure(PyObject *op, void *arg)
     struct closure_state *cs = arg;
     if (!closure_is_candidate(op) || !gc_is_unreachable(op)) {
         /* Outside S or retired: neither counted nor followed. */
+        return 0;
+    }
+    if (cs->use_dag) {
+        Py_ssize_t cur = cs->dag.cur;
+        if (!(op->ob_tid & CLOSURE_DISCOVERED)) {
+            cs->dag.rec[cur].edges++;
+            return closure_discover(cs, op);
+        }
+        Py_ssize_t idx = (Py_ssize_t)(op->ob_tid & ~CLOSURE_DISCOVERED);
+        if (idx == cur) {
+            cs->dag.rec[cur].edges++;
+        }
+        else if (_PyGC_DagEdge(&cs->dag, idx) < 0) {
+            cs->oom = 1;
+            return -1;
+        }
         return 0;
     }
     cs->edges++;
@@ -1701,12 +1727,16 @@ closure_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
         return true;    /* not a candidate, or retired */
     }
     if (start->ob_tid & CLOSURE_DISCOVERED) {
-        return true;    /* member of an earlier garbage closure */
+        return true;    /* member of an earlier closure */
     }
     cs->len = 0;
     cs->rc_sum = 0;
     cs->edges = 0;
     cs->has_deferred = 0;
+    if (cs->use_dag && _PyGC_DagNewRecord(&cs->dag) < 0) {
+        cs->oom = 1;
+        return false;
+    }
     if (closure_discover(cs, start) < 0) {
         return false;
     }
@@ -1716,6 +1746,17 @@ closure_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
     }
     if (cs->oom) {
         return false;
+    }
+    if (cs->use_dag) {
+        /* judged by _PyGC_DagSweep() once all records exist */
+        if (cs->has_deferred && state->skip_deferred_objects) {
+            cs->dag.rec[cs->dag.cur].tainted = 1;
+        }
+        if (_PyGC_DagFlush(&cs->dag) < 0) {
+            cs->oom = 1;
+            return false;
+        }
+        return true;
     }
     _PyObject_ASSERT_WITH_MSG(start, cs->rc_sum >= cs->edges,
                               "closure edges exceed refcounts");
@@ -1742,17 +1783,107 @@ closure_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
  * deduce_unreachable_heap(): afterwards exactly the garbage has the
  * unreachable bit set.  Returns -1 if memory ran out (refcounts restored,
  * alive bits cleared, like the classic path). */
+/* DAG mode, after the sweep: retire the members of records that are not
+ * garbage (clear the unreachable bit) and count record sizes. */
+static bool
+closure_dag_retire_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
+                           void *block, size_t block_size, void *args)
+{
+    struct collection_state *state = (struct collection_state *)args;
+    PyObject *op = op_from_block(block, args, false);
+    if (op == NULL || gc_is_alive(op) || !gc_is_unreachable(op)) {
+        return true;
+    }
+    assert(op->ob_tid & CLOSURE_DISCOVERED);
+    struct _gc_dag_record *r =
+        &state->closure->dag.rec[op->ob_tid & ~CLOSURE_DISCOVERED];
+    r->size++;
+    if (!r->garbage) {
+        gc_clear_unreachable(op);
+    }
+    return true;
+}
+
+/* DAG mode, truth statistics: fill the member arena, grouped by record.
+ * Retired members have lost the unreachable bit but still carry their
+ * record index in ob_tid. */
+static bool
+closure_dag_log_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
+                        void *block, size_t block_size, void *args)
+{
+    struct collection_state *state = (struct collection_state *)args;
+    PyObject *op = op_from_block(block, args, false);
+    if (op == NULL || gc_is_alive(op) || !(op->ob_tid & CLOSURE_DISCOVERED)) {
+        return true;
+    }
+    Py_ssize_t idx = (Py_ssize_t)(op->ob_tid & ~CLOSURE_DISCOVERED);
+    PyObject **arena = state->closure->queue;      /* reused as the arena */
+    arena[state->closure->dag.rec[idx].out_start++] = op;   /* out_start reused as cursor */
+    return true;
+}
+
+static int
+closure_dag_finish(PyInterpreterState *interp, struct collection_state *state,
+                   struct closure_state *cs)
+{
+    _PyGC_DagSweep(&cs->dag);
+    gc_visit_heaps(interp, &closure_dag_retire_visitor, &state->base);
+    struct _gc_dag_record *rec = cs->dag.rec;
+    Py_ssize_t count = cs->dag.count;
+    if (cs->st != NULL) {
+        for (Py_ssize_t i = 1; i < count; i++) {
+            if (rec[i].size > 0) {
+                _PyGC_ClosureAccount(cs->st, rec[i].size, rec[i].rc_sum,
+                                     rec[i].edges, rec[i].garbage);
+            }
+        }
+    }
+    if (cs->log != NULL) {
+        Py_ssize_t n = 0;
+        for (Py_ssize_t i = 1; i < count; i++) {
+            rec[i].out_start = n;   /* reuse as arena cursor */
+            n += rec[i].size;
+        }
+        PyObject **arena = PyMem_RawMalloc((n ? n : 1) * sizeof(PyObject *));
+        if (arena == NULL) {
+            cs->log->oom = 1;
+            return 0;
+        }
+        PyMem_RawFree(cs->queue);
+        cs->queue = arena;
+        gc_visit_heaps(interp, &closure_dag_log_visitor, &state->base);
+        for (Py_ssize_t i = 1; i < count; i++) {
+            if (rec[i].size > 0
+                && _PyGC_ClosureLogAdd(cs->log, arena + rec[i].out_start - rec[i].size,
+                                       rec[i].size, rec[i].garbage) < 0) {
+                break;
+            }
+        }
+    }
+    return 0;
+}
+
 static int
 closure_deduce_heap(PyInterpreterState *interp, struct collection_state *state,
                     struct _gc_closure_gen_stats *st, struct _gc_closure_log *log)
 {
-    struct closure_state cs = { .st = st, .log = log };
+    struct closure_state cs = { .st = st, .log = log, .use_dag = _PyGC_closure.dag };
     state->closure = &cs;
     gc_visit_heaps(interp, &closure_init_visitor, &state->base);
     gc_visit_thread_stacks(interp, state);
-    int err = gc_visit_heaps(interp, &closure_heap_visitor, &state->base);
+    int err = 0;
+    if (cs.use_dag && _PyGC_DagNewRecord(&cs.dag) < 0) {     /* record 0: unused */
+        err = -1;
+    }
+    if (err == 0) {
+        err = gc_visit_heaps(interp, &closure_heap_visitor, &state->base);
+    }
+    if (err == 0 && cs.use_dag) {
+        err = closure_dag_finish(interp, state, &cs);
+    }
     state->closure = NULL;
     PyMem_RawFree(cs.queue);
+    _PyGC_DagFree(&cs.dag);
     if (err < 0) {
         gc_visit_heaps(interp, &restore_refs, &state->base);
         return -1;

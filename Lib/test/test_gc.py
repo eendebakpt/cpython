@@ -1838,7 +1838,6 @@ class ClosureSumTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.run_mode(mode, code)
 
-    @unittest.skipIf(Py_GIL_DISABLED, "closure merging is default-build only")
     def test_dag_collects_class_with_instance(self):
         # A garbage class is older than its garbage instance and is visited
         # first; it looks externally referenced (the instance points at it)
@@ -1861,7 +1860,10 @@ class ClosureSumTests(unittest.TestCase):
             assert (wC() is None) == EXPECT, wC()
         """
         self.run_mode(1, code.replace("EXPECT", "True"), merge=1)
-        self.run_mode(1, code.replace("EXPECT", "False"), merge=0)
+        if not Py_GIL_DISABLED:
+            # the plain pass only misses the class if it is visited first,
+            # which only allocation order (default build) guarantees
+            self.run_mode(1, code.replace("EXPECT", "False"), merge=0)
 
     @unittest.skipIf(Py_GIL_DISABLED, "mark-alive switch is default-build only")
     def test_mark_alive_full_collection(self):

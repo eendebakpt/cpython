@@ -377,3 +377,107 @@ _PyGC_ClosureResetStats(void)
         memset(_PyGC_closure.stats, 0, sizeof(struct _gc_closure_stats));
     }
 }
+
+/* ---- record DAG of the deferred-verdict pass ---------------------------- */
+
+static int
+dag_grow(void **p, Py_ssize_t *cap, Py_ssize_t needed, size_t elem)
+{
+    if (needed <= *cap) {
+        return 0;
+    }
+    Py_ssize_t ncap = *cap ? *cap : 1024;
+    while (ncap < needed) {
+        ncap *= 2;
+    }
+    /* raw allocator: the free-threaded collector calls this while walking
+     * the mimalloc heaps */
+    void *np = PyMem_RawRealloc(*p, ncap * elem);
+    if (np == NULL) {
+        return -1;
+    }
+    *p = np;
+    *cap = ncap;
+    return 0;
+}
+
+int
+_PyGC_DagNewRecord(struct _gc_dag *dag)
+{
+    if (dag_grow((void **)&dag->rec, &dag->cap, dag->count + 1,
+                 sizeof(struct _gc_dag_record)) < 0) {
+        return -1;
+    }
+    Py_ssize_t i = dag->count++;
+    memset(&dag->rec[i], 0, sizeof(struct _gc_dag_record));
+    dag->rec[i].stamp = -1;
+    dag->cur = i;
+    return (int)i;
+}
+
+int
+_PyGC_DagEdge(struct _gc_dag *dag, Py_ssize_t target)
+{
+    struct _gc_dag_record *r = &dag->rec[target];
+    if (r->stamp != dag->cur) {
+        if (dag_grow((void **)&dag->touched, &dag->touched_cap,
+                     dag->ntouched + 1, sizeof(Py_ssize_t)) < 0) {
+            return -1;
+        }
+        r->stamp = dag->cur;
+        r->tmp = 0;
+        dag->touched[dag->ntouched++] = target;
+    }
+    r->tmp++;
+    return 0;
+}
+
+int
+_PyGC_DagFlush(struct _gc_dag *dag)
+{
+    struct _gc_dag_record *cur = &dag->rec[dag->cur];
+    cur->out_start = dag->elen;
+    cur->out_count = dag->ntouched;
+    Py_ssize_t needed = dag->elen + dag->ntouched;
+    if (dag_grow((void **)&dag->etarget, &dag->ecap, needed, sizeof(Py_ssize_t)) < 0
+        || dag_grow((void **)&dag->ecount, &dag->ecount_cap, needed,
+                    sizeof(Py_ssize_t)) < 0) {
+        return -1;
+    }
+    for (Py_ssize_t i = 0; i < dag->ntouched; i++) {
+        Py_ssize_t k = dag->touched[i];
+        dag->etarget[dag->elen] = k;
+        dag->ecount[dag->elen] = dag->rec[k].tmp;
+        dag->elen++;
+    }
+    dag->ntouched = 0;
+    return 0;
+}
+
+/* Backward sweep: records are created in visit order and their out-edges
+ * only point at earlier records.  A record with E > R (a tp_traverse that
+ * visits a reference it does not own) is never garbage. */
+void
+_PyGC_DagSweep(struct _gc_dag *dag)
+{
+    for (Py_ssize_t k = dag->count - 1; k >= 1; k--) {
+        struct _gc_dag_record *r = &dag->rec[k];
+        r->garbage = (!r->tainted && r->rc_sum >= r->edges
+                      && r->rc_sum - r->edges == r->garbage_in);
+        if (r->garbage) {
+            for (Py_ssize_t e = r->out_start; e < r->out_start + r->out_count; e++) {
+                dag->rec[dag->etarget[e]].garbage_in += dag->ecount[e];
+            }
+        }
+    }
+}
+
+void
+_PyGC_DagFree(struct _gc_dag *dag)
+{
+    PyMem_RawFree(dag->rec);
+    PyMem_RawFree(dag->touched);
+    PyMem_RawFree(dag->etarget);
+    PyMem_RawFree(dag->ecount);
+    memset(dag, 0, sizeof(*dag));
+}

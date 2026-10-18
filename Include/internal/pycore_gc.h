@@ -399,6 +399,40 @@ struct _gc_closure_config {
 };
 extern struct _gc_closure_config _PyGC_closure;
 
+/* Record DAG of the deferred-verdict closure pass (PYTHON_GC_DAG), shared
+ * by both collectors; see closure_pass_dag() in gc.c.  Records are created
+ * in visit order; an edge from the record being built (cur) into an earlier
+ * record is recorded with _PyGC_DagEdge(); _PyGC_DagSweep() judges every
+ * record garbage iff its external references (rc_sum - edges) are exactly
+ * the edges from records already judged garbage. */
+struct _gc_dag_record {
+    Py_ssize_t rc_sum;      /* R */
+    Py_ssize_t edges;       /* E, edges inside the record */
+    Py_ssize_t garbage_in;  /* edges into this record from garbage records */
+    Py_ssize_t out_start;   /* this record's out-edges in the edge arena */
+    Py_ssize_t out_count;
+    Py_ssize_t stamp;       /* == cur while tmp is valid */
+    Py_ssize_t tmp;         /* edges from cur into this record */
+    Py_ssize_t size;        /* members (statistics) */
+    int tainted;            /* never garbage (deferred references unseen) */
+    int garbage;
+};
+struct _gc_dag {
+    struct _gc_dag_record *rec;
+    Py_ssize_t count, cap;  /* records 1..count-1; 0 means undiscovered */
+    Py_ssize_t cur;         /* record being built */
+    Py_ssize_t *touched;    /* records with edges from cur, for the arena */
+    Py_ssize_t ntouched, touched_cap;
+    Py_ssize_t *etarget;    /* edge arena: (target record, edge count) */
+    Py_ssize_t *ecount;
+    Py_ssize_t elen, ecap, ecount_cap;
+};
+extern int _PyGC_DagNewRecord(struct _gc_dag *dag);    /* sets cur; -1 on OOM */
+extern int _PyGC_DagEdge(struct _gc_dag *dag, Py_ssize_t target);
+extern int _PyGC_DagFlush(struct _gc_dag *dag);        /* end of record cur */
+extern void _PyGC_DagSweep(struct _gc_dag *dag);
+extern void _PyGC_DagFree(struct _gc_dag *dag);
+
 extern void _PyGC_ClosureInit(void);
 extern void _PyGC_ClosureFini(void);
 extern int _PyGC_ClosureWanted(int generation);
