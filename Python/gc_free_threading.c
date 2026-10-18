@@ -83,6 +83,8 @@ struct collection_state {
     struct worklist legacy_finalizers;
     struct worklist wrcb_to_call;
     struct worklist objs_to_decref;
+    // Closure-sum detection (experimental): state of the running pass.
+    struct closure_state *closure;
 };
 
 // iterate over a worklist
@@ -1504,6 +1506,376 @@ move_legacy_finalizer_reachable(struct collection_state *state)
     return 0;
 }
 
+
+/*
+ * Closure-sum cycle detection (experimental, PYTHON_GC_CLOSURE).  See the
+ * description above closure_pass() in gc.c; this is the same algorithm on
+ * the free-threaded heap.  The candidate set S is every tracked object that
+ * is not frozen and not marked alive by gc_mark_alive_from_roots(), i.e.
+ * the pass runs in the regime it was designed for: a single set with the
+ * objects reachable from known roots already excluded.
+ *
+ * closure_deduce_heap() replaces update_refs(), gc_visit_thread_stacks()
+ * and mark_heap_visitor(); scan_heap_visitor() then picks up the garbage as
+ * usual.  Closures are started in heap order.
+ *
+ * State during the pass:
+ *   _PyGC_BITS_UNREACHABLE  the object is in S and not retired yet.  Garbage
+ *                           keeps the bit, unknown closures lose it.
+ *   ob_tid                  the number of deferred stack references to the
+ *                           object (as gc_visit_thread_stacks() counts
+ *                           them; they are not in the refcount), plus
+ *                           CLOSURE_DISCOVERED once a closure has
+ *                           discovered the object.  scan_heap_visitor()
+ *                           restores ob_tid afterwards, as it does for
+ *                           gc_refs.
+ */
+#define CLOSURE_DISCOVERED ((uintptr_t)1 << (8 * sizeof(uintptr_t) - 2))
+
+struct closure_state {
+    PyObject **queue;       /* breadth-first worklist; queue[0..len) is the closure */
+    Py_ssize_t len;
+    Py_ssize_t cap;
+    Py_ssize_t rc_sum;      /* R */
+    Py_ssize_t edges;       /* E */
+    int has_deferred;       /* a member uses deferred reference counting */
+    int oom;
+    struct _gc_closure_gen_stats *st;   /* statistics, or NULL */
+    struct _gc_closure_log *log;        /* truth mode, or NULL */
+};
+
+static inline int
+closure_is_candidate(PyObject *op)
+{
+    return (_PyObject_GC_IS_TRACKED(op)
+            && !_Py_IsImmortal(op)
+            && !gc_is_frozen(op)
+            && !gc_is_alive(op));
+}
+
+static int
+closure_discover(struct closure_state *cs, PyObject *op)
+{
+    if (cs->len == cs->cap) {
+        Py_ssize_t ncap = cs->cap ? cs->cap * 2 : 1024;
+        /* raw allocator: we are inside a mimalloc heap walk */
+        PyObject **nq = PyMem_RawRealloc(cs->queue, ncap * sizeof(PyObject *));
+        if (nq == NULL) {
+            cs->oom = 1;
+            return -1;
+        }
+        cs->queue = nq;
+        cs->cap = ncap;
+    }
+    Py_ssize_t refcount = Py_REFCNT(op);
+    if (_PyObject_HasDeferredRefcount(op)) {
+        refcount -= _Py_REF_DEFERRED;
+        cs->has_deferred = 1;
+    }
+    _PyObject_ASSERT(op, refcount >= 0);
+    uintptr_t stack_refs = op->ob_tid;
+    assert((stack_refs & CLOSURE_DISCOVERED) == 0);
+    op->ob_tid = stack_refs | CLOSURE_DISCOVERED;
+    cs->rc_sum += refcount + (Py_ssize_t)stack_refs;
+    cs->queue[cs->len++] = op;
+    return 0;
+}
+
+/* A traversal callback for closure_heap_visitor. */
+static int
+visit_closure(PyObject *op, void *arg)
+{
+    struct closure_state *cs = arg;
+    if (!closure_is_candidate(op) || !gc_is_unreachable(op)) {
+        /* Outside S or retired: neither counted nor followed. */
+        return 0;
+    }
+    cs->edges++;
+    if (op->ob_tid & CLOSURE_DISCOVERED) {
+        return 0;
+    }
+    return closure_discover(cs, op);
+}
+
+/* The candidate part of update_refs(): mark S, untrack what can be
+ * untracked, zero ob_tid so that gc_visit_thread_stacks() can count the
+ * deferred stack references into it. */
+static bool
+closure_init_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
+                     void *block, size_t block_size, void *args)
+{
+    struct collection_state *state = (struct collection_state *)args;
+    PyObject *op = op_from_block(block, args, false);
+    if (op == NULL) {
+        return true;
+    }
+    if (_Py_IsImmortal(op)) {
+        op->ob_tid = 0;
+        _PyObject_GC_UNTRACK(op);
+        gc_clear_unreachable(op);
+        return true;
+    }
+    state->candidates++;
+    if (gc_is_alive(op)) {
+        return true;
+    }
+    Py_ssize_t refcount = Py_REFCNT(op);
+    if (_PyObject_HasDeferredRefcount(op)) {
+        refcount -= _Py_REF_DEFERRED;
+    }
+    _PyObject_ASSERT(op, refcount >= 0);
+    if (refcount > 0 && gc_maybe_untrack(op)) {
+        gc_restore_refs(op);
+        return true;
+    }
+    gc_set_unreachable(op);
+    op->ob_tid = 0;
+    return true;
+}
+
+/* Start a closure from every candidate that no earlier closure reached. */
+static bool
+closure_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
+                     void *block, size_t block_size, void *args)
+{
+    struct collection_state *state = (struct collection_state *)args;
+    struct closure_state *cs = state->closure;
+    PyObject *start = op_from_block(block, args, false);
+    if (start == NULL || gc_is_alive(start) || !gc_is_unreachable(start)) {
+        return true;    /* not a candidate, or retired */
+    }
+    if (start->ob_tid & CLOSURE_DISCOVERED) {
+        return true;    /* member of an earlier garbage closure */
+    }
+    cs->len = 0;
+    cs->rc_sum = 0;
+    cs->edges = 0;
+    cs->has_deferred = 0;
+    if (closure_discover(cs, start) < 0) {
+        return false;
+    }
+    for (Py_ssize_t head = 0; head < cs->len && !cs->oom; head++) {
+        PyObject *op = cs->queue[head];
+        (void) Py_TYPE(op)->tp_traverse(op, visit_closure, cs);
+    }
+    if (cs->oom) {
+        return false;
+    }
+    _PyObject_ASSERT_WITH_MSG(start, cs->rc_sum >= cs->edges,
+                              "closure edges exceed refcounts");
+    /* GH-129236: if a frame's stack pointer was unknown, objects with
+     * deferred references may have references we did not see. */
+    int pure = (cs->rc_sum == cs->edges)
+               && !(cs->has_deferred && state->skip_deferred_objects);
+    if (cs->st != NULL) {
+        _PyGC_ClosureAccount(cs->st, cs->len, cs->rc_sum, cs->edges, pure);
+        if (cs->log != NULL
+            && _PyGC_ClosureLogAdd(cs->log, cs->queue, cs->len, pure) < 0) {
+            cs->log = NULL;     /* keep collecting, statistics incomplete */
+        }
+    }
+    if (!pure) {
+        for (Py_ssize_t i = 0; i < cs->len; i++) {
+            gc_clear_unreachable(cs->queue[i]);     /* retire in place */
+        }
+    }
+    return true;
+}
+
+/* The closure-sum counterpart of the first half of
+ * deduce_unreachable_heap(): afterwards exactly the garbage has the
+ * unreachable bit set.  Returns -1 if memory ran out (refcounts restored,
+ * alive bits cleared, like the classic path). */
+static int
+closure_deduce_heap(PyInterpreterState *interp, struct collection_state *state,
+                    struct _gc_closure_gen_stats *st, struct _gc_closure_log *log)
+{
+    struct closure_state cs = { .st = st, .log = log };
+    state->closure = &cs;
+    gc_visit_heaps(interp, &closure_init_visitor, &state->base);
+    gc_visit_thread_stacks(interp, state);
+    int err = gc_visit_heaps(interp, &closure_heap_visitor, &state->base);
+    state->closure = NULL;
+    PyMem_RawFree(cs.queue);
+    if (err < 0) {
+        gc_visit_heaps(interp, &restore_refs, &state->base);
+        return -1;
+    }
+    return 0;
+}
+
+static int
+finish_unreachable_heap(PyInterpreterState *interp, struct collection_state *state)
+{
+    gc_visit_heaps(interp, &scan_heap_visitor, &state->base);
+    if (state->legacy_finalizers.head) {
+        if (move_legacy_finalizer_reachable(state) < 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/* Truth mode helpers: put the candidates back for the classic algorithm,
+ * and count its result. */
+static bool
+closure_reset_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
+                      void *block, size_t block_size, void *args)
+{
+    PyObject *op = op_from_block(block, args, false);
+    if (op != NULL && !gc_is_alive(op)) {
+        gc_clear_unreachable(op);
+        op->ob_tid = 0;
+    }
+    return true;
+}
+
+static bool
+closure_count_unreachable_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
+                                  void *block, size_t block_size, void *args)
+{
+    struct collection_state *state = (struct collection_state *)args;
+    PyObject *op = op_from_block(block, args, false);
+    if (op != NULL && gc_is_unreachable(op)) {
+        state->closure->st->true_garbage++;
+    }
+    return true;
+}
+
+/* _PyGC_CLOSURE_TRUTH: closure pass for the statistics, then the classic
+ * algorithm for the result; compare the two.  See gc.c. */
+static int
+closure_deduce_with_truth(PyInterpreterState *interp,
+                          struct collection_state *state,
+                          struct _gc_closure_gen_stats *st)
+{
+    struct _gc_closure_log log = { 0 };
+    PyTime_t t0, t1, t2;
+    (void)PyTime_PerfCounterRaw(&t0);
+    if (closure_deduce_heap(interp, state, st, &log) < 0) {
+        _PyGC_ClosureLogFree(&log);
+        return -1;
+    }
+    (void)PyTime_PerfCounterRaw(&t1);
+    st->closure_collections++;
+    st->truth_collections++;
+    st->closure_time += t1 - t0;
+    Py_ssize_t candidates = state->candidates;
+
+    gc_visit_heaps(interp, &closure_reset_visitor, &state->base);
+    (void)PyTime_PerfCounterRaw(&t1);
+    gc_visit_heaps(interp, &update_refs, &state->base);
+    state->candidates = candidates;     /* counted twice */
+    gc_visit_thread_stacks(interp, state);
+
+    /* Blockers: members of unknown closures with external references;
+     * gc_refs is final here. */
+    if (!log.oom) {
+        for (Py_ssize_t r = 0; r < log.recs_len; r++) {
+            struct _gc_closure_record *rec = &log.recs[r];
+            if (rec->pure) {
+                continue;
+            }
+            for (Py_ssize_t i = 0; i < rec->size; i++) {
+                PyObject *op = log.arena[rec->start + i];
+                if (gc_is_unreachable(op) && gc_get_refs(op) > 0) {
+                    _PyGC_ClosureCountType(st->blockers, Py_TYPE(op));
+                }
+            }
+        }
+    }
+    if (gc_visit_heaps(interp, &mark_heap_visitor, &state->base) < 0) {
+        gc_visit_heaps(interp, &restore_refs, &state->base);
+        _PyGC_ClosureLogFree(&log);
+        return -1;
+    }
+    (void)PyTime_PerfCounterRaw(&t2);
+    st->deduce_time += t2 - t1;
+    st->candidates += candidates;
+
+    /* The unreachable bit is now the truth. */
+    struct closure_state cs = { .st = st };
+    state->closure = &cs;
+    gc_visit_heaps(interp, &closure_count_unreachable_visitor, &state->base);
+    state->closure = NULL;
+    if (log.oom) {
+        st->log_oom++;
+    }
+    else {
+        for (Py_ssize_t r = 0; r < log.recs_len; r++) {
+            struct _gc_closure_record *rec = &log.recs[r];
+            Py_ssize_t garbage = 0;
+            for (Py_ssize_t i = 0; i < rec->size; i++) {
+                PyObject *op = log.arena[rec->start + i];
+                /* A member that update_refs() untracked meanwhile (a tuple
+                 * whose items were untracked after the closure pass saw
+                 * it) is garbage too: it dies with its holder. */
+                if (gc_is_unreachable(op) || !_PyObject_GC_IS_TRACKED(op)) {
+                    garbage++;
+                    if (!rec->pure) {
+                        _PyGC_ClosureCountType(st->missed_types, Py_TYPE(op));
+                    }
+                }
+            }
+            if (rec->pure) {
+                _PyObject_ASSERT_WITH_MSG(log.arena[rec->start],
+                                          garbage == rec->size,
+                                          "pure closure not fully garbage");
+                if (garbage != rec->size) {
+                    st->pure_but_live++;
+                }
+            }
+            else if (garbage > 0) {
+                st->unknown_with_garbage++;
+                st->missed_garbage += garbage;
+            }
+        }
+    }
+    _PyGC_ClosureLogFree(&log);
+    return finish_unreachable_heap(interp, state);
+}
+
+/* Find the unreachable objects with the detector selected by
+ * gcstate->closure_mode.  Same contract as deduce_unreachable_heap(). */
+static int
+find_unreachable_heap(PyInterpreterState *interp, struct collection_state *state,
+                      int generation)
+{
+    GCState *gcstate = state->gcstate;
+    struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(gcstate, generation);
+    if (gcstate->closure_mode == _PyGC_CLOSURE_TRUTH) {
+        assert(st != NULL);
+        return closure_deduce_with_truth(interp, state, st);
+    }
+    PyTime_t t0 = 0, t1 = 0;
+    if (st != NULL) {
+        (void)PyTime_PerfCounterRaw(&t0);
+    }
+    int err;
+    if (_PyGC_ClosureWanted(gcstate, generation)) {
+        err = closure_deduce_heap(interp, state, NULL, NULL);
+        if (err == 0) {
+            err = finish_unreachable_heap(interp, state);
+        }
+        if (st != NULL) {
+            (void)PyTime_PerfCounterRaw(&t1);
+            st->closure_collections++;
+            st->closure_time += t1 - t0;
+        }
+    }
+    else {
+        err = deduce_unreachable_heap(interp, state);
+        if (st != NULL) {
+            (void)PyTime_PerfCounterRaw(&t1);
+            st->deduce_time += t1 - t0;
+        }
+    }
+    if (st != NULL) {
+        st->candidates += state->candidates;
+    }
+    return err;
+}
+
 // Weakrefs with callbacks are enqueued in `wrcb_to_call`, but not invoked
 // yet.  Note that it's possible for such weakrefs to be outside the
 // unreachable set -- indeed, those are precisely the weakrefs whose callbacks
@@ -1700,6 +2072,8 @@ _PyGC_Init(PyInterpreterState *interp)
         return _PyStatus_NO_MEMORY();
     }
 
+    _PyGC_ClosureInit(gcstate);
+
     return _PyStatus_OK();
 }
 
@@ -1829,7 +2203,8 @@ _PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)
     // regular references.
     assert(!PyStackRef_IsTaggedInt(*ref));
     if (PyStackRef_RefcountOnObject(*ref) ||
-        (visit != visit_decref && visit != visit_decref_unreachable))
+        (visit != visit_decref && visit != visit_decref_unreachable
+         && visit != visit_closure))
     {
         Py_VISIT(PyStackRef_AsPyObjectBorrow(*ref));
     }
@@ -2130,7 +2505,7 @@ gc_collect_internal(PyInterpreterState *interp, struct collection_state *state, 
     #endif
 
     // Find unreachable objects
-    int err = deduce_unreachable_heap(interp, state);
+    int err = find_unreachable_heap(interp, state, generation);
     if (err < 0) {
         _PyEval_StartTheWorld(interp);
         PyErr_NoMemory();
@@ -2661,6 +3036,7 @@ void
 _PyGC_Fini(PyInterpreterState *interp)
 {
     GCState *gcstate = &interp->gc;
+    _PyGC_ClosureFini(gcstate);
     Py_CLEAR(gcstate->garbage);
     Py_CLEAR(gcstate->callbacks);
     PyMem_RawFree(gcstate->generation_stats);

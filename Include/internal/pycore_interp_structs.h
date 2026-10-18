@@ -272,12 +272,14 @@ struct _gc_runtime_state {
     int freeze_active;
 #else
     PyGC_Head *generation0;
+#endif
     /* Closure-sum cycle detection (experimental, PYTHON_GC_CLOSURE). */
     int closure_mode;
+    int closure_mark_alive;     /* PYTHON_GC_MARK: mark from roots before a
+                                   full collection (default build) */
     unsigned int closure_counter;
     const char *closure_stats_path;
     struct _gc_closure_stats *closure_stats;
-#endif
 };
 
 #ifndef Py_GIL_DISABLED

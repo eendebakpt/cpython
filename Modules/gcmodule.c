@@ -513,11 +513,7 @@ static int
 gc__closure_mode_impl(PyObject *module)
 /*[clinic end generated code: output=141d28ee5d7c95b2 input=c9d9a3c1bf875fd5]*/
 {
-#ifdef Py_GIL_DISABLED
-    return 0;
-#else
     return get_gc_state()->closure_mode;
-#endif
 }
 
 /*[clinic input]
@@ -530,11 +526,7 @@ static PyObject *
 gc__closure_stats_impl(PyObject *module)
 /*[clinic end generated code: output=ff7558a779638c5e input=2708e4117c3c8a3e]*/
 {
-#ifdef Py_GIL_DISABLED
-    Py_RETURN_NONE;
-#else
     return _PyGC_ClosureStats(_PyInterpreterState_GET());
-#endif
 }
 
 /*[clinic input]
@@ -547,9 +539,7 @@ static PyObject *
 gc__closure_reset_stats_impl(PyObject *module)
 /*[clinic end generated code: output=b4d9b19a3ec0b3c2 input=469503ec6874a9e0]*/
 {
-#ifndef Py_GIL_DISABLED
     _PyGC_ClosureResetStats(_PyInterpreterState_GET());
-#endif
     Py_RETURN_NONE;
 }
 

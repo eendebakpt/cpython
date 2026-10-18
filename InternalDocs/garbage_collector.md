@@ -761,7 +761,12 @@ counter: the per-object version is what `update_refs()`, `subtract_refs()`
 and `move_unreachable()` compute.
 
 Each object is traversed once and survivors are not moved, which is what the
-pass saves over `deduce_unreachable()`.  In generation 0 and 1 collections,
+pass saves over `deduce_unreachable()`.  It also leaves the objects' GC
+headers intact apart from two flag bits: `deduce_unreachable()` overwrites
+the `_gc_prev` link of every candidate with its `gc_refs` counter and has to
+rebuild the lists afterwards, while the closure pass keeps its only
+per-object state in `PREV_MASK_COLLECTING` and the low bit of `_gc_next`,
+so the generation lists stay valid throughout.  In generation 0 and 1 collections,
 references into older generations play the role that a mark-alive pass would
 play: an instance's reference to its class or to a module dictionary leaves
 *S* and does not contaminate the closure.  The limitation is granularity: a
@@ -778,6 +783,36 @@ retired yet, and the low bit of `_gc_next` (`NEXT_MASK_UNREACHABLE`) marks
 objects discovered by the current closure.  `gc_refs` is not used, so the
 `_gc_prev` pointers stay valid and garbage can be unlinked with the normal
 list operations.
+
+The free-threaded build has the same detector (`closure_pass()` in
+`gc_free_threading.c`, same environment variable).  There *S* is every tracked
+object that is not frozen and not marked alive by the "mark alive" pass, so
+the detector runs in the regime it was designed for: one candidate set per
+collection with the objects reachable from known roots already excluded, and
+no generational promotion of unknown closures.  The pass replaces
+`update_refs()`, `gc_visit_thread_stacks()` and `mark_heap_visitor()`;
+`scan_heap_visitor()` then collects the garbage as usual.  The unreachable
+bit marks members of *S* that have not been retired, and `ob_tid` holds the
+number of deferred stack references to the object plus a "discovered" flag,
+until `scan_heap_visitor()` restores it.
+
+The default build can also mark from the roots before a full collection
+(`PYTHON_GC_MARK=1`): everything reachable from the sys module dict, the
+builtins, the interpreter dict, the managed static types' dicts and subclass
+lists, and the thread stacks is moved out of the candidate set before either
+detector runs, so references from those objects count as external.  This is
+what the free-threaded "mark alive" pass does; in the default build it only
+pays in full collections, which already traverse the live heap twice.
+`PYTHON_GC_CLOSURE=5` runs the closure pass for full collections only, the
+configuration that combines with marking.
+
+`PYTHON_GC_CLOSURE=4` is a measurement mode for both builds: the closure pass
+runs and records its closures, everything is put back, and the classic
+algorithm computes the result.  `gc._closure_stats()` then reports, per
+generation, how much of the garbage the closure pass found on its own
+("recall"), which live objects hid the rest from it, and the time spent in
+each detector.  `PYTHON_GC_CLOSURE_STATS=<file>` appends the same data as one
+JSON line per process at exit.
 
 Differences between GC implementations
 ======================================

@@ -315,8 +315,19 @@ static inline void _PyObject_GC_UNTRACK(
 
 extern void _PyGC_InitState(struct _gc_runtime_state *);
 
-/* Statistics of the closure-sum cycle detector (default build only; see
- * PYTHON_GC_CLOSURE_STATS in Python/gc.c). */
+/* Closure-sum cycle detection (experimental, PYTHON_GC_CLOSURE).  The
+ * detectors are closure_pass() in gc.c and gc_free_threading.c; the shared
+ * configuration and statistics code is in gc_closure.c. */
+enum _PyGC_ClosureMode {
+    _PyGC_CLOSURE_OFF = 0,        /* classic algorithm only (default) */
+    _PyGC_CLOSURE_ALL = 1,        /* closure pass for every collection */
+    _PyGC_CLOSURE_YOUNG = 2,      /* closure pass unless the oldest generation */
+    _PyGC_CLOSURE_ALTERNATE = 3,  /* alternate between the two */
+    _PyGC_CLOSURE_TRUTH = 4,      /* closure pass for statistics, then the
+                                     classic algorithm for the result */
+    _PyGC_CLOSURE_OLD = 5,        /* closure pass for the oldest generation only */
+};
+
 #define _PyGC_CLOSURE_HIST 24
 #define _PyGC_CLOSURE_TYPES 24
 struct _gc_closure_type_count {
@@ -343,6 +354,8 @@ struct _gc_closure_gen_stats {
     uint64_t log_oom;
     PyTime_t closure_time;         /* spent in closure_pass() */
     PyTime_t deduce_time;          /* spent in deduce_unreachable() */
+    PyTime_t mark_time;            /* spent marking from the roots */
+    uint64_t marked;               /* objects taken out by marking */
     uint64_t size_hist[_PyGC_CLOSURE_HIST];       /* log2 closure sizes */
     uint64_t pure_size_hist[_PyGC_CLOSURE_HIST];
     struct _gc_closure_type_count blockers[_PyGC_CLOSURE_TYPES];
@@ -351,10 +364,38 @@ struct _gc_closure_gen_stats {
 struct _gc_closure_stats {
     struct _gc_closure_gen_stats gens[3];   /* NUM_GENERATIONS */
 };
-#ifndef Py_GIL_DISABLED
+
+/* Record of the closures of one collection (truth mode). */
+struct _gc_closure_record {
+    Py_ssize_t start;       /* offset into arena */
+    Py_ssize_t size;
+    int pure;
+};
+struct _gc_closure_log {
+    PyObject **arena;
+    Py_ssize_t arena_len, arena_cap;
+    struct _gc_closure_record *recs;
+    Py_ssize_t recs_len, recs_cap;
+    int oom;
+};
+
+extern void _PyGC_ClosureInit(struct _gc_runtime_state *gcstate);
+extern void _PyGC_ClosureFini(struct _gc_runtime_state *gcstate);
+extern int _PyGC_ClosureWanted(struct _gc_runtime_state *gcstate, int generation);
+/* Statistics slot of a generation (NULL if statistics are off); counts the
+ * collection. */
+extern struct _gc_closure_gen_stats *_PyGC_ClosureGenStats(
+    struct _gc_runtime_state *gcstate, int generation);
+extern void _PyGC_ClosureAccount(struct _gc_closure_gen_stats *st,
+                                 Py_ssize_t size, Py_ssize_t rc_sum,
+                                 Py_ssize_t edges, int pure);
+extern void _PyGC_ClosureCountType(struct _gc_closure_type_count *table,
+                                   PyTypeObject *tp);
+extern int _PyGC_ClosureLogAdd(struct _gc_closure_log *log,
+                               PyObject **members, Py_ssize_t n, int pure);
+extern void _PyGC_ClosureLogFree(struct _gc_closure_log *log);
 extern PyObject *_PyGC_ClosureStats(PyInterpreterState *interp);
 extern void _PyGC_ClosureResetStats(PyInterpreterState *interp);
-#endif
 
 extern Py_ssize_t _PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason);
 extern void _PyGC_CollectNoFail(PyThreadState *tstate);

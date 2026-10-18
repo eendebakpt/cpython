@@ -1729,14 +1729,14 @@ class PythonFinalizationTests(unittest.TestCase):
         assert_python_ok("-c", code)
 
 
-@unittest.skipIf(Py_GIL_DISABLED, "closure-sum detection is default-build only")
 class ClosureSumTests(unittest.TestCase):
     """The closure-sum detector is selected per process with PYTHON_GC_CLOSURE,
     so these tests run the scenarios in a subprocess."""
 
-    def run_mode(self, mode, code):
+    def run_mode(self, mode, code, mark=0):
         rc, out, err = assert_python_ok("-c", textwrap.dedent(code),
-                                        PYTHON_GC_CLOSURE=str(mode))
+                                        PYTHON_GC_CLOSURE=str(mode),
+                                        PYTHON_GC_MARK=str(mark))
         self.assertEqual(err, b"", err)
         return out
 
@@ -1769,25 +1769,32 @@ class ClosureSumTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.run_mode(mode, code)
 
+    @unittest.skipIf(Py_GIL_DISABLED,
+                     "candidates are visited in mimalloc heap order, which the "
+                     "test cannot control")
     def test_unknown_closure_is_kept_until_old_algorithm_runs(self):
         # Garbage that references a live young object forms an "unknown"
         # closure: it survives the closure pass and is collected by the next
         # collection that runs the old algorithm (the full collection in
-        # mode 2).  Candidates are visited in allocation order and a closure
-        # retires everything it reaches, so the live object is created after
-        # the cycle and its holder is made old first; otherwise the holder's
-        # closure would retire the live object before the cycle is looked at
-        # and the cycle would be pure on its own.
+        # mode 2).  The holder of the live object is frozen: frozen objects
+        # are outside the candidate set in both builds, so the holder's
+        # reference is an external one (and in the free-threaded build the
+        # mark-alive pass, which would otherwise exclude the live object
+        # itself, is skipped while objects are frozen).  The live object
+        # must be visited after the cycle, because a closure retires
+        # everything it reaches: it is created after the cycle (allocation
+        # order, default build) and is a much larger object (heap order by
+        # size class, free-threaded build).
         code = """
             import gc, weakref
             class A:
                 pass
             keep = []
-            gc.collect()        # keep (and A) leave the young generation
+            gc.freeze()
             def make():
                 a = A()
                 a.me = a
-                live = []
+                live = ([],) * 50
                 keep.append(live)
                 a.live = live
                 return weakref.ref(a)
@@ -1830,11 +1837,40 @@ class ClosureSumTests(unittest.TestCase):
             with self.subTest(mode=mode):
                 self.run_mode(mode, code)
 
+    @unittest.skipIf(Py_GIL_DISABLED, "mark-alive switch is default-build only")
+    def test_mark_alive_full_collection(self):
+        # In a full collection the whole heap is the candidate set.  A
+        # garbage cycle that references a live object held only by a running
+        # frame (created after the cycle, so visited after it) forms an
+        # unknown closure for the closure pass.  With PYTHON_GC_MARK=1 the
+        # thread stacks are roots, the live object is taken out of the
+        # candidate set first, and the cycle is pure again.
+        code = """
+            import gc, weakref
+            class A:
+                pass
+            def f():
+                a = A()
+                a.me = a
+                later = []          # kept alive by this frame only
+                a.live = later
+                r = weakref.ref(a)
+                del a
+                gc.collect()
+                return r() is None, later
+            gc.disable()
+            collected, _ = f()
+            assert collected == EXPECT, collected
+        """
+        self.run_mode(5, code.replace("EXPECT", "True"), mark=1)
+        self.run_mode(5, code.replace("EXPECT", "False"), mark=0)
+
     def test_truth_mode_statistics(self):
         # Mode 4 runs the closure pass and then the old algorithm as ground
         # truth; gc._closure_stats() reports how the two compare.
         code = """
             import gc
+            gc.collect()        # no garbage left over from start-up
             gc.disable()
             class A:
                 pass
@@ -1845,9 +1881,10 @@ class ClosureSumTests(unittest.TestCase):
                     a.other = b
                     b.other = a
                     if contaminate:
-                        # created after a and b, so it is visited after
-                        # them and is part of their closure
-                        shared = []
+                        # created after a and b (same size class), so it
+                        # is visited after them and is part of their
+                        # closure
+                        shared = A()
                         keep.append(shared)
                         a.shared = shared
             def gen0():
@@ -1863,20 +1900,24 @@ class ClosureSumTests(unittest.TestCase):
             gc._closure_reset_stats()
             make(100, False)
             st = gen0()
-            assert st["true_garbage"] == 200, st
-            assert st["pure_objects"] == 200, st
-            assert st["pure_closures"] == 100, st
+            # (a little start-up garbage may be left; it is pure too)
+            assert st["true_garbage"] >= 200, st
+            assert st["pure_objects"] == st["true_garbage"], st
+            assert st["pure_closures"] >= 100, st
 
-            # The first collection promoted keep and A, so the shared lists
-            # are only reachable from the cycles and from an old object.
+            # keep is frozen (see test_unknown_closure_is_kept_until_...),
+            # so the shared lists are only reachable from the cycles and
+            # from outside the candidate set.
+            gc.freeze()
             gc._closure_reset_stats()
             make(100, True)
             st = gen0()
             assert st["true_garbage"] == 200, st
             assert st["pure_objects"] == 0, st
             assert st["unknown_with_garbage"] == 100, st
-            assert st["blockers"]["list"] == 100, st
+            assert st["blockers"] == {"A": 100}, st
             assert st["missed_types"] == {"A": 200}, st
+            gc.unfreeze()
             gc.collect()
         """
         self.run_mode(4, code)

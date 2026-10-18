@@ -646,6 +646,7 @@
     </ClCompile>
     <ClCompile Include="..\Python\future.c" />
     <ClCompile Include="..\Python\gc.c" />
+    <ClCompile Include="..\Python\gc_closure.c" />
     <ClCompile Include="..\Python\gc_free_threading.c" />
     <ClCompile Include="..\Python\gc_gil.c" />
     <ClCompile Include="..\Python\getargs.c" />
