@@ -17,41 +17,45 @@
 #include <stdlib.h>               // getenv(), atoi()
 #include <string.h>               // strncpy()
 
+struct _gc_closure_config _PyGC_closure;
+
 void
-_PyGC_ClosureInit(struct _gc_runtime_state *gcstate)
+_PyGC_ClosureInit(void)
 {
-    gcstate->closure_mode = _PyGC_CLOSURE_OFF;
-    gcstate->closure_counter = 0;
-    gcstate->closure_stats = NULL;
-    gcstate->closure_stats_path = NULL;
+    _PyGC_closure.mode = _PyGC_CLOSURE_OFF;
+    _PyGC_closure.counter = 0;
+    _PyGC_closure.stats = NULL;
+    _PyGC_closure.stats_path = NULL;
 
     const char *mode = getenv("PYTHON_GC_CLOSURE");
     if (mode != NULL && *mode != '\0') {
         int value = atoi(mode);
         if (value >= _PyGC_CLOSURE_OFF && value <= _PyGC_CLOSURE_OLD) {
-            gcstate->closure_mode = value;
+            _PyGC_closure.mode = value;
         }
     }
     const char *mark = getenv("PYTHON_GC_MARK");
-    gcstate->closure_mark_alive = (mark != NULL && atoi(mark) != 0);
+    _PyGC_closure.mark_alive = (mark != NULL && atoi(mark) != 0);
+    const char *merge = getenv("PYTHON_GC_MERGE");
+    _PyGC_closure.merge = (merge != NULL && atoi(merge) != 0);
     const char *path = getenv("PYTHON_GC_CLOSURE_STATS");
     int want_path = (path != NULL && *path != '\0');
-    if (want_path || gcstate->closure_mode == _PyGC_CLOSURE_TRUTH) {
-        gcstate->closure_stats = PyMem_RawCalloc(1, sizeof(struct _gc_closure_stats));
-        if (gcstate->closure_stats == NULL) {
-            gcstate->closure_mode = _PyGC_CLOSURE_OFF;
+    if (want_path || _PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {
+        _PyGC_closure.stats = PyMem_RawCalloc(1, sizeof(struct _gc_closure_stats));
+        if (_PyGC_closure.stats == NULL) {
+            _PyGC_closure.mode = _PyGC_CLOSURE_OFF;
             return;
         }
         if (want_path) {
-            gcstate->closure_stats_path = _PyMem_RawStrdup(path);
+            _PyGC_closure.stats_path = _PyMem_RawStrdup(path);
         }
     }
 }
 
 int
-_PyGC_ClosureWanted(struct _gc_runtime_state *gcstate, int generation)
+_PyGC_ClosureWanted(int generation)
 {
-    switch (gcstate->closure_mode) {
+    switch (_PyGC_closure.mode) {
     case _PyGC_CLOSURE_ALL:
         return 1;
     case _PyGC_CLOSURE_YOUNG:
@@ -59,20 +63,20 @@ _PyGC_ClosureWanted(struct _gc_runtime_state *gcstate, int generation)
     case _PyGC_CLOSURE_OLD:
         return generation == NUM_GENERATIONS - 1;
     case _PyGC_CLOSURE_ALTERNATE:
-        return (gcstate->closure_counter++ & 1) != 0;
+        return (_PyGC_closure.counter++ & 1) != 0;
     default:
         return 0;
     }
 }
 
 struct _gc_closure_gen_stats *
-_PyGC_ClosureGenStats(struct _gc_runtime_state *gcstate, int generation)
+_PyGC_ClosureGenStats(int generation)
 {
-    if (gcstate->closure_stats == NULL) {
+    if (_PyGC_closure.stats == NULL) {
         return NULL;
     }
     assert(generation >= 0 && generation < NUM_GENERATIONS);
-    struct _gc_closure_gen_stats *st = &gcstate->closure_stats->gens[generation];
+    struct _gc_closure_gen_stats *st = &_PyGC_closure.stats->gens[generation];
     st->collections++;
     return st;
 }
@@ -213,15 +217,15 @@ closure_stats_write_hist(FILE *f, const uint64_t *hist)
 /* Append one JSON line.  Only integers are printed: %f is locale dependent
  * and benchmark harnesses do call setlocale(). */
 static void
-closure_stats_dump(struct _gc_runtime_state *gcstate)
+closure_stats_dump(void)
 {
-    FILE *f = fopen(gcstate->closure_stats_path, "a");
+    FILE *f = fopen(_PyGC_closure.stats_path, "a");
     if (f == NULL) {
         return;
     }
-    fprintf(f, "{\"mode\": %d, \"gens\": [", gcstate->closure_mode);
+    fprintf(f, "{\"mode\": %d, \"gens\": [", _PyGC_closure.mode);
     for (int g = 0; g < NUM_GENERATIONS; g++) {
-        struct _gc_closure_gen_stats *st = &gcstate->closure_stats->gens[g];
+        struct _gc_closure_gen_stats *st = &_PyGC_closure.stats->gens[g];
         fprintf(f, "%s{", g ? ", " : "");
 #define WRITE_COUNTER(name) \
         fprintf(f, "\"" #name "\": %llu, ", (unsigned long long)st->name);
@@ -246,15 +250,15 @@ closure_stats_dump(struct _gc_runtime_state *gcstate)
 }
 
 void
-_PyGC_ClosureFini(struct _gc_runtime_state *gcstate)
+_PyGC_ClosureFini(void)
 {
-    if (gcstate->closure_stats != NULL && gcstate->closure_stats_path != NULL) {
-        closure_stats_dump(gcstate);
+    if (_PyGC_closure.stats != NULL && _PyGC_closure.stats_path != NULL) {
+        closure_stats_dump();
     }
-    PyMem_RawFree(gcstate->closure_stats);
-    gcstate->closure_stats = NULL;
-    PyMem_RawFree((void *)gcstate->closure_stats_path);
-    gcstate->closure_stats_path = NULL;
+    PyMem_RawFree(_PyGC_closure.stats);
+    _PyGC_closure.stats = NULL;
+    PyMem_RawFree((void *)_PyGC_closure.stats_path);
+    _PyGC_closure.stats_path = NULL;
 }
 
 static PyObject *
@@ -310,10 +314,9 @@ closure_dict_set(PyObject *d, const char *key, PyObject *value)
 
 /* gc._closure_stats(): list with one dict per generation, or None. */
 PyObject *
-_PyGC_ClosureStats(PyInterpreterState *interp)
+_PyGC_ClosureStats(void)
 {
-    struct _gc_runtime_state *gcstate = &interp->gc;
-    if (gcstate->closure_stats == NULL) {
+    if (_PyGC_closure.stats == NULL) {
         Py_RETURN_NONE;
     }
     PyObject *result = PyList_New(0);
@@ -321,7 +324,7 @@ _PyGC_ClosureStats(PyInterpreterState *interp)
         return NULL;
     }
     for (int g = 0; g < NUM_GENERATIONS; g++) {
-        struct _gc_closure_gen_stats *st = &gcstate->closure_stats->gens[g];
+        struct _gc_closure_gen_stats *st = &_PyGC_closure.stats->gens[g];
         PyObject *d = PyDict_New();
         if (d == NULL) {
             goto error;
@@ -361,10 +364,9 @@ error:
 }
 
 void
-_PyGC_ClosureResetStats(PyInterpreterState *interp)
+_PyGC_ClosureResetStats(void)
 {
-    struct _gc_runtime_state *gcstate = &interp->gc;
-    if (gcstate->closure_stats != NULL) {
-        memset(gcstate->closure_stats, 0, sizeof(struct _gc_closure_stats));
+    if (_PyGC_closure.stats != NULL) {
+        memset(_PyGC_closure.stats, 0, sizeof(struct _gc_closure_stats));
     }
 }

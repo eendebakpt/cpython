@@ -379,13 +379,27 @@ struct _gc_closure_log {
     int oom;
 };
 
-extern void _PyGC_ClosureInit(struct _gc_runtime_state *gcstate);
-extern void _PyGC_ClosureFini(struct _gc_runtime_state *gcstate);
-extern int _PyGC_ClosureWanted(struct _gc_runtime_state *gcstate, int generation);
+/* Process-wide configuration and statistics of the experiment (deliberately
+ * not per interpreter: fields in PyInterpreterState would make every
+ * extension module ABI-dependent on the experiment). */
+struct _gc_closure_config {
+    int mode;                   /* enum _PyGC_ClosureMode, PYTHON_GC_CLOSURE */
+    int mark_alive;             /* PYTHON_GC_MARK: mark from the roots before a
+                                   full collection (default build) */
+    int merge;                  /* PYTHON_GC_MERGE: merge closures instead of
+                                   retiring them (default build) */
+    unsigned int counter;       /* for _PyGC_CLOSURE_ALTERNATE */
+    const char *stats_path;     /* PYTHON_GC_CLOSURE_STATS */
+    struct _gc_closure_stats *stats;
+};
+extern struct _gc_closure_config _PyGC_closure;
+
+extern void _PyGC_ClosureInit(void);
+extern void _PyGC_ClosureFini(void);
+extern int _PyGC_ClosureWanted(int generation);
 /* Statistics slot of a generation (NULL if statistics are off); counts the
  * collection. */
-extern struct _gc_closure_gen_stats *_PyGC_ClosureGenStats(
-    struct _gc_runtime_state *gcstate, int generation);
+extern struct _gc_closure_gen_stats *_PyGC_ClosureGenStats(int generation);
 extern void _PyGC_ClosureAccount(struct _gc_closure_gen_stats *st,
                                  Py_ssize_t size, Py_ssize_t rc_sum,
                                  Py_ssize_t edges, int pure);
@@ -394,8 +408,8 @@ extern void _PyGC_ClosureCountType(struct _gc_closure_type_count *table,
 extern int _PyGC_ClosureLogAdd(struct _gc_closure_log *log,
                                PyObject **members, Py_ssize_t n, int pure);
 extern void _PyGC_ClosureLogFree(struct _gc_closure_log *log);
-extern PyObject *_PyGC_ClosureStats(PyInterpreterState *interp);
-extern void _PyGC_ClosureResetStats(PyInterpreterState *interp);
+extern PyObject *_PyGC_ClosureStats(void);
+extern void _PyGC_ClosureResetStats(void);
 
 extern Py_ssize_t _PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason);
 extern void _PyGC_CollectNoFail(PyThreadState *tstate);

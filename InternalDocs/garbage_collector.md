@@ -806,6 +806,19 @@ pays in full collections, which already traverse the live heap twice.
 `PYTHON_GC_CLOSURE=5` runs the closure pass for full collections only, the
 configuration that combines with marking.
 
+`PYTHON_GC_MERGE=1` (default build) replaces retiring with merging: each
+candidate carries the index of its closure record in the `gc_refs` bits of
+`_gc_prev`, the records form a union-find forest, and a closure that reaches
+a member of an earlier closure absorbs that record and counts the edge.
+Every record then stays closed under in-set edges and the verdict no longer
+depends on the visit order: a garbage class visited before its garbage
+instance is collected together with it.  Since `_gc_prev` no longer holds
+the list links during the pass, a final walk restores them and separates
+the garbage, as `move_unreachable()` does.  The switches live in a
+process-wide `struct _gc_closure_config` (`gc_closure.c`) rather than in the
+interpreter state, so that the experiment does not change the layout that
+extension modules depend on.
+
 `PYTHON_GC_CLOSURE=4` is a measurement mode for both builds: the closure pass
 runs and records its closures, everything is put back, and the classic
 algorithm computes the result.  `gc._closure_stats()` then reports, per

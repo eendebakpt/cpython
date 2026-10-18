@@ -513,7 +513,7 @@ static int
 gc__closure_mode_impl(PyObject *module)
 /*[clinic end generated code: output=141d28ee5d7c95b2 input=c9d9a3c1bf875fd5]*/
 {
-    return get_gc_state()->closure_mode;
+    return _PyGC_closure.mode;
 }
 
 /*[clinic input]
@@ -526,7 +526,7 @@ static PyObject *
 gc__closure_stats_impl(PyObject *module)
 /*[clinic end generated code: output=ff7558a779638c5e input=2708e4117c3c8a3e]*/
 {
-    return _PyGC_ClosureStats(_PyInterpreterState_GET());
+    return _PyGC_ClosureStats();
 }
 
 /*[clinic input]
@@ -539,7 +539,7 @@ static PyObject *
 gc__closure_reset_stats_impl(PyObject *module)
 /*[clinic end generated code: output=b4d9b19a3ec0b3c2 input=469503ec6874a9e0]*/
 {
-    _PyGC_ClosureResetStats(_PyInterpreterState_GET());
+    _PyGC_ClosureResetStats();
     Py_RETURN_NONE;
 }
 

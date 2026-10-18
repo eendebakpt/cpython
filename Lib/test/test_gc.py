@@ -1733,10 +1733,11 @@ class ClosureSumTests(unittest.TestCase):
     """The closure-sum detector is selected per process with PYTHON_GC_CLOSURE,
     so these tests run the scenarios in a subprocess."""
 
-    def run_mode(self, mode, code, mark=0):
+    def run_mode(self, mode, code, mark=0, merge=0):
         rc, out, err = assert_python_ok("-c", textwrap.dedent(code),
                                         PYTHON_GC_CLOSURE=str(mode),
-                                        PYTHON_GC_MARK=str(mark))
+                                        PYTHON_GC_MARK=str(mark),
+                                        PYTHON_GC_MERGE=str(merge))
         self.assertEqual(err, b"", err)
         return out
 
@@ -1836,6 +1837,30 @@ class ClosureSumTests(unittest.TestCase):
         for mode in (1, 2, 3):
             with self.subTest(mode=mode):
                 self.run_mode(mode, code)
+
+    @unittest.skipIf(Py_GIL_DISABLED, "closure merging is default-build only")
+    def test_merge_collects_class_with_instance(self):
+        # A garbage class is older than its garbage instance and is visited
+        # first; it looks externally referenced (the instance points at it)
+        # and the plain closure pass retires it, collecting the instance
+        # alone.  With PYTHON_GC_MERGE=1 the instance's closure absorbs the
+        # class's record and both go in the same collection.
+        code = """
+            import gc, weakref
+            def make():
+                class C:
+                    pass
+                c = C()
+                c.me = c
+                return weakref.ref(C), weakref.ref(c)
+            gc.disable()
+            wC, wc = make()
+            gc.collect(0)
+            assert wc() is None
+            assert (wC() is None) == EXPECT, wC()
+        """
+        self.run_mode(1, code.replace("EXPECT", "True"), merge=1)
+        self.run_mode(1, code.replace("EXPECT", "False"), merge=0)
 
     @unittest.skipIf(Py_GIL_DISABLED, "mark-alive switch is default-build only")
     def test_mark_alive_full_collection(self):

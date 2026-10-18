@@ -15,6 +15,7 @@
 #include "pycore_pyerrors.h"
 #include "pycore_pymem.h"         // _PyMem_RawStrdup()
 #include "pycore_pystate.h"       // _PyThreadState_GET()
+#include "pycore_tstate.h"        // _PyThreadStateImpl
 #include "pycore_tuple.h"         // _PyTuple_MaybeUntrack()
 #include "pycore_weakref.h"       // _PyWeakref_ClearRef()
 #include "pydtrace.h"
@@ -152,7 +153,7 @@ _PyGC_Init(PyInterpreterState *interp)
         return _PyStatus_NO_MEMORY();
     }
 
-    _PyGC_ClosureInit(gcstate);
+    _PyGC_ClosureInit();
 
     return _PyStatus_OK();
 }
@@ -461,6 +462,7 @@ visit_decref(PyObject *op, void *parent)
 }
 
 static int visit_closure(PyObject *op, void *arg);
+static int visit_closure_merge(PyObject *op, void *arg);
 
 int
 _PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)
@@ -470,7 +472,8 @@ _PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)
     // them like normal.
     assert(!PyStackRef_IsTaggedInt(*ref));
     if (!PyStackRef_RefcountOnObject(*ref)
-        && (visit == visit_decref || visit == visit_closure)) {
+        && (visit == visit_decref || visit == visit_closure
+            || visit == visit_closure_merge)) {
         return 0;
     }
     Py_VISIT(PyStackRef_AsPyObjectBorrow(*ref));
@@ -1529,16 +1532,338 @@ closure_pass(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable,
     return candidates;
 }
 
+/*
+ * Merging variant (PYTHON_GC_MERGE=1).
+ *
+ * Instead of retiring an unknown closure and treating its members as
+ * external from then on, closures are merged: every candidate carries the
+ * index of its closure record in the gc_refs bits of _gc_prev (0 = not
+ * discovered yet), the records form a union-find forest, and R and E live
+ * at the roots.  When a closure reaches a member of an earlier closure the
+ * two records are merged and the edge is counted, so every record stays
+ * closed under in-set edges and the verdict no longer depends on the order
+ * in which candidates are visited: a garbage structure is found whole
+ * whichever of its parts is visited first (a garbage class visited before
+ * its garbage instance is merged into the instance's closure and collected
+ * with it).  It is still one traversal per object; the price is the record
+ * index write per object and, because _gc_prev no longer holds the list
+ * links, a final walk that restores them and separates the garbage, as
+ * move_unreachable() does.  A closure that contains a live object is still
+ * unknown as a whole.
+ */
+
+typedef struct {
+    Py_ssize_t *parent;     /* union-find; parent[r] == r for roots */
+    Py_ssize_t *rc_sum;     /* R, valid at roots */
+    Py_ssize_t *edges;      /* E, valid at roots */
+    Py_ssize_t *size;       /* members, counted in the final walk (stats) */
+    Py_ssize_t count, cap;  /* records 1..count-1; 0 means undiscovered */
+    Py_ssize_t cur;         /* record being built, always a root */
+    PyObject **queue;
+    Py_ssize_t len, qcap;
+    int oom;
+} merge_state;
+
+static Py_ssize_t
+merge_find(merge_state *ms, Py_ssize_t i)
+{
+    while (ms->parent[i] != i) {
+        ms->parent[i] = ms->parent[ms->parent[i]];
+        i = ms->parent[i];
+    }
+    return i;
+}
+
+static int
+merge_new_record(merge_state *ms)
+{
+    if (ms->count == ms->cap) {
+        Py_ssize_t ncap = ms->cap ? ms->cap * 2 : 1024;
+        Py_ssize_t *p = PyMem_Realloc(ms->parent, ncap * sizeof(Py_ssize_t));
+        if (p == NULL) {
+            ms->oom = 1;
+            return -1;
+        }
+        ms->parent = p;
+        Py_ssize_t *r = PyMem_Realloc(ms->rc_sum, ncap * sizeof(Py_ssize_t));
+        if (r == NULL) {
+            ms->oom = 1;
+            return -1;
+        }
+        ms->rc_sum = r;
+        Py_ssize_t *e = PyMem_Realloc(ms->edges, ncap * sizeof(Py_ssize_t));
+        if (e == NULL) {
+            ms->oom = 1;
+            return -1;
+        }
+        ms->edges = e;
+        Py_ssize_t *s = PyMem_Realloc(ms->size, ncap * sizeof(Py_ssize_t));
+        if (s == NULL) {
+            ms->oom = 1;
+            return -1;
+        }
+        ms->size = s;
+        ms->cap = ncap;
+    }
+    Py_ssize_t i = ms->count++;
+    ms->parent[i] = i;
+    ms->rc_sum[i] = 0;
+    ms->edges[i] = 0;
+    ms->size[i] = 0;
+    return (int)i;
+}
+
+static int
+merge_discover(merge_state *ms, PyObject *op)
+{
+    if (ms->len == ms->qcap) {
+        Py_ssize_t ncap = ms->qcap ? ms->qcap * 2 : 1024;
+        PyObject **nq = PyMem_Realloc(ms->queue, ncap * sizeof(PyObject *));
+        if (nq == NULL) {
+            ms->oom = 1;
+            return -1;
+        }
+        ms->queue = nq;
+        ms->qcap = ncap;
+    }
+    gc_set_refs(AS_GC(op), ms->cur);
+    _PyObject_ASSERT(op, Py_REFCNT(op) > 0);
+    ms->rc_sum[ms->cur] += Py_REFCNT(op);
+    ms->queue[ms->len++] = op;
+    return 0;
+}
+
+/* A traversal callback for closure_pass_merge. */
+static int
+visit_closure_merge(PyObject *op, void *arg)
+{
+    merge_state *ms = arg;
+    OBJECT_STAT_INC(object_visits);
+    if (!_PyObject_IS_GC(op)) {
+        return 0;
+    }
+    PyGC_Head *gc = AS_GC(op);
+    if (!gc_is_collecting(gc)) {
+        return 0;   /* outside S: neither counted nor followed */
+    }
+    ms->edges[ms->cur]++;
+    Py_ssize_t idx = gc_get_refs(gc);
+    if (idx == 0) {
+        return merge_discover(ms, op);
+    }
+    Py_ssize_t r = merge_find(ms, idx);
+    if (r != ms->cur) {
+        /* an earlier closure: absorb it, it is fully traversed already */
+        ms->rc_sum[ms->cur] += ms->rc_sum[r];
+        ms->edges[ms->cur] += ms->edges[r];
+        ms->parent[r] = ms->cur;
+    }
+    return 0;
+}
+
+static void
+merge_free(merge_state *ms)
+{
+    PyMem_Free(ms->parent);
+    PyMem_Free(ms->rc_sum);
+    PyMem_Free(ms->edges);
+    PyMem_Free(ms->size);
+    PyMem_Free(ms->queue);
+}
+
+/* Truth mode: record the final records (members grouped by root) before
+ * the final walk destroys the record indices. */
+static void
+merge_log_records(merge_state *ms, PyGC_Head *young, struct _gc_closure_log *log)
+{
+    Py_ssize_t n = 0;
+    for (PyGC_Head *gc = GC_NEXT(young); gc != young; gc = GC_NEXT(gc)) {
+        ms->size[merge_find(ms, gc_get_refs(gc))]++;
+        n++;
+    }
+    /* offsets per root in a single arena */
+    Py_ssize_t *offset = PyMem_Malloc(ms->count * sizeof(Py_ssize_t));
+    PyObject **arena = PyMem_Malloc((n ? n : 1) * sizeof(PyObject *));
+    if (offset == NULL || arena == NULL) {
+        PyMem_Free(offset);
+        PyMem_Free(arena);
+        log->oom = 1;
+        return;
+    }
+    Py_ssize_t pos = 0;
+    for (Py_ssize_t i = 1; i < ms->count; i++) {
+        offset[i] = pos;
+        if (ms->parent[i] == i) {
+            pos += ms->size[i];
+        }
+    }
+    for (PyGC_Head *gc = GC_NEXT(young); gc != young; gc = GC_NEXT(gc)) {
+        Py_ssize_t r = merge_find(ms, gc_get_refs(gc));
+        arena[offset[r]++] = FROM_GC(gc);
+    }
+    for (Py_ssize_t i = 1; i < ms->count; i++) {
+        if (ms->parent[i] != i || ms->size[i] == 0) {
+            continue;
+        }
+        int pure = (ms->rc_sum[i] == ms->edges[i]);
+        if (_PyGC_ClosureLogAdd(log, arena + offset[i] - ms->size[i],
+                                ms->size[i], pure) < 0) {
+            break;
+        }
+    }
+    PyMem_Free(offset);
+    PyMem_Free(arena);
+    /* sizes are recounted by the final walk */
+    for (Py_ssize_t i = 1; i < ms->count; i++) {
+        ms->size[i] = 0;
+    }
+}
+
+/* Same contract as closure_pass(). */
+static Py_ssize_t
+closure_pass_merge(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable,
+                   struct _gc_closure_gen_stats *st, struct _gc_closure_log *log)
+{
+    validate_list(young, collecting_clear_unreachable_clear);
+    gc_list_init(unreachable);
+
+    /* Like update_refs() with gc_refs = 0: record index "undiscovered". */
+    Py_ssize_t candidates = 0;
+    for (PyGC_Head *gc = GC_NEXT(young), *next; gc != young; gc = next) {
+        next = GC_NEXT(gc);
+        PyObject *op = FROM_GC(gc);
+        if (_Py_IsImmortal(op)) {
+            assert(!_Py_IsStaticImmortal(op));
+            _PyObject_GC_UNTRACK(op);
+            continue;
+        }
+        gc_reset_refs(gc, 0);
+        candidates++;
+    }
+
+    merge_state ms = { 0 };
+    if (merge_new_record(&ms) < 0) {    /* record 0: unused */
+        goto fail;
+    }
+    for (PyGC_Head *gc = GC_NEXT(young); gc != young; gc = GC_NEXT(gc)) {
+        if (gc_get_refs(gc) != 0) {
+            continue;   /* already part of a record */
+        }
+        int r = merge_new_record(&ms);
+        if (r < 0) {
+            goto fail;
+        }
+        ms.cur = r;
+        ms.len = 0;
+        if (merge_discover(&ms, FROM_GC(gc)) < 0) {
+            goto fail;
+        }
+        for (Py_ssize_t head = 0; head < ms.len && !ms.oom; head++) {
+            PyObject *op = ms.queue[head];
+            (void) Py_TYPE(op)->tp_traverse(op, visit_closure_merge, &ms);
+        }
+        if (ms.oom) {
+            goto fail;
+        }
+    }
+
+    if (log != NULL) {
+        merge_log_records(&ms, young, log);
+    }
+
+    /* Final walk, modelled on move_unreachable(): restore the prev links
+     * of the survivors, move the garbage to unreachable. */
+    Py_ssize_t nreachable = 0;
+    PyGC_Head *prev = young;
+    PyGC_Head *gc = GC_NEXT(young);
+    while (gc != young) {
+        Py_ssize_t root = merge_find(&ms, gc_get_refs(gc));
+        ms.size[root]++;
+        PyObject *op = FROM_GC(gc);
+        _PyObject_ASSERT_WITH_MSG(op, ms.rc_sum[root] >= ms.edges[root],
+                                  "closure edges exceed refcounts");
+        if (ms.rc_sum[root] == ms.edges[root]) {
+            prev->_gc_next = gc->_gc_next;
+            PyGC_Head *last = GC_PREV(unreachable);
+            last->_gc_next = (NEXT_MASK_UNREACHABLE | (uintptr_t)gc);
+            _PyGCHead_SET_PREV(gc, last);
+            gc->_gc_next = (NEXT_MASK_UNREACHABLE | (uintptr_t)unreachable);
+            unreachable->_gc_prev = (uintptr_t)gc;
+        }
+        else {
+            _PyGCHead_SET_PREV(gc, prev);
+            gc_clear_collecting(gc);
+            if (PyTuple_CheckExact(op)) {
+                /* untracking overwrites the next object's _gc_prev */
+                PyGC_Head *next = GC_NEXT(gc);
+                uintptr_t next_prev = next->_gc_prev;
+                _PyTuple_MaybeUntrack(op);
+                next->_gc_prev = next_prev;
+                if (gc->_gc_next != 0) {
+                    prev = gc;
+                    nreachable++;
+                }
+            }
+            else {
+                prev = gc;
+                nreachable++;
+            }
+        }
+        gc = (PyGC_Head *)prev->_gc_next;
+    }
+    young->_gc_prev = (uintptr_t)prev;
+    unreachable->_gc_next &= ~NEXT_MASK_UNREACHABLE;
+
+    if (st != NULL) {
+        for (Py_ssize_t i = 1; i < ms.count; i++) {
+            if (ms.parent[i] == i && ms.size[i] > 0) {
+                _PyGC_ClosureAccount(st, ms.size[i], ms.rc_sum[i], ms.edges[i],
+                                     ms.rc_sum[i] == ms.edges[i]);
+            }
+        }
+    }
+    merge_free(&ms);
+    *reachable = nreachable;
+    validate_list(young, collecting_clear_unreachable_clear);
+    validate_list(unreachable, collecting_set_unreachable_set);
+    return candidates;
+
+fail:
+    /* Nothing has been moved yet; restore the links like move_unreachable()
+     * would by walking the still intact _gc_next chain. */
+    prev = young;
+    for (gc = GC_NEXT(young); gc != young; gc = GC_NEXT(gc)) {
+        _PyGCHead_SET_PREV(gc, prev);
+        gc_clear_collecting(gc);
+        prev = gc;
+    }
+    young->_gc_prev = (uintptr_t)prev;
+    merge_free(&ms);
+    return -1;
+}
+
+static Py_ssize_t
+closure_pass_any(GCState *gcstate, PyGC_Head *young, PyGC_Head *unreachable,
+                 Py_ssize_t *reachable, struct _gc_closure_gen_stats *st,
+                 struct _gc_closure_log *log)
+{
+    if (_PyGC_closure.merge) {
+        return closure_pass_merge(young, unreachable, reachable, st, log);
+    }
+    return closure_pass(young, unreachable, reachable, st, log);
+}
+
 /* _PyGC_CLOSURE_TRUTH: closure pass for the statistics, then everything
  * back and deduce_unreachable() for the result; compare the two. */
 static Py_ssize_t
-closure_pass_with_truth(PyGC_Head *young, PyGC_Head *unreachable,
+closure_pass_with_truth(GCState *gcstate, PyGC_Head *young, PyGC_Head *unreachable,
                         Py_ssize_t *reachable, struct _gc_closure_gen_stats *st)
 {
     struct _gc_closure_log log = { 0 };
     PyTime_t t0, t1, t2;
     (void)PyTime_PerfCounterRaw(&t0);
-    Py_ssize_t candidates = closure_pass(young, unreachable, reachable, st, &log);
+    Py_ssize_t candidates = closure_pass_any(gcstate, young, unreachable,
+                                            reachable, st, &log);
     (void)PyTime_PerfCounterRaw(&t1);
     if (candidates < 0) {
         st->fallbacks++;
@@ -1681,8 +2006,11 @@ visit_mark(PyObject *op, void *arg)
         ms->queue = nq;
         ms->cap = ncap;
     }
+    /* Only the flag is touched here: moving the object now would write the
+     * headers of its list neighbours in random order, which made this pass
+     * an order of magnitude slower than a traversal.  The list is
+     * partitioned sequentially afterwards. */
     gc_clear_collecting(gc);
-    gc_list_move(gc, ms->alive);
     ms->marked++;
     ms->queue[ms->len++] = op;
     return 0;
@@ -1694,6 +2022,45 @@ mark_propagate(mark_state *ms)
     while (ms->head < ms->len) {
         PyObject *op = ms->queue[ms->head++];
         if (Py_TYPE(op)->tp_traverse(op, visit_mark, ms) < 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+
+/* Objects held by a thread state, and the frames whose stack pointer is
+ * known.  visit_mark is not exempted in _PyGC_VisitStackRef, so borrowed
+ * stack references are followed too, as they should be for marking. */
+static int
+mark_thread_roots(PyThreadState *p, mark_state *ms)
+{
+    PyObject *roots[] = {
+        p->dict, p->context, p->current_exception,
+        p->async_gen_firstiter, p->async_gen_finalizer,
+        p->c_profileobj, p->c_traceobj,
+        p->threading_local_key, p->threading_local_sentinel,
+        ((_PyThreadStateImpl *)p)->asyncio_running_loop,
+        ((_PyThreadStateImpl *)p)->asyncio_running_task,
+    };
+    for (size_t i = 0; i < Py_ARRAY_LENGTH(roots); i++) {
+        if (roots[i] != NULL && visit_mark(roots[i], ms) < 0) {
+            return -1;
+        }
+    }
+    for (_PyErr_StackItem *ei = p->exc_info; ei != NULL; ei = ei->previous_item) {
+        if (ei->exc_value != NULL && visit_mark(ei->exc_value, ms) < 0) {
+            return -1;
+        }
+    }
+    for (_PyInterpreterFrame *f = p->current_frame; f != NULL; f = f->previous) {
+        if (f->owner >= FRAME_OWNED_BY_INTERPRETER || f->stackpointer == NULL) {
+            continue;
+        }
+        if (!PyStackRef_IsNull(f->f_executable)
+            && visit_mark(PyStackRef_AsPyObjectBorrow(f->f_executable), ms) < 0) {
+            return -1;
+        }
+        if (_PyGC_VisitFrameStack(f, visit_mark, ms) < 0) {
             return -1;
         }
     }
@@ -1732,25 +2099,28 @@ mark_alive_from_roots(PyInterpreterState *interp, PyGC_Head *young,
         MARK_ROOT(types->for_extensions.initialized[i].tp_dict);
         MARK_ROOT(types->for_extensions.initialized[i].tp_subclasses);
     }
+    /* Interpreter state that holds objects without being an object itself.
+     * Live objects reachable only from here (and from the per-thread state
+     * below) are what root marking otherwise misses. */
+    MARK_ROOT(interp->imports.modules);
+    MARK_ROOT(interp->imports.modules_by_index);
+    MARK_ROOT(interp->imports.importlib);
+    MARK_ROOT(interp->imports.import_func);
+    MARK_ROOT(interp->codecs.search_path);
+    MARK_ROOT(interp->codecs.search_cache);
+    MARK_ROOT(interp->codecs.error_registry);
+    MARK_ROOT(interp->warnings.filters);
+    MARK_ROOT(interp->warnings.once_registry);
+    MARK_ROOT(interp->audit_hooks);
+    MARK_ROOT(interp->gc.garbage);
+    MARK_ROOT(interp->gc.callbacks);
+
 #undef MARK_ROOT
 
-    /* Thread stacks: frames whose stack pointer is known.  visit_mark is
-     * not exempted in _PyGC_VisitStackRef, so borrowed references are
-     * followed too, as they should be for marking. */
+    /* Per-thread state and thread stacks.  No early exit while the thread
+     * list is locked: mark_thread_roots() reports failure, the loop breaks. */
     _Py_FOR_EACH_TSTATE_BEGIN(interp, p) {
-        for (_PyInterpreterFrame *f = p->current_frame; f != NULL; f = f->previous) {
-            if (f->owner >= FRAME_OWNED_BY_INTERPRETER || f->stackpointer == NULL) {
-                continue;
-            }
-            if (!PyStackRef_IsNull(f->f_executable)
-                && visit_mark(PyStackRef_AsPyObjectBorrow(f->f_executable), &ms) < 0) {
-                break;
-            }
-            if (_PyGC_VisitFrameStack(f, visit_mark, &ms) < 0) {
-                break;
-            }
-        }
-        if (ms.oom) {
+        if (mark_thread_roots(p, &ms) < 0) {
             break;
         }
     }
@@ -1763,22 +2133,32 @@ mark_alive_from_roots(PyInterpreterState *interp, PyGC_Head *young,
         goto fail;
     }
     PyMem_Free(ms.queue);
+
+    /* Partition: marked objects (flag cleared) leave young, in list order,
+     * so the neighbour headers each move rewrites are the ones the walk has
+     * just visited or is about to visit. */
+    for (PyGC_Head *gc = GC_NEXT(young), *next; gc != young; gc = next) {
+        next = GC_NEXT(gc);
+        if (!gc_is_collecting(gc)) {
+            gc_list_move(gc, alive);
+        }
+    }
     return ms.marked;
 
 fail:
+    /* Nothing has been moved yet. */
     PyMem_Free(ms.queue);
-    gc_list_merge(alive, young);
     gc_list_clear_collecting(young);
     return -1;
 }
 
 /* Find the unreachable subset of young with the detector selected by
- * gcstate->closure_mode.  Same contract as deduce_unreachable(). */
+ * _PyGC_closure.mode.  Same contract as deduce_unreachable(). */
 static Py_ssize_t
 find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
                  PyGC_Head *unreachable, Py_ssize_t *reachable)
 {
-    struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(gcstate, generation);
+    struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(generation);
     PyTime_t t0 = 0, t1 = 0;
     if (st != NULL) {
         (void)PyTime_PerfCounterRaw(&t0);
@@ -1787,7 +2167,7 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
     PyGC_Head alive;
     gc_list_init(&alive);
     Py_ssize_t marked = 0;
-    if (gcstate->closure_mark_alive && generation == NUM_GENERATIONS - 1) {
+    if (_PyGC_closure.mark_alive && generation == NUM_GENERATIONS - 1) {
         marked = mark_alive_from_roots(_PyInterpreterState_GET(), young, &alive);
         if (marked < 0) {
             marked = 0;
@@ -1801,17 +2181,19 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
     }
 
     Py_ssize_t candidates;
-    if (gcstate->closure_mode == _PyGC_CLOSURE_TRUTH) {
+    if (_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {
         assert(st != NULL);
-        candidates = closure_pass_with_truth(young, unreachable, reachable, st);
+        candidates = closure_pass_with_truth(gcstate, young, unreachable,
+                                             reachable, st);
         gc_list_merge(&alive, young);
         *reachable += marked;
         return candidates;
     }
 
     candidates = -1;
-    if (_PyGC_ClosureWanted(gcstate, generation)) {
-        candidates = closure_pass(young, unreachable, reachable, NULL, NULL);
+    if (_PyGC_ClosureWanted(generation)) {
+        candidates = closure_pass_any(gcstate, young, unreachable, reachable,
+                                      NULL, NULL);
         if (st != NULL) {
             (void)PyTime_PerfCounterRaw(&t1);
             if (candidates >= 0) {
@@ -2484,7 +2866,7 @@ void
 _PyGC_Fini(PyInterpreterState *interp)
 {
     GCState *gcstate = &interp->gc;
-    _PyGC_ClosureFini(gcstate);
+    _PyGC_ClosureFini();
     Py_CLEAR(gcstate->garbage);
     Py_CLEAR(gcstate->callbacks);
     PyMem_RawFree(gcstate->generation_stats);

@@ -1360,6 +1360,34 @@ gc_propagate_alive(gc_mark_args_t *args)
     }
 }
 
+#ifdef GC_MARK_ALIVE_EXTRA_ROOTS
+// Objects held by a thread state without being reachable from any object
+// (experimental: added with the closure-sum detector).
+static int
+gc_mark_thread_roots(PyThreadState *p, gc_mark_args_t *args)
+{
+    PyObject *roots[] = {
+        p->dict, p->context, p->current_exception,
+        p->async_gen_firstiter, p->async_gen_finalizer,
+        p->c_profileobj, p->c_traceobj,
+        p->threading_local_key, p->threading_local_sentinel,
+        ((_PyThreadStateImpl *)p)->asyncio_running_loop,
+        ((_PyThreadStateImpl *)p)->asyncio_running_task,
+    };
+    for (size_t i = 0; i < Py_ARRAY_LENGTH(roots); i++) {
+        if (roots[i] != NULL && gc_mark_enqueue(roots[i], args) < 0) {
+            return -1;
+        }
+    }
+    for (_PyErr_StackItem *ei = p->exc_info; ei != NULL; ei = ei->previous_item) {
+        if (ei->exc_value != NULL && gc_mark_enqueue(ei->exc_value, args) < 0) {
+            return -1;
+        }
+    }
+    return 0;
+}
+#endif
+
 // Using tp_traverse, mark everything reachable from known root objects
 // (which must be non-garbage) as alive (_PyGC_BITS_ALIVE is set).  In
 // most programs, this marks nearly all objects that are not actually
@@ -1413,6 +1441,34 @@ gc_mark_alive_from_roots(PyInterpreterState *interp,
     for (int i = 0; i < _Py_MAX_MANAGED_STATIC_EXT_TYPES; i++) {
         MARK_ENQUEUE(types->for_extensions.initialized[i].tp_dict);
         MARK_ENQUEUE(types->for_extensions.initialized[i].tp_subclasses);
+    }
+    // Interpreter and per-thread state that holds objects without being an
+    // object itself (experimental: added with the closure-sum detector; live
+    // objects reachable only from here are what root marking misses).
+    MARK_ENQUEUE(interp->imports.modules);
+    MARK_ENQUEUE(interp->imports.modules_by_index);
+    MARK_ENQUEUE(interp->imports.importlib);
+    MARK_ENQUEUE(interp->imports.import_func);
+    MARK_ENQUEUE(interp->codecs.search_path);
+    MARK_ENQUEUE(interp->codecs.search_cache);
+    MARK_ENQUEUE(interp->codecs.error_registry);
+    MARK_ENQUEUE(interp->warnings.filters);
+    MARK_ENQUEUE(interp->warnings.once_registry);
+    MARK_ENQUEUE(interp->audit_hooks);
+    MARK_ENQUEUE(interp->gc.garbage);
+    MARK_ENQUEUE(interp->gc.callbacks);
+    // Per-thread state; no early return while the thread list is locked.
+    int root_err = 0;
+    _Py_FOR_EACH_TSTATE_BEGIN(interp, p) {
+        if (gc_mark_thread_roots(p, &mark_args) < 0) {
+            root_err = -1;
+            break;
+        }
+    }
+    _Py_FOR_EACH_TSTATE_END(interp);
+    if (root_err < 0) {
+        gc_abort_mark_alive(interp, state, &mark_args);
+        return -1;
     }
 #endif
 #ifdef GC_MARK_ALIVE_STACKS
@@ -1836,14 +1892,13 @@ closure_deduce_with_truth(PyInterpreterState *interp,
 }
 
 /* Find the unreachable objects with the detector selected by
- * gcstate->closure_mode.  Same contract as deduce_unreachable_heap(). */
+ * _PyGC_closure.mode.  Same contract as deduce_unreachable_heap(). */
 static int
 find_unreachable_heap(PyInterpreterState *interp, struct collection_state *state,
                       int generation)
 {
-    GCState *gcstate = state->gcstate;
-    struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(gcstate, generation);
-    if (gcstate->closure_mode == _PyGC_CLOSURE_TRUTH) {
+    struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(generation);
+    if (_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {
         assert(st != NULL);
         return closure_deduce_with_truth(interp, state, st);
     }
@@ -1852,7 +1907,7 @@ find_unreachable_heap(PyInterpreterState *interp, struct collection_state *state
         (void)PyTime_PerfCounterRaw(&t0);
     }
     int err;
-    if (_PyGC_ClosureWanted(gcstate, generation)) {
+    if (_PyGC_ClosureWanted(generation)) {
         err = closure_deduce_heap(interp, state, NULL, NULL);
         if (err == 0) {
             err = finish_unreachable_heap(interp, state);
@@ -2072,7 +2127,7 @@ _PyGC_Init(PyInterpreterState *interp)
         return _PyStatus_NO_MEMORY();
     }
 
-    _PyGC_ClosureInit(gcstate);
+    _PyGC_ClosureInit();
 
     return _PyStatus_OK();
 }
@@ -3036,7 +3091,7 @@ void
 _PyGC_Fini(PyInterpreterState *interp)
 {
     GCState *gcstate = &interp->gc;
-    _PyGC_ClosureFini(gcstate);
+    _PyGC_ClosureFini();
     Py_CLEAR(gcstate->garbage);
     Py_CLEAR(gcstate->callbacks);
     PyMem_RawFree(gcstate->generation_stats);
