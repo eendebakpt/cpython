@@ -55,6 +55,25 @@ typedef struct _gc_runtime_state GCState;
 #define AS_GC(op) _Py_AS_GC(op)
 #define FROM_GC(gc) _Py_FROM_GC(gc)
 
+// Breadth-first passes (closure, mark) visit objects in discovery order,
+// not in list (allocation) order, so every object header is a cache miss
+// unless it is prefetched a few queue entries ahead.
+#if defined(__GNUC__) || defined(__clang__)
+#  define GC_PREFETCH(ptr)  __builtin_prefetch((ptr), 0, 3)
+#elif defined(_MSC_VER) && (defined(_M_X64) || defined(_M_IX86)) && !defined(_M_ARM64EC)
+#  include <xmmintrin.h>
+#  define GC_PREFETCH(ptr)  _mm_prefetch((const char *)(ptr), _MM_HINT_T0)
+#else
+#  define GC_PREFETCH(ptr)  ((void)0)
+#endif
+#define GC_PREFETCH_AHEAD 8
+#define GC_PREFETCH_QUEUE(queue, i, n) \
+    do { \
+        if ((i) + GC_PREFETCH_AHEAD < (n)) { \
+            GC_PREFETCH(AS_GC((queue)[(i) + GC_PREFETCH_AHEAD])); \
+        } \
+    } while (0)
+
 // Automatically choose the generation that needs collecting.
 #define GENERATION_AUTO (-1)
 
@@ -1488,6 +1507,7 @@ closure_pass(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable,
             break;
         }
         for (Py_ssize_t head = 0; head < cs.len && !cs.oom; head++) {
+            GC_PREFETCH_QUEUE(cs.queue, head, cs.len);
             PyObject *op = cs.queue[head];
             (void) Py_TYPE(op)->tp_traverse(op, visit_closure, &cs);
         }
@@ -1696,6 +1716,7 @@ closure_pass_dag(PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable
             goto fail;
         }
         for (Py_ssize_t head = 0; head < ds.len && !ds.oom; head++) {
+            GC_PREFETCH_QUEUE(ds.queue, head, ds.len);
             PyObject *op = ds.queue[head];
             (void) Py_TYPE(op)->tp_traverse(op, visit_closure_dag, &ds);
         }
@@ -1783,11 +1804,12 @@ fail:
 }
 
 static Py_ssize_t
-closure_pass_any(GCState *gcstate, PyGC_Head *young, PyGC_Head *unreachable,
+closure_pass_any(int generation, PyGC_Head *young, PyGC_Head *unreachable,
                  Py_ssize_t *reachable, struct _gc_closure_gen_stats *st,
                  struct _gc_closure_log *log)
 {
-    if (_PyGC_closure.dag) {
+    if (_PyGC_closure.dag == 1
+        || (_PyGC_closure.dag == 2 && generation == NUM_GENERATIONS - 1)) {
         return closure_pass_dag(young, unreachable, reachable, st, log);
     }
     return closure_pass(young, unreachable, reachable, st, log);
@@ -1796,13 +1818,13 @@ closure_pass_any(GCState *gcstate, PyGC_Head *young, PyGC_Head *unreachable,
 /* _PyGC_CLOSURE_TRUTH: closure pass for the statistics, then everything
  * back and deduce_unreachable() for the result; compare the two. */
 static Py_ssize_t
-closure_pass_with_truth(GCState *gcstate, PyGC_Head *young, PyGC_Head *unreachable,
+closure_pass_with_truth(int generation, PyGC_Head *young, PyGC_Head *unreachable,
                         Py_ssize_t *reachable, struct _gc_closure_gen_stats *st)
 {
     struct _gc_closure_log log = { 0 };
     PyTime_t t0, t1, t2;
     (void)PyTime_PerfCounterRaw(&t0);
-    Py_ssize_t candidates = closure_pass_any(gcstate, young, unreachable,
+    Py_ssize_t candidates = closure_pass_any(generation, young, unreachable,
                                             reachable, st, &log);
     (void)PyTime_PerfCounterRaw(&t1);
     if (candidates < 0) {
@@ -1960,6 +1982,7 @@ static int
 mark_propagate(mark_state *ms)
 {
     while (ms->head < ms->len) {
+        GC_PREFETCH_QUEUE(ms->queue, ms->head, ms->len);
         PyObject *op = ms->queue[ms->head++];
         if (Py_TYPE(op)->tp_traverse(op, visit_mark, ms) < 0) {
             return -1;
@@ -2099,15 +2122,20 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
                  PyGC_Head *unreachable, Py_ssize_t *reachable)
 {
     struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(generation);
-    PyTime_t t0 = 0, t1 = 0;
-    if (st != NULL) {
-        (void)PyTime_PerfCounterRaw(&t0);
-    }
+    PyTime_t t_start, t0, t1;
+    (void)PyTime_PerfCounterRaw(&t_start);
+    t0 = t_start;
+
+    /* The choice comes first: marking only pays together with the closure
+     * pass, so it is tied to it (and the truth mode runs both). */
+    int use_closure = (_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH)
+                      || _PyGC_ClosureWanted(generation);
 
     PyGC_Head alive;
     gc_list_init(&alive);
     Py_ssize_t marked = 0;
-    if (_PyGC_closure.mark_alive && generation == NUM_GENERATIONS - 1) {
+    if (use_closure && _PyGC_closure.mark_alive
+        && generation == NUM_GENERATIONS - 1) {
         marked = mark_alive_from_roots(_PyInterpreterState_GET(), young, &alive);
         if (marked < 0) {
             marked = 0;
@@ -2123,7 +2151,7 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
     Py_ssize_t candidates;
     if (_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {
         assert(st != NULL);
-        candidates = closure_pass_with_truth(gcstate, young, unreachable,
+        candidates = closure_pass_with_truth(generation, young, unreachable,
                                              reachable, st);
         gc_list_merge(&alive, young);
         *reachable += marked;
@@ -2131,8 +2159,8 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
     }
 
     candidates = -1;
-    if (_PyGC_ClosureWanted(generation)) {
-        candidates = closure_pass_any(gcstate, young, unreachable, reachable,
+    if (use_closure) {
+        candidates = closure_pass_any(generation, young, unreachable, reachable,
                                       NULL, NULL);
         if (st != NULL) {
             (void)PyTime_PerfCounterRaw(&t1);
@@ -2154,6 +2182,9 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
             st->traversals_old += candidates + *reachable;
         }
     }
+    (void)PyTime_PerfCounterRaw(&t1);
+    _PyGC_ClosureRecordCost(generation, use_closure, t1 - t_start,
+                            candidates + marked);
     if (st != NULL) {
         st->candidates += candidates;
     }

@@ -30,14 +30,18 @@ _PyGC_ClosureInit(void)
     const char *mode = getenv("PYTHON_GC_CLOSURE");
     if (mode != NULL && *mode != '\0') {
         int value = atoi(mode);
-        if (value >= _PyGC_CLOSURE_OFF && value <= _PyGC_CLOSURE_OLD) {
+        if (value >= _PyGC_CLOSURE_OFF && value <= _PyGC_CLOSURE_ADAPTIVE) {
             _PyGC_closure.mode = value;
         }
     }
     const char *mark = getenv("PYTHON_GC_MARK");
     _PyGC_closure.mark_alive = (mark != NULL && atoi(mark) != 0);
     const char *dag = getenv("PYTHON_GC_DAG");
-    _PyGC_closure.dag = (dag != NULL && atoi(dag) != 0);
+    _PyGC_closure.dag = (dag != NULL) ? atoi(dag) : 0;
+    if (_PyGC_closure.dag < 0 || _PyGC_closure.dag > 2) {
+        _PyGC_closure.dag = 0;
+    }
+    memset(_PyGC_closure.adapt, 0, sizeof(_PyGC_closure.adapt));
     const char *every = getenv("PYTHON_GC_CLASSIC_EVERY");
     _PyGC_closure.classic_every = (every != NULL) ? atoi(every) : 0;
     _PyGC_closure.full_counter = 0;
@@ -63,6 +67,30 @@ _PyGC_ClosureWanted(int generation)
         return 0;   /* periodic classic full collection */
     }
     switch (_PyGC_closure.mode) {
+    case _PyGC_CLOSURE_ADAPTIVE: {
+        /* Use the detector that was cheaper per candidate the last time it
+         * ran on this generation; every 16th collection run the other one
+         * so that both samples stay current (and the classic algorithm
+         * bounds the delay of garbage the closure pass cannot decide). */
+        assert(generation >= 0 && generation < 3);
+        struct _gc_closure_adapt *a = &_PyGC_closure.adapt[generation];
+        a->n++;
+        int choice;
+        if (a->closure_cost == 0.0) {
+            choice = 1;
+        }
+        else if (a->classic_cost == 0.0) {
+            choice = 0;
+        }
+        else if ((a->n & 15) == 0) {
+            choice = !a->last_closure;
+        }
+        else {
+            choice = a->closure_cost < a->classic_cost;
+        }
+        a->last_closure = choice;
+        return choice;
+    }
     case _PyGC_CLOSURE_ALL:
         return 1;
     case _PyGC_CLOSURE_YOUNG:
@@ -73,6 +101,22 @@ _PyGC_ClosureWanted(int generation)
         return (_PyGC_closure.counter++ & 1) != 0;
     default:
         return 0;
+    }
+}
+
+void
+_PyGC_ClosureRecordCost(int generation, int used_closure, PyTime_t ns,
+                        Py_ssize_t candidates)
+{
+    if (_PyGC_closure.mode != _PyGC_CLOSURE_ADAPTIVE || candidates <= 0) {
+        return;
+    }
+    double cost = (double)ns / (double)candidates;
+    if (used_closure) {
+        _PyGC_closure.adapt[generation].closure_cost = cost;
+    }
+    else {
+        _PyGC_closure.adapt[generation].classic_cost = cost;
     }
 }
 

@@ -1741,6 +1741,11 @@ closure_heap_visitor(const mi_heap_t *heap, const mi_heap_area_t *area,
         return false;
     }
     for (Py_ssize_t head = 0; head < cs->len && !cs->oom; head++) {
+#ifdef GC_ENABLE_PREFETCH_INSTRUCTIONS
+        if (head + 8 < cs->len) {
+            PREFETCH_T0(cs->queue[head + 8]);
+        }
+#endif
         PyObject *op = cs->queue[head];
         (void) Py_TYPE(op)->tp_traverse(op, visit_closure, cs);
     }
@@ -1865,9 +1870,12 @@ closure_dag_finish(PyInterpreterState *interp, struct collection_state *state,
 
 static int
 closure_deduce_heap(PyInterpreterState *interp, struct collection_state *state,
-                    struct _gc_closure_gen_stats *st, struct _gc_closure_log *log)
+                    int generation, struct _gc_closure_gen_stats *st,
+                    struct _gc_closure_log *log)
 {
-    struct closure_state cs = { .st = st, .log = log, .use_dag = _PyGC_closure.dag };
+    int use_dag = (_PyGC_closure.dag == 1
+                   || (_PyGC_closure.dag == 2 && generation == NUM_GENERATIONS - 1));
+    struct closure_state cs = { .st = st, .log = log, .use_dag = use_dag };
     state->closure = &cs;
     gc_visit_heaps(interp, &closure_init_visitor, &state->base);
     gc_visit_thread_stacks(interp, state);
@@ -1933,13 +1941,13 @@ closure_count_unreachable_visitor(const mi_heap_t *heap, const mi_heap_area_t *a
  * algorithm for the result; compare the two.  See gc.c. */
 static int
 closure_deduce_with_truth(PyInterpreterState *interp,
-                          struct collection_state *state,
+                          struct collection_state *state, int generation,
                           struct _gc_closure_gen_stats *st)
 {
     struct _gc_closure_log log = { 0 };
     PyTime_t t0, t1, t2;
     (void)PyTime_PerfCounterRaw(&t0);
-    if (closure_deduce_heap(interp, state, st, &log) < 0) {
+    if (closure_deduce_heap(interp, state, generation, st, &log) < 0) {
         _PyGC_ClosureLogFree(&log);
         return -1;
     }
@@ -2031,32 +2039,31 @@ find_unreachable_heap(PyInterpreterState *interp, struct collection_state *state
     struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(generation);
     if (_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH) {
         assert(st != NULL);
-        return closure_deduce_with_truth(interp, state, st);
+        return closure_deduce_with_truth(interp, state, generation, st);
     }
-    PyTime_t t0 = 0, t1 = 0;
-    if (st != NULL) {
-        (void)PyTime_PerfCounterRaw(&t0);
-    }
+    PyTime_t t0, t1;
+    (void)PyTime_PerfCounterRaw(&t0);
     int err;
-    if (_PyGC_ClosureWanted(generation)) {
-        err = closure_deduce_heap(interp, state, NULL, NULL);
+    int use_closure = _PyGC_ClosureWanted(generation);
+    if (use_closure) {
+        err = closure_deduce_heap(interp, state, generation, NULL, NULL);
         if (err == 0) {
             err = finish_unreachable_heap(interp, state);
-        }
-        if (st != NULL) {
-            (void)PyTime_PerfCounterRaw(&t1);
-            st->closure_collections++;
-            st->closure_time += t1 - t0;
         }
     }
     else {
         err = deduce_unreachable_heap(interp, state);
-        if (st != NULL) {
-            (void)PyTime_PerfCounterRaw(&t1);
+    }
+    (void)PyTime_PerfCounterRaw(&t1);
+    _PyGC_ClosureRecordCost(generation, use_closure, t1 - t0, state->candidates);
+    if (st != NULL) {
+        if (use_closure) {
+            st->closure_collections++;
+            st->closure_time += t1 - t0;
+        }
+        else {
             st->deduce_time += t1 - t0;
         }
-    }
-    if (st != NULL) {
         st->candidates += state->candidates;
     }
     return err;

@@ -326,6 +326,9 @@ enum _PyGC_ClosureMode {
     _PyGC_CLOSURE_TRUTH = 4,      /* closure pass for statistics, then the
                                      classic algorithm for the result */
     _PyGC_CLOSURE_OLD = 5,        /* closure pass for the oldest generation only */
+    _PyGC_CLOSURE_ADAPTIVE = 6,   /* per generation, the detector that was
+                                     cheaper per candidate last time; the
+                                     other one is re-probed periodically */
 };
 
 #define _PyGC_CLOSURE_HIST 24
@@ -387,7 +390,8 @@ struct _gc_closure_config {
     int mark_alive;             /* PYTHON_GC_MARK: mark from the roots before a
                                    full collection (default build) */
     int dag;                    /* PYTHON_GC_DAG: judge closures in a backward
-                                   sweep over the record DAG (default build) */
+                                   sweep over the record DAG; 1: every
+                                   collection, 2: full collections only */
     unsigned int counter;       /* for _PyGC_CLOSURE_ALTERNATE */
     int classic_every;          /* PYTHON_GC_CLASSIC_EVERY=k: every k-th full
                                    collection uses the classic algorithm, which
@@ -396,8 +400,19 @@ struct _gc_closure_config {
     unsigned int full_counter;
     const char *stats_path;     /* PYTHON_GC_CLOSURE_STATS */
     struct _gc_closure_stats *stats;
+    /* _PyGC_CLOSURE_ADAPTIVE: last measured cost per candidate (ns) of each
+     * detector, per generation; 0 = no sample yet */
+    struct _gc_closure_adapt {
+        double closure_cost;
+        double classic_cost;
+        unsigned int n;
+        int last_closure;
+    } adapt[3];
 };
 extern struct _gc_closure_config _PyGC_closure;
+/* Record the cost of the detector just used (adaptive mode). */
+extern void _PyGC_ClosureRecordCost(int generation, int used_closure,
+                                    PyTime_t ns, Py_ssize_t candidates);
 
 /* Record DAG of the deferred-verdict closure pass (PYTHON_GC_DAG), shared
  * by both collectors; see closure_pass_dag() in gc.c.  Records are created
