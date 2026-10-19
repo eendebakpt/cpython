@@ -11,6 +11,7 @@ from test.support.script_helper import assert_python_ok, make_script
 from test.support import threading_helper, gc_threshold
 
 import gc
+import os
 import sys
 import textwrap
 import threading
@@ -1616,10 +1617,13 @@ class GCCallbackTests(unittest.TestCase):
         p.stdout.close()
         p.stderr.close()
         # Verify that stderr has a useful error message:
+        # deduce_unreachable() and the closure pass report the broken
+        # tp_traverse with different assertions.
         self.assertRegex(stderr,
-            br'gc.*\.c:[0-9]+: .*: Assertion "gc_get_refs\(.+\) .*" failed.')
+            br'gc.*\.c:[0-9]+: .*: Assertion "(gc_get_refs\(.+\) .*'
+            br'|cs\.rc_sum >= cs\.edges)" failed.')
         self.assertRegex(stderr,
-            br'refcount is too small')
+            br'refcount is too small|closure edges exceed refcounts')
         # "address : 0x7fb5062efc18"
         # "address : 7FB5062EFC18"
         address_regex = br'[0-9a-fA-Fx]+'
@@ -1893,6 +1897,105 @@ class PythonFinalizationTests(unittest.TestCase):
         ''')
 
         assert_python_ok("-c", code)
+
+
+@unittest.skipIf(Py_GIL_DISABLED, "closure-sum detection is default-build only")
+class ClosureSumTests(unittest.TestCase):
+    """Young collections use the closure-sum detector (see gc.c); old
+    increments and full collections use the classic algorithm.  Run in a
+    subprocess so that the young generation starts out empty.  Under the
+    incremental collector gc.collect(0) rotates the nursery through the
+    aging spaces, so a young collection of fresh objects takes
+    aging_spaces + 1 calls."""
+
+    PRELUDE = """
+        import gc, weakref
+        def young():
+            return sum(gc.collect(0) for _ in range(8))
+    """
+
+    def run_code(self, code):
+        rc, out, err = assert_python_ok(
+            "-c", textwrap.dedent(self.PRELUDE) + textwrap.dedent(code))
+        self.assertEqual(err, b"", err)
+
+    def test_cycles_collected_in_young_collection(self):
+        self.run_code("""
+            class A:
+                pass
+            class L(list):
+                pass
+            def make():
+                a, b = A(), A()
+                a.other = b
+                b.other = a
+                l = L()
+                l.append(l)
+                def inner():
+                    return inner
+                return weakref.ref(a), weakref.ref(l), weakref.ref(inner)
+            gc.disable()
+            refs = make()
+            assert all(r() is not None for r in refs)
+            n = young()
+            assert n >= 5, n
+            assert all(r() is None for r in refs), [r() for r in refs]
+        """)
+
+    @unittest.skipIf(os.environ.get("PYTHON_GC_CLASSIC") == "1",
+                     "closure pass disabled")
+    def test_unknown_closure_waits_for_full_collection(self):
+        # Garbage that references a live young object forms an unknown
+        # closure: the young collection keeps it, the full collection
+        # (classic algorithm) frees it.  The holder of the live object is
+        # frozen so that its reference is external, and the live object is
+        # created after the cycle so that it is visited after it.
+        self.run_code("""
+            class A:
+                pass
+            keep = []
+            gc.freeze()
+            def make():
+                a = A()
+                a.me = a
+                live = ([],) * 50
+                keep.append(live)
+                a.live = live
+                return weakref.ref(a)
+            gc.disable()
+            r = make()
+            young()
+            assert r() is not None
+            gc.collect()
+            assert r() is None
+        """)
+
+    def test_finalizers_and_resurrection(self):
+        self.run_code("""
+            finalized = []
+            kept = []
+            class A:
+                def __del__(self):
+                    finalized.append(id(self))
+            class Z(A):
+                def __del__(self):
+                    super().__del__()
+                    kept.append(self)
+            gc.disable()
+            def make():
+                a, b = A(), Z()
+                a.other = b
+                b.other = a
+            make()
+            young()
+            assert len(finalized) == 2, finalized
+            assert len(kept) == 1
+            kept.clear()
+            young()
+            gc.collect()
+            assert len(finalized) == 2, finalized   # finalized only once
+            assert not gc.garbage
+        """)
 
 
 def setUpModule():
