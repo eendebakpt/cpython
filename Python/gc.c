@@ -56,8 +56,10 @@ typedef struct _gc_runtime_state GCState;
 // Automatically choose the generation that needs collecting.
 #define GENERATION_AUTO (-1)
 
-// PYTHON_GC_CLASSIC=1: use deduce_unreachable() for every collection (A/B switch).
-static int closure_disabled = 0;
+// PYTHON_GC_CLASSIC=1: use deduce_unreachable() for every collection (A/B
+// switch).  Stored as a gc.set_debug() bit so that a benchmark driver can
+// alternate the detectors within one process.
+#define DEBUG_CLASSIC (1<<7)
 
 static inline int
 gc_is_collecting(PyGC_Head *g)
@@ -154,7 +156,9 @@ _PyGC_Init(PyInterpreterState *interp)
     }
 
     const char *classic = getenv("PYTHON_GC_CLASSIC");
-    closure_disabled = (classic != NULL && atoi(classic) != 0);
+    if (classic != NULL && atoi(classic) != 0) {
+        gcstate->debug |= DEBUG_CLASSIC;
+    }
 
     return _PyStatus_OK();
 }
@@ -1522,7 +1526,7 @@ static Py_ssize_t
 find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
                  PyGC_Head *unreachable, Py_ssize_t *reachable)
 {
-    if (generation < NUM_GENERATIONS - 1 && !closure_disabled) {
+    if (generation < NUM_GENERATIONS - 1 && !(gcstate->debug & DEBUG_CLASSIC)) {
         Py_ssize_t candidates = closure_pass(young, unreachable, reachable);
         if (candidates >= 0) {
             return candidates;
