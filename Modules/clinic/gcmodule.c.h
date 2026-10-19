@@ -647,4 +647,24 @@ gc__closure_reset_stats(PyObject *module, PyObject *Py_UNUSED(ignored))
 {
     return gc__closure_reset_stats_impl(module);
 }
-/*[clinic end generated code: output=47bb3e5649a89340 input=a9049054013a1b77]*/
+
+PyDoc_STRVAR(gc__closure_blockers__doc__,
+"_closure_blockers($module, /)\n"
+"--\n"
+"\n"
+"Return and clear the truth-mode sample of live objects blocking garbage.\n"
+"\n"
+"Each entry is (blocker, garbage_type_name, record_size, garbage_count).");
+
+#define GC__CLOSURE_BLOCKERS_METHODDEF    \
+    {"_closure_blockers", (PyCFunction)gc__closure_blockers, METH_NOARGS, gc__closure_blockers__doc__},
+
+static PyObject *
+gc__closure_blockers_impl(PyObject *module);
+
+static PyObject *
+gc__closure_blockers(PyObject *module, PyObject *Py_UNUSED(ignored))
+{
+    return gc__closure_blockers_impl(module);
+}
+/*[clinic end generated code: output=f6cf77fb1a4b36ad input=a9049054013a1b77]*/

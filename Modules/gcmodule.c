@@ -543,6 +543,25 @@ gc__closure_reset_stats_impl(PyObject *module)
     Py_RETURN_NONE;
 }
 
+/*[clinic input]
+gc._closure_blockers
+
+Return and clear the truth-mode sample of live objects blocking garbage.
+
+Each entry is (blocker, garbage_type_name, record_size, garbage_count).
+[clinic start generated code]*/
+
+static PyObject *
+gc__closure_blockers_impl(PyObject *module)
+/*[clinic end generated code: output=d4958d8dc3969be0 input=8e17ed50eb73d817]*/
+{
+#ifdef Py_GIL_DISABLED
+    return PyList_New(0);
+#else
+    return _PyGC_ClosureBlockers();
+#endif
+}
+
 
 PyDoc_STRVAR(gc__doc__,
 "This module provides access to the garbage collector for reference cycles.\n"
@@ -588,6 +607,7 @@ static PyMethodDef GcMethods[] = {
     GC__CLOSURE_MODE_METHODDEF
     GC__CLOSURE_STATS_METHODDEF
     GC__CLOSURE_RESET_STATS_METHODDEF
+    GC__CLOSURE_BLOCKERS_METHODDEF
     {NULL,      NULL}           /* Sentinel */
 };
 

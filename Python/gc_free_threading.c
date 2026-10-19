@@ -1433,6 +1433,8 @@ gc_mark_alive_from_roots(PyInterpreterState *interp,
 #ifdef GC_MARK_ALIVE_EXTRA_ROOTS
     MARK_ENQUEUE(interp->builtins);
     MARK_ENQUEUE(interp->dict);
+    MARK_ENQUEUE(interp->sysdict_copy);
+    MARK_ENQUEUE(interp->builtins_copy);
     struct types_state *types = &interp->types;
     for (int i = 0; i < _Py_MAX_MANAGED_STATIC_BUILTIN_TYPES; i++) {
         MARK_ENQUEUE(types->builtins.initialized[i].tp_dict);
@@ -2044,7 +2046,11 @@ find_unreachable_heap(PyInterpreterState *interp, struct collection_state *state
     PyTime_t t0, t1;
     (void)PyTime_PerfCounterRaw(&t0);
     int err;
-    int use_closure = _PyGC_ClosureWanted(generation);
+    /* Interpreter shutdown tears down module namespaces: the garbage is
+     * dominated by records that also hold objects the finalization
+     * machinery still references, so the classic algorithm runs there. */
+    int use_closure = (state->reason != _Py_GC_REASON_SHUTDOWN)
+                      && _PyGC_ClosureWanted(generation);
     if (use_closure) {
         err = closure_deduce_heap(interp, state, generation, NULL, NULL);
         if (err == 0) {

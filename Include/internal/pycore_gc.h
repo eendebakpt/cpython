@@ -464,6 +464,9 @@ extern int _PyGC_ClosureLogAdd(struct _gc_closure_log *log,
 extern void _PyGC_ClosureLogFree(struct _gc_closure_log *log);
 extern PyObject *_PyGC_ClosureStats(void);
 extern void _PyGC_ClosureResetStats(void);
+#ifndef Py_GIL_DISABLED
+extern PyObject *_PyGC_ClosureBlockers(void);  /* truth-mode diagnostic */
+#endif
 
 extern Py_ssize_t _PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason);
 extern void _PyGC_CollectNoFail(PyThreadState *tstate);

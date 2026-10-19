@@ -1815,6 +1815,47 @@ closure_pass_any(int generation, PyGC_Head *young, PyGC_Head *unreachable,
     return closure_pass(young, unreachable, reachable, st, log);
 }
 
+/* Diagnostic: a sample of the live objects that keep unknown closures from
+ * being collected, with the record they block (gc._closure_blockers()). */
+#define CLOSURE_BLOCKER_SAMPLE 4096
+#define CLOSURE_BLOCKER_KEEP 64
+static PyObject *closure_blocker_sample = NULL;
+
+static void
+closure_sample_blocker(PyObject *blocker, PyObject *garbage_example,
+                       Py_ssize_t size, Py_ssize_t garbage)
+{
+    if (closure_blocker_sample == NULL) {
+        closure_blocker_sample = PyList_New(0);
+        if (closure_blocker_sample == NULL) {
+            PyErr_Clear();
+            return;
+        }
+    }
+    if (PyList_GET_SIZE(closure_blocker_sample) >= CLOSURE_BLOCKER_KEEP) {
+        return;
+    }
+    /* the garbage member is about to be freed: keep only its type name */
+    PyObject *entry = Py_BuildValue("(Osnn)", blocker,
+                                    Py_TYPE(garbage_example)->tp_name,
+                                    size, garbage);
+    if (entry == NULL || PyList_Append(closure_blocker_sample, entry) < 0) {
+        PyErr_Clear();
+    }
+    Py_XDECREF(entry);
+}
+
+PyObject *
+_PyGC_ClosureBlockers(void)
+{
+    PyObject *sample = closure_blocker_sample;
+    closure_blocker_sample = NULL;
+    if (sample == NULL) {
+        return PyList_New(0);
+    }
+    return sample;
+}
+
 /* _PyGC_CLOSURE_TRUTH: closure pass for the statistics, then everything
  * back and deduce_unreachable() for the result; compare the two. */
 static Py_ssize_t
@@ -1851,8 +1892,13 @@ closure_pass_with_truth(int generation, PyGC_Head *young, PyGC_Head *unreachable
 
     /* Blockers: members of unknown closures with external references.
      * gc_refs is final here: all references into a closure come from inside
-     * it or from outside S. */
+     * it or from outside S.  A sample of them (with the record they block)
+     * is kept for gc._closure_blockers(); the objects are live, so keeping
+     * references to them is harmless. */
+    Py_ssize_t *blk_rec = NULL, *blk_obj = NULL, nblk = 0;
     if (!log.oom) {
+        blk_rec = PyMem_Malloc(CLOSURE_BLOCKER_SAMPLE * sizeof(Py_ssize_t));
+        blk_obj = PyMem_Malloc(CLOSURE_BLOCKER_SAMPLE * sizeof(Py_ssize_t));
         for (Py_ssize_t r = 0; r < log.recs_len; r++) {
             struct _gc_closure_record *rec = &log.recs[r];
             if (rec->pure) {
@@ -1864,6 +1910,12 @@ closure_pass_with_truth(int generation, PyGC_Head *young, PyGC_Head *unreachable
                 if (gc->_gc_next != 0 && gc_is_collecting(gc)
                     && gc_get_refs(gc) > 0) {
                     _PyGC_ClosureCountType(st->blockers, Py_TYPE(op));
+                    if (blk_rec != NULL && blk_obj != NULL
+                        && nblk < CLOSURE_BLOCKER_SAMPLE) {
+                        blk_rec[nblk] = r;
+                        blk_obj[nblk] = rec->start + i;
+                        nblk++;
+                    }
                 }
             }
         }
@@ -1887,14 +1939,19 @@ closure_pass_with_truth(int generation, PyGC_Head *young, PyGC_Head *unreachable
         st->log_oom++;
     }
     else {
+        Py_ssize_t b = 0;   /* blockers are stored in record order */
         for (Py_ssize_t r = 0; r < log.recs_len; r++) {
             struct _gc_closure_record *rec = &log.recs[r];
             Py_ssize_t garbage = 0;
+            PyObject *garbage_example = NULL;
             for (Py_ssize_t i = 0; i < rec->size; i++) {
                 PyObject *op = log.arena[rec->start + i];
                 PyGC_Head *gc = AS_GC(op);
                 if (gc->_gc_next != 0 && gc_is_collecting(gc)) {
                     garbage++;
+                    if (garbage_example == NULL) {
+                        garbage_example = op;
+                    }
                     if (!rec->pure) {
                         _PyGC_ClosureCountType(st->missed_types, Py_TYPE(op));
                     }
@@ -1911,9 +1968,20 @@ closure_pass_with_truth(int generation, PyGC_Head *young, PyGC_Head *unreachable
             else if (garbage > 0) {
                 st->unknown_with_garbage++;
                 st->missed_garbage += garbage;
+                if (blk_rec != NULL) {
+                    while (b < nblk && blk_rec[b] < r) {
+                        b++;
+                    }
+                    for (Py_ssize_t k = b; k < nblk && blk_rec[k] == r && k < b + 4; k++) {
+                        closure_sample_blocker(log.arena[blk_obj[k]], garbage_example,
+                                               rec->size, garbage);
+                    }
+                }
             }
         }
     }
+    PyMem_Free(blk_rec);
+    PyMem_Free(blk_obj);
     _PyGC_ClosureLogFree(&log);
     return candidates;
 }
@@ -2053,6 +2121,8 @@ mark_alive_from_roots(PyInterpreterState *interp, PyGC_Head *young,
     MARK_ROOT(interp->sysdict);
     MARK_ROOT(interp->builtins);
     MARK_ROOT(interp->dict);
+    MARK_ROOT(interp->sysdict_copy);
+    MARK_ROOT(interp->builtins_copy);
     struct types_state *types = &interp->types;
     for (int i = 0; i < _Py_MAX_MANAGED_STATIC_BUILTIN_TYPES; i++) {
         MARK_ROOT(types->builtins.initialized[i].tp_dict);
@@ -2118,8 +2188,8 @@ fail:
 /* Find the unreachable subset of young with the detector selected by
  * _PyGC_closure.mode.  Same contract as deduce_unreachable(). */
 static Py_ssize_t
-find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
-                 PyGC_Head *unreachable, Py_ssize_t *reachable)
+find_unreachable(GCState *gcstate, int generation, int shutdown,
+                 PyGC_Head *young, PyGC_Head *unreachable, Py_ssize_t *reachable)
 {
     struct _gc_closure_gen_stats *st = _PyGC_ClosureGenStats(generation);
     PyTime_t t_start, t0, t1;
@@ -2127,9 +2197,13 @@ find_unreachable(GCState *gcstate, int generation, PyGC_Head *young,
     t0 = t_start;
 
     /* The choice comes first: marking only pays together with the closure
-     * pass, so it is tied to it (and the truth mode runs both). */
-    int use_closure = (_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH)
-                      || _PyGC_ClosureWanted(generation);
+     * pass, so it is tied to it (and the truth mode runs both).  Interpreter
+     * shutdown tears down module namespaces: that garbage is dominated by
+     * records that also hold objects the finalization machinery still
+     * references, so the classic algorithm runs there. */
+    int use_closure = !shutdown
+                      && ((_PyGC_closure.mode == _PyGC_CLOSURE_TRUTH)
+                          || _PyGC_ClosureWanted(generation));
 
     PyGC_Head alive;
     gc_list_init(&alive);
@@ -2456,8 +2530,9 @@ gc_collect_main(PyThreadState *tstate, int generation, _PyGC_Reason reason)
     validate_list(old, collecting_clear_unreachable_clear);
 
     Py_ssize_t reachable;
-    stats.candidates = find_unreachable(gcstate, generation, young,
-                                        &unreachable, &reachable);
+    stats.candidates = find_unreachable(gcstate, generation,
+                                        reason == _Py_GC_REASON_SHUTDOWN,
+                                        young, &unreachable, &reachable);
 
     /* Move reachable objects to next generation. */
     if (young != old) {
