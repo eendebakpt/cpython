@@ -58,8 +58,10 @@ typedef struct _gc_runtime_state GCState;
 // Automatically choose the generation that needs collecting.
 #define GENERATION_AUTO (-1)
 
-// PYTHON_GC_CLASSIC=1: use deduce_unreachable() for every collection (A/B switch).
-static int closure_disabled = 0;
+// PYTHON_GC_CLASSIC=1: use deduce_unreachable() for every collection (A/B
+// switch).  Stored as a gc.set_debug() bit so that a benchmark driver can
+// alternate the detectors within one process.
+#define DEBUG_CLASSIC (1<<7)
 
 #define MAX_AGING_SPACES (1 << 16)
 
@@ -188,7 +190,9 @@ _PyGC_Init(PyInterpreterState *interp)
     }
 
     const char *classic = getenv("PYTHON_GC_CLASSIC");
-    closure_disabled = (classic != NULL && atoi(classic) != 0);
+    if (classic != NULL && atoi(classic) != 0) {
+        gcstate->debug |= DEBUG_CLASSIC;
+    }
 
     return _PyStatus_OK();
 }
@@ -1787,9 +1791,10 @@ closure_pass(PyGC_Head *young, PyGC_Head *unreachable)
  * runs out).  PYTHON_GC_CLASSIC=1 disables the closure pass; this switch
  * exists for A/B measurements. */
 static Py_ssize_t
-find_unreachable(PyGC_Head *collecting, PyGC_Head *unreachable, int young)
+find_unreachable(GCState *gcstate, PyGC_Head *collecting,
+                 PyGC_Head *unreachable, int young)
 {
-    if (young && !closure_disabled) {
+    if (young && !(gcstate->debug & DEBUG_CLASSIC)) {
         Py_ssize_t candidates = closure_pass(collecting, unreachable);
         if (candidates >= 0) {
             return candidates;
@@ -1998,7 +2003,7 @@ gc_collect_region(PyThreadState *tstate, PyGC_Head *collecting,
     PyGC_Head unreachable, finalizers, *gc;
 
     validate_list(survivors, collecting_clear_unreachable_clear);
-    Py_ssize_t candidates = find_unreachable(collecting, &unreachable, young);
+    Py_ssize_t candidates = find_unreachable(gcstate, collecting, &unreachable, young);
     stats->candidates += candidates;
     Py_ssize_t unreachable_count = gc_list_size(&unreachable);
     Py_ssize_t survivor_count = candidates - unreachable_count;
