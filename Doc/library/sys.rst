@@ -820,14 +820,17 @@ always available. Unless explicitly noted otherwise, all variables are read-only
 .. data:: float_repr_style
 
    A string indicating how the :func:`repr` function behaves for
-   floats.  If the string has value ``'short'`` then for a finite
-   float ``x``, ``repr(x)`` aims to produce a short string with the
-   property that ``float(repr(x)) == x``.  This is the usual behaviour
-   in Python 3.1 and later.  Otherwise, ``float_repr_style`` has value
-   ``'legacy'`` and ``repr(x)`` behaves in the same way as it did in
+   floats.  The value is always ``'short'``: for a finite float ``x``,
+   ``repr(x)`` produces the shortest string with the property that
+   ``float(repr(x)) == x``.  Before Python 3.16 the value could also be
+   ``'legacy'`` on platforms where the FPU precision could not be
+   controlled, in which case ``repr(x)`` used 17 significant digits as in
    versions of Python prior to 3.1.
 
    .. versionadded:: 3.1
+
+   .. versionchanged:: 3.16
+      The ``'legacy'`` style no longer exists.
 
 
 .. function:: getallocatedblocks()
