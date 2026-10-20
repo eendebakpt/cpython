@@ -210,7 +210,7 @@
     <ClCompile Include="..\Python\context.c" />
     <ClCompile Include="..\Python\critical_section.c" />
     <ClCompile Include="..\Python\crossinterp.c" />
-    <ClCompile Include="..\Python\dtoa.c" />
+    <ClCompile Include="..\Python\floatconv.c" />
     <ClCompile Include="..\Python\dynamic_annotations.c" />
     <ClCompile Include="..\Python\dynload_win.c" />
     <ClCompile Include="..\Python\errors.c" />

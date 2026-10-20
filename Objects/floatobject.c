@@ -901,7 +901,7 @@ float___ceil___impl(PyObject *self)
 
 #if _PY_SHORT_FLOAT_REPR == 1
 /* version of double_round that uses the correctly-rounded string<->double
-   conversions from Python/dtoa.c */
+   conversions from Python/floatconv.c */
 
 static PyObject *
 double_round(double x, int ndigits) {

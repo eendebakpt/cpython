@@ -1601,7 +1601,7 @@
     <ClCompile Include="..\Python\qsbr.c">
       <Filter>Python</Filter>
     </ClCompile>
-    <ClCompile Include="..\Python\dtoa.c">
+    <ClCompile Include="..\Python\floatconv.c">
       <Filter>Python</Filter>
     </ClCompile>
     <ClCompile Include="..\Python\Python-ast.c">
