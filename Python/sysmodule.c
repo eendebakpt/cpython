@@ -30,7 +30,6 @@ Data members:
 #include "pycore_pathconfig.h"    // _PyPathConfig_ComputeSysPath0()
 #include "pycore_pyerrors.h"      // _PyErr_GetRaisedException()
 #include "pycore_pylifecycle.h"   // _PyErr_WriteUnraisableDefaultHook()
-#include "pycore_pymath.h"        // _PY_SHORT_FLOAT_REPR
 #include "pycore_pymem.h"         // _PyMem_DefaultRawFree()
 #include "pycore_pystate.h"       // _PyThreadState_GET()
 #include "pycore_pystats.h"       // _Py_PrintSpecializationStats()
@@ -4120,12 +4119,8 @@ _PySys_InitCore(PyThreadState *tstate, PyObject *sysdict)
 
 #undef ENSURE_INFO_TYPE
 
-    /* float repr style: 0.03 (short) vs 0.029999999999999999 (legacy) */
-#if _PY_SHORT_FLOAT_REPR == 1
+    /* float repr style: always 'short' since 3.16 ('legacy' is gone) */
     SET_SYS("float_repr_style", &_Py_ID(short));
-#else
-    SET_SYS("float_repr_style", &_Py_ID(legacy));
-#endif
 
     SET_SYS("thread_info", PyThread_GetInfo());
 

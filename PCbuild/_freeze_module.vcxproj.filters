@@ -124,7 +124,7 @@
     <ClCompile Include="..\Objects\dictobject.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Python\dtoa.c">
+    <ClCompile Include="..\Python\floatconv.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Python\dynamic_annotations.c">
