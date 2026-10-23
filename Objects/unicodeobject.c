@@ -10122,57 +10122,62 @@ tailmatch(PyObject *self,
           Py_ssize_t end,
           int direction)
 {
-    int kind_self;
-    int kind_sub;
-    const void *data_self;
-    const void *data_sub;
-    Py_ssize_t offset;
-    Py_ssize_t i;
-    Py_ssize_t end_sub;
-
     ADJUST_INDICES(start, end, PyUnicode_GET_LENGTH(self));
-    end -= PyUnicode_GET_LENGTH(substring);
+    Py_ssize_t len_sub = PyUnicode_GET_LENGTH(substring);
+    end -= len_sub;
     if (end < start)
         return 0;
 
-    if (PyUnicode_GET_LENGTH(substring) == 0)
+    if (len_sub == 0)
         return 1;
 
-    kind_self = PyUnicode_KIND(self);
-    data_self = PyUnicode_DATA(self);
-    kind_sub = PyUnicode_KIND(substring);
-    data_sub = PyUnicode_DATA(substring);
-    end_sub = PyUnicode_GET_LENGTH(substring) - 1;
+    int kind_self = PyUnicode_KIND(self);
+    int kind_sub = PyUnicode_KIND(substring);
+    /* The kind is determined by the largest code point of a string, so a
+       substring of a wider kind cannot occur in self (see unicode_eq()). */
+    if (kind_sub > kind_self)
+        return 0;
 
-    if (direction > 0)
-        offset = end;
-    else
-        offset = start;
+    const void *data_self = PyUnicode_DATA(self);
+    const void *data_sub = PyUnicode_DATA(substring);
+    Py_ssize_t offset = (direction > 0) ? end : start;
 
-    int match_last = PyUnicode_READ(kind_self, data_self, offset + end_sub) ==
-                        PyUnicode_READ(kind_sub, data_sub, end_sub);
-
-    if (match_last) {
-        /* If both are of the same kind, memcmp is sufficient */
-        if (kind_self == kind_sub) {
-            return ! memcmp((char *)data_self + (offset * kind_sub),
-                            data_sub, end_sub * kind_sub);
-        }
-        /* otherwise we have to compare each character by first accessing it */
-        else {
-            /* We do not need to compare len(substring)-1 because the check on
-               match_last above ensured already that they are equal when we
-               end up here. */
-            for (i = 0; i < end_sub; ++i) {
-                if (PyUnicode_READ(kind_self, data_self, offset + i) !=
-                    PyUnicode_READ(kind_sub, data_sub, i))
-                    return 0;
-            }
+    if (kind_self == kind_sub) {
+        const char *p = (const char *)data_self + offset * kind_self;
+        const char *q = (const char *)data_sub;
+        Py_ssize_t nbytes = len_sub * kind_self;
+        /* Before calling memcmp(), compare the byte most likely to differ:
+           the low byte of the first character for startswith() and of the
+           last character for endswith(). */
+#if PY_BIG_ENDIAN
+        Py_ssize_t probe = (direction > 0) ? nbytes - 1 : kind_self - 1;
+#else
+        Py_ssize_t probe = (direction > 0) ? nbytes - kind_self : 0;
+#endif
+        if (p[probe] != q[probe])
+            return 0;
+        if (nbytes == 1)
             return 1;
-        }
+        return memcmp(p, q, nbytes) == 0;
     }
 
-    return 0;
+    /* Different kinds: compare character by character, starting at the end
+       most likely to differ. */
+    if (direction > 0) {
+        for (Py_ssize_t i = len_sub - 1; i >= 0; i--) {
+            if (PyUnicode_READ(kind_self, data_self, offset + i) !=
+                PyUnicode_READ(kind_sub, data_sub, i))
+                return 0;
+        }
+    }
+    else {
+        for (Py_ssize_t i = 0; i < len_sub; i++) {
+            if (PyUnicode_READ(kind_self, data_self, offset + i) !=
+                PyUnicode_READ(kind_sub, data_sub, i))
+                return 0;
+        }
+    }
+    return 1;
 }
 
 Py_ssize_t
