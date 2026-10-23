@@ -861,18 +861,33 @@ dummy_func(
             EXIT_IF(!PyStackRef_RefcountOnObject(target));
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
             PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
-            EXIT_IF(!PyFloat_CheckExact(left_o));
-            EXIT_IF(!PyFloat_CheckExact(right_o));
+            if (kind < INPLACE_FIRST_INT_KIND) {
+                EXIT_IF(!PyFloat_CheckExact(left_o));
+                EXIT_IF(!PyFloat_CheckExact(right_o));
+            }
+            else {
+                EXIT_IF(!_PyLong_CheckExactAndCompact(left_o));
+                EXIT_IF(!_PyLong_CheckExactAndCompact(right_o));
+            }
             EXIT_IF(!BINARY_OP_INPLACE_IS_UNIQUE(PyStackRef_AsPyObjectBorrow(target)));
         }
 
         op(_BINARY_OP_INPLACE, (kind/1, left, right -- res)) {
-            STAT_INC(BINARY_OP, hit);
             _PyStackRef target;
+            int inplace_ok = 1;
+            int zero_division = 0;
             // The switch lives in ceval_macros.h: the DSL does not accept
             // switch statements. It mutates the target in place and closes
             // the other operand.
-            BINARY_OP_INPLACE_SWITCH(kind, left, right, target);
+            BINARY_OP_INPLACE_SWITCH(kind, left, right, target, inplace_ok, zero_division);
+            // A compact int result that is a small int or needs more than
+            // one digit: nothing was mutated, use the generic instruction.
+            DEOPT_IF(!inplace_ok);
+            if (zero_division) {
+                PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+                ERROR_NO_POP();
+            }
+            STAT_INC(BINARY_OP, hit);
             res = target;
             INPUTS_DEAD();
         }

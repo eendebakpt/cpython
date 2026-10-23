@@ -433,15 +433,29 @@
                 }
                 PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
                 PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
-                if (!PyFloat_CheckExact(left_o)) {
-                    UPDATE_MISS_STATS(BINARY_OP);
-                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
-                    JUMP_TO_PREDICTED(BINARY_OP);
+                if (kind < INPLACE_FIRST_INT_KIND) {
+                    if (!PyFloat_CheckExact(left_o)) {
+                        UPDATE_MISS_STATS(BINARY_OP);
+                        assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                        JUMP_TO_PREDICTED(BINARY_OP);
+                    }
+                    if (!PyFloat_CheckExact(right_o)) {
+                        UPDATE_MISS_STATS(BINARY_OP);
+                        assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                        JUMP_TO_PREDICTED(BINARY_OP);
+                    }
                 }
-                if (!PyFloat_CheckExact(right_o)) {
-                    UPDATE_MISS_STATS(BINARY_OP);
-                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
-                    JUMP_TO_PREDICTED(BINARY_OP);
+                else {
+                    if (!_PyLong_CheckExactAndCompact(left_o)) {
+                        UPDATE_MISS_STATS(BINARY_OP);
+                        assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                        JUMP_TO_PREDICTED(BINARY_OP);
+                    }
+                    if (!_PyLong_CheckExactAndCompact(right_o)) {
+                        UPDATE_MISS_STATS(BINARY_OP);
+                        assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                        JUMP_TO_PREDICTED(BINARY_OP);
+                    }
                 }
                 if (!BINARY_OP_INPLACE_IS_UNIQUE(PyStackRef_AsPyObjectBorrow(target))) {
                     UPDATE_MISS_STATS(BINARY_OP);
@@ -453,9 +467,23 @@
             // _BINARY_OP_INPLACE
             {
                 uint16_t kind = read_u16(&this_instr[2].cache);
-                STAT_INC(BINARY_OP, hit);
                 _PyStackRef target;
-                BINARY_OP_INPLACE_SWITCH(kind, left, right, target);
+                int inplace_ok = 1;
+                int zero_division = 0;
+                BINARY_OP_INPLACE_SWITCH(kind, left, right, target, inplace_ok, zero_division);
+                if (!inplace_ok) {
+                    UPDATE_MISS_STATS(BINARY_OP);
+                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                    JUMP_TO_PREDICTED(BINARY_OP);
+                }
+                if (zero_division) {
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    _PyFrame_StackPointerValidate(frame);
+                    PyErr_SetString(PyExc_ZeroDivisionError, "division by zero");
+                    _PyFrame_StackPointerInvalidate(frame);
+                    JUMP_TO_LABEL(error);
+                }
+                STAT_INC(BINARY_OP, hit);
                 res = target;
             }
             /* Skip 3 cache entries */

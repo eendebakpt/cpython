@@ -2409,6 +2409,9 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 return;
             }
             if (_PyLong_CheckExactAndCompact(lhs) && _PyLong_CheckExactAndCompact(rhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_INT_ADD_L)) {
+                    return;
+                }
                 specialize(instr, BINARY_OP_ADD_INT);
                 return;
             }
@@ -2426,6 +2429,9 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 break;
             }
             if (_PyLong_CheckExactAndCompact(lhs) && _PyLong_CheckExactAndCompact(rhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_INT_MUL_L)) {
+                    return;
+                }
                 specialize(instr, BINARY_OP_MULTIPLY_INT);
                 return;
             }
@@ -2443,6 +2449,9 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 break;
             }
             if (_PyLong_CheckExactAndCompact(lhs) && _PyLong_CheckExactAndCompact(rhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_INT_SUB_L)) {
+                    return;
+                }
                 specialize(instr, BINARY_OP_SUBTRACT_INT);
                 return;
             }
@@ -2452,6 +2461,14 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 }
                 specialize(instr, BINARY_OP_SUBTRACT_FLOAT);
                 return;
+            }
+            break;
+        case NB_TRUE_DIVIDE:
+        case NB_INPLACE_TRUE_DIVIDE:
+            if (PyFloat_CheckExact(lhs) && PyFloat_CheckExact(rhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_FLOAT_TRUEDIV_L)) {
+                    return;
+                }
             }
             break;
         case NB_SUBSCR:

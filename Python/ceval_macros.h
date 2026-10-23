@@ -614,7 +614,50 @@ gen_try_set_executing(PyGenObject *gen)
         PyStackRef_CLOSE_SPECIALIZED((OTH), _PyFloat_ExactDealloc);       \
         break;
 
-#define BINARY_OP_INPLACE_SWITCH(kind, left, right, TARGET)                \
+// Float true division: a zero divisor raises, nothing is mutated.
+#define BINARY_OP_INPLACE_TRUEDIV_CASE(KIND, TGT_O, TGT, OTH, TARGET, ZDIV) \
+    case KIND: {                                                          \
+        double _divisor = ((PyFloatObject *)_right_o)->ob_fval;           \
+        if (_divisor == 0.0) {                                            \
+            (ZDIV) = 1;                                                   \
+            break;                                                        \
+        }                                                                 \
+        ((PyFloatObject *)(TGT_O))->ob_fval =                             \
+            ((PyFloatObject *)_left_o)->ob_fval / _divisor;               \
+        (TARGET) = (TGT);                                                 \
+        PyStackRef_CLOSE_SPECIALIZED((OTH), _PyFloat_ExactDealloc);       \
+        break;                                                            \
+    }
+
+// Compact int value without the helper call MSVC would emit for
+// _PyLong_CompactValue inside the eval loop.
+#define BINARY_OP_INPLACE_COMPACT_VALUE(o)                                \
+    ((Py_ssize_t)(1 - (Py_ssize_t)(((PyLongObject *)(o))->long_value.lv_tag & SIGN_MASK)) \
+     * (Py_ssize_t)((PyLongObject *)(o))->long_value.ob_digit[0])
+
+// Compact int op: the result must stay a single digit and must not be a
+// small int (those are canonical immortal objects). Otherwise decline and
+// let the generic instruction allocate.
+#define BINARY_OP_INPLACE_INT_CASE(KIND, TGT_O, TGT, OTH, OP, TARGET, OK)  \
+    case KIND: {                                                          \
+        Py_ssize_t _ires = BINARY_OP_INPLACE_COMPACT_VALUE(_left_o) OP    \
+                           BINARY_OP_INPLACE_COMPACT_VALUE(_right_o);     \
+        if (_PY_IS_SMALL_INT(_ires)                                       \
+            || (twodigits)((stwodigits)_ires) + PyLong_MASK               \
+                >= (twodigits)PyLong_MASK + PyLong_BASE) {                \
+            (OK) = 0;                                                     \
+            break;                                                        \
+        }                                                                 \
+        ((PyLongObject *)(TGT_O))->long_value.lv_tag =                    \
+            TAG_FROM_SIGN_AND_SIZE(_ires < 0 ? -1 : 1, 1);                \
+        ((PyLongObject *)(TGT_O))->long_value.ob_digit[0] =               \
+            (digit)(_ires < 0 ? -_ires : _ires);                          \
+        (TARGET) = (TGT);                                                 \
+        PyStackRef_CLOSE_SPECIALIZED((OTH), _PyLong_ExactDealloc);        \
+        break;                                                            \
+    }
+
+#define BINARY_OP_INPLACE_SWITCH(kind, left, right, TARGET, OK, ZDIV)      \
     do {                                                                  \
         PyObject *_left_o = PyStackRef_AsPyObjectBorrow(left);            \
         PyObject *_right_o = PyStackRef_AsPyObjectBorrow(right);          \
@@ -625,6 +668,14 @@ gen_try_set_executing(PyGenObject *gen)
         BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_SUB_R, _right_o, right, left, -, TARGET) \
         BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_MUL_L, _left_o, left, right, *, TARGET)  \
         BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_MUL_R, _right_o, right, left, *, TARGET) \
+        BINARY_OP_INPLACE_TRUEDIV_CASE(INPLACE_FLOAT_TRUEDIV_L, _left_o, left, right, TARGET, ZDIV)  \
+        BINARY_OP_INPLACE_TRUEDIV_CASE(INPLACE_FLOAT_TRUEDIV_R, _right_o, right, left, TARGET, ZDIV) \
+        BINARY_OP_INPLACE_INT_CASE(INPLACE_INT_ADD_L, _left_o, left, right, +, TARGET, OK)  \
+        BINARY_OP_INPLACE_INT_CASE(INPLACE_INT_ADD_R, _right_o, right, left, +, TARGET, OK) \
+        BINARY_OP_INPLACE_INT_CASE(INPLACE_INT_SUB_L, _left_o, left, right, -, TARGET, OK)  \
+        BINARY_OP_INPLACE_INT_CASE(INPLACE_INT_SUB_R, _right_o, right, left, -, TARGET, OK) \
+        BINARY_OP_INPLACE_INT_CASE(INPLACE_INT_MUL_L, _left_o, left, right, *, TARGET, OK)  \
+        BINARY_OP_INPLACE_INT_CASE(INPLACE_INT_MUL_R, _right_o, right, left, *, TARGET, OK) \
         default:                                                          \
             Py_UNREACHABLE();                                             \
         }                                                                 \
