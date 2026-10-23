@@ -2419,8 +2419,9 @@ type_call(PyObject *self, PyObject *args, PyObject *kwds)
         Py_ssize_t nargs = PyTuple_GET_SIZE(args);
 
         if (nargs == 1 && (kwds == NULL || !PyDict_GET_SIZE(kwds))) {
-            obj = (PyObject *) Py_TYPE(PyTuple_GET_ITEM(args, 0));
-            return Py_NewRef(obj);
+            PyTypeObject *tp = Py_TYPE(PyTuple_GET_ITEM(args, 0));
+            _Py_INCREF_TYPE(tp);
+            return (PyObject *)tp;
         }
 
         /* SF bug 475327 -- if that didn't trigger, we need 3
@@ -5113,7 +5114,9 @@ type_vectorcall(PyObject *metatype, PyObject *const *args,
         if (!_PyArg_NoKwnames("type", kwnames)) {
             return NULL;
         }
-        return Py_NewRef(Py_TYPE(args[0]));
+        PyTypeObject *tp = Py_TYPE(args[0]);
+        _Py_INCREF_TYPE(tp);
+        return (PyObject *)tp;
     }
     /* In other (much less common) cases, fall back to
        more flexible calling conventions. */
@@ -12680,7 +12683,9 @@ supercheck(PyTypeObject *type, PyObject *obj)
 
     /* Normal case */
     if (PyType_IsSubtype(Py_TYPE(obj), type)) {
-        return (PyTypeObject*)Py_NewRef(Py_TYPE(obj));
+        PyTypeObject *tp = Py_TYPE(obj);
+        _Py_INCREF_TYPE(tp);
+        return tp;
     }
     else {
         /* Try the slow way */
@@ -12729,7 +12734,7 @@ _PySuper_Lookup(PyTypeObject *su_type, PyObject *su_obj, PyObject *name, int *me
         return NULL;
     }
     PyObject *res = do_super_lookup(NULL, su_type, su_obj, su_obj_type, name, method);
-    Py_DECREF(su_obj_type);
+    _Py_DECREF_TYPE(su_obj_type);
     return res;
 }
 

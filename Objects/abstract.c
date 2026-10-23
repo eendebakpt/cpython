@@ -44,14 +44,13 @@ null_error(void)
 PyObject *
 PyObject_Type(PyObject *o)
 {
-    PyObject *v;
-
     if (o == NULL) {
         return null_error();
     }
 
-    v = (PyObject *)Py_TYPE(o);
-    return Py_NewRef(v);
+    PyTypeObject *tp = Py_TYPE(o);
+    _Py_INCREF_TYPE(tp);
+    return (PyObject *)tp;
 }
 
 Py_ssize_t
