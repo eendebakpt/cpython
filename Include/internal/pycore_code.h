@@ -160,6 +160,25 @@ typedef struct {
 
 #define INLINE_CACHE_ENTRIES_TO_BOOL CACHE_ENTRIES(_PyToBoolCache)
 
+/* TO_BOOL_SIZED: types whose truthiness is a size field at a fixed offset. */
+typedef struct {
+    PyTypeObject *type;
+    uint16_t offset;
+} _PyToBoolSizedDescr;
+
+enum _PyToBoolSizedKind {
+    TO_BOOL_SIZED_DICT = 0,
+    TO_BOOL_SIZED_FROZENDICT,
+    TO_BOOL_SIZED_TUPLE,
+    TO_BOOL_SIZED_BYTES,
+    TO_BOOL_SIZED_BYTEARRAY,
+    TO_BOOL_SIZED_SET,
+    TO_BOOL_SIZED_FROZENSET,
+    TO_BOOL_SIZED_NKINDS,
+};
+
+extern const _PyToBoolSizedDescr _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS];
+
 typedef struct {
     _Py_BackoffCounter counter;
 } _PyContainsOpCache;

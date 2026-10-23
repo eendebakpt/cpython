@@ -480,6 +480,13 @@
             break;
         }
 
+        case _TO_BOOL_SIZED: {
+            JitOptRef res;
+            res = sym_new_not_null(ctx);
+            stack_pointer[-1] = res;
+            break;
+        }
+
         case _REPLACE_WITH_TRUE: {
             JitOptRef value;
             JitOptRef res;

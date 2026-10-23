@@ -355,6 +355,7 @@ enum {
     _TO_BOOL,
     _TO_BOOL_INT,
     _TO_BOOL_LIST,
+    _TO_BOOL_SIZED,
     _TO_BOOL_STR,
     _UNARY_INVERT,
     _UNARY_NEGATIVE,
@@ -368,7 +369,7 @@ enum {
     _UNPACK_SEQUENCE_UNIQUE_TWO_TUPLE,
     _YIELD_VALUE,
 };
-#define MAX_UOP_ID 656
+#define MAX_UOP_ID 657
 
 #define _BUILD_INTERPOLATION BUILD_INTERPOLATION
 #define _BUILD_LIST BUILD_LIST
@@ -1424,6 +1425,7 @@ enum {
     _TO_BOOL_NONE_r11,
     _TO_BOOL_NONE_r22,
     _TO_BOOL_NONE_r33,
+    _TO_BOOL_SIZED_r11,
     _TO_BOOL_STR_r02,
     _TO_BOOL_STR_r12,
     _TO_BOOL_STR_r23,
@@ -1451,7 +1453,7 @@ enum {
     _WITH_EXCEPT_START_r33,
     _YIELD_VALUE_r11,
 };
-#define MAX_UOP_REGS_ID 1662
+#define MAX_UOP_REGS_ID 1664
 
 #ifdef __cplusplus
 }

@@ -13120,6 +13120,42 @@
             DISPATCH();
         }
 
+        TARGET(TO_BOOL_SIZED) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = TO_BOOL_SIZED;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 4;
+            INSTRUCTION_STATS(TO_BOOL_SIZED);
+            static_assert(INLINE_CACHE_ENTRIES_TO_BOOL == 3, "incorrect cache size");
+            _PyStackRef value;
+            _PyStackRef res;
+            /* Skip 1 cache entry */
+            value = stack_pointer[-1];
+            uint16_t kind = read_u16(&this_instr[2].cache);
+            PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+            const _PyToBoolSizedDescr *d = &_PyToBoolSized_Table[kind];
+            if (Py_TYPE(value_o) != d->type) {
+                UPDATE_MISS_STATS(TO_BOOL);
+                assert(_PyOpcode_Deopt[opcode] == (TO_BOOL));
+                JUMP_TO_PREDICTED(TO_BOOL);
+            }
+            STAT_INC(TO_BOOL, hit);
+            Py_ssize_t size = FT_ATOMIC_LOAD_SSIZE_RELAXED(
+                *(Py_ssize_t *)((char *)value_o + d->offset));
+            res = size ? PyStackRef_True : PyStackRef_False;
+            stack_pointer[-1] = res;
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            PyStackRef_CLOSE(value);
+            _PyFrame_StackPointerInvalidate(frame);
+            /* Skip 1 cache entry */
+            DISPATCH();
+        }
+
         TARGET(TO_BOOL_STR) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = TO_BOOL_STR;

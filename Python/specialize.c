@@ -2904,6 +2904,16 @@ check_type_always_true(PyTypeObject *ty)
     return 0;
 }
 
+const _PyToBoolSizedDescr _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS] = {
+    [TO_BOOL_SIZED_DICT] = {&PyDict_Type, offsetof(PyDictObject, ma_used)},
+    [TO_BOOL_SIZED_FROZENDICT] = {&PyFrozenDict_Type, offsetof(PyDictObject, ma_used)},
+    [TO_BOOL_SIZED_TUPLE] = {&PyTuple_Type, offsetof(PyVarObject, ob_size)},
+    [TO_BOOL_SIZED_BYTES] = {&PyBytes_Type, offsetof(PyVarObject, ob_size)},
+    [TO_BOOL_SIZED_BYTEARRAY] = {&PyByteArray_Type, offsetof(PyVarObject, ob_size)},
+    [TO_BOOL_SIZED_SET] = {&PySet_Type, offsetof(PySetObject, used)},
+    [TO_BOOL_SIZED_FROZENSET] = {&PyFrozenSet_Type, offsetof(PySetObject, used)},
+};
+
 Py_NO_INLINE void
 _Py_Specialize_ToBool(_PyStackRef value_o, _Py_CODEUNIT *instr)
 {
@@ -2931,6 +2941,15 @@ _Py_Specialize_ToBool(_PyStackRef value_o, _Py_CODEUNIT *instr)
     if (PyUnicode_CheckExact(value)) {
         specialized_op = TO_BOOL_STR;
         goto success;
+    }
+    if (kind_specialization_enabled()) {
+        for (int kind = 0; kind < TO_BOOL_SIZED_NKINDS; kind++) {
+            if (Py_TYPE(value) == _PyToBoolSized_Table[kind].type) {
+                cache->version[0] = (uint16_t)kind;
+                specialized_op = TO_BOOL_SIZED;
+                goto success;
+            }
+        }
     }
     if (PyType_HasFeature(Py_TYPE(value), Py_TPFLAGS_HEAPTYPE)) {
         unsigned int version = 0;

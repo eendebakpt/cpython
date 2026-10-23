@@ -498,6 +498,8 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 1;
         case TO_BOOL_NONE:
             return 1;
+        case TO_BOOL_SIZED:
+            return 1;
         case TO_BOOL_STR:
             return 1;
         case TRACE_RECORD:
@@ -995,6 +997,8 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 1;
         case TO_BOOL_NONE:
             return 1;
+        case TO_BOOL_SIZED:
+            return 1;
         case TO_BOOL_STR:
             return 1;
         case TRACE_RECORD:
@@ -1324,6 +1328,7 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [TO_BOOL_INT] = { true, INSTR_FMT_IXC00, HAS_EXIT_FLAG },
     [TO_BOOL_LIST] = { true, INSTR_FMT_IXC00, HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
     [TO_BOOL_NONE] = { true, INSTR_FMT_IXC00, HAS_EXIT_FLAG },
+    [TO_BOOL_SIZED] = { true, INSTR_FMT_IXC00, HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
     [TO_BOOL_STR] = { true, INSTR_FMT_IXC00, HAS_EXIT_FLAG },
     [TRACE_RECORD] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [UNARY_INVERT] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
@@ -1541,6 +1546,7 @@ _PyOpcode_macro_expansion[256] = {
     [TO_BOOL_INT] = { .nuops = 3, .uops = { { _GUARD_TOS_EXACT_INT, OPARG_SIMPLE, 0 }, { _TO_BOOL_INT, OPARG_SIMPLE, 3 }, { _POP_TOP_INT, OPARG_SIMPLE, 3 } } },
     [TO_BOOL_LIST] = { .nuops = 3, .uops = { { _GUARD_TOS_LIST, OPARG_SIMPLE, 0 }, { _TO_BOOL_LIST, OPARG_SIMPLE, 3 }, { _POP_TOP, OPARG_SIMPLE, 3 } } },
     [TO_BOOL_NONE] = { .nuops = 1, .uops = { { _TO_BOOL_NONE, OPARG_SIMPLE, 3 } } },
+    [TO_BOOL_SIZED] = { .nuops = 1, .uops = { { _TO_BOOL_SIZED, 1, 1 } } },
     [TO_BOOL_STR] = { .nuops = 3, .uops = { { _GUARD_TOS_UNICODE, OPARG_SIMPLE, 0 }, { _TO_BOOL_STR, OPARG_SIMPLE, 3 }, { _POP_TOP_UNICODE, OPARG_SIMPLE, 3 } } },
     [UNARY_INVERT] = { .nuops = 2, .uops = { { _UNARY_INVERT, OPARG_SIMPLE, 0 }, { _POP_TOP, OPARG_SIMPLE, 0 } } },
     [UNARY_NEGATIVE] = { .nuops = 2, .uops = { { _UNARY_NEGATIVE, OPARG_SIMPLE, 0 }, { _POP_TOP, OPARG_SIMPLE, 0 } } },
@@ -1789,6 +1795,7 @@ const char *_PyOpcode_OpName[267] = {
     [TO_BOOL_INT] = "TO_BOOL_INT",
     [TO_BOOL_LIST] = "TO_BOOL_LIST",
     [TO_BOOL_NONE] = "TO_BOOL_NONE",
+    [TO_BOOL_SIZED] = "TO_BOOL_SIZED",
     [TO_BOOL_STR] = "TO_BOOL_STR",
     [TRACE_RECORD] = "TRACE_RECORD",
     [UNARY_INVERT] = "UNARY_INVERT",
@@ -1846,7 +1853,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [125] = 125,
     [126] = 126,
     [127] = 127,
-    [220] = 220,
     [221] = 221,
     [222] = 222,
     [223] = 223,
@@ -2079,6 +2085,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [TO_BOOL_INT] = TO_BOOL,
     [TO_BOOL_LIST] = TO_BOOL,
     [TO_BOOL_NONE] = TO_BOOL,
+    [TO_BOOL_SIZED] = TO_BOOL,
     [TO_BOOL_STR] = TO_BOOL,
     [TRACE_RECORD] = TRACE_RECORD,
     [UNARY_INVERT] = UNARY_INVERT,
@@ -2107,7 +2114,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     case 125: \
     case 126: \
     case 127: \
-    case 220: \
     case 221: \
     case 222: \
     case 223: \

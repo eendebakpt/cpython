@@ -215,10 +215,11 @@ extern "C" {
 #define TO_BOOL_INT                            213
 #define TO_BOOL_LIST                           214
 #define TO_BOOL_NONE                           215
-#define TO_BOOL_STR                            216
-#define UNPACK_SEQUENCE_LIST                   217
-#define UNPACK_SEQUENCE_TUPLE                  218
-#define UNPACK_SEQUENCE_TWO_TUPLE              219
+#define TO_BOOL_SIZED                          216
+#define TO_BOOL_STR                            217
+#define UNPACK_SEQUENCE_LIST                   218
+#define UNPACK_SEQUENCE_TUPLE                  219
+#define UNPACK_SEQUENCE_TWO_TUPLE              220
 #define INSTRUMENTED_END_FOR                   233
 #define INSTRUMENTED_POP_ITER                  234
 #define INSTRUMENTED_END_SEND                  235

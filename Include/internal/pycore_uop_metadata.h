@@ -99,6 +99,7 @@ const uint32_t _PyUop_Flags[MAX_UOP_ID+1] = {
     [_GUARD_NOS_UNICODE] = HAS_EXIT_FLAG,
     [_GUARD_TOS_UNICODE] = HAS_EXIT_FLAG,
     [_TO_BOOL_STR] = 0,
+    [_TO_BOOL_SIZED] = HAS_EXIT_FLAG | HAS_ESCAPES_FLAG,
     [_REPLACE_WITH_TRUE] = 0,
     [_UNARY_INVERT] = HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG,
     [_GUARD_NOS_INT] = HAS_EXIT_FLAG,
@@ -1022,6 +1023,15 @@ const _PyUopCachingInfo _PyUop_Caching[MAX_UOP_ID+1] = {
             { 2, 0, _TO_BOOL_STR_r02 },
             { 2, 1, _TO_BOOL_STR_r12 },
             { 3, 2, _TO_BOOL_STR_r23 },
+            { -1, -1, -1 },
+        },
+    },
+    [_TO_BOOL_SIZED] = {
+        .best = { 1, 1, 1, 1 },
+        .entries = {
+            { -1, -1, -1 },
+            { 1, 1, _TO_BOOL_SIZED_r11 },
+            { -1, -1, -1 },
             { -1, -1, -1 },
         },
     },
@@ -4133,6 +4143,7 @@ const uint16_t _PyUop_Uncached[MAX_UOP_REGS_ID+1] = {
     [_TO_BOOL_STR_r02] = _TO_BOOL_STR,
     [_TO_BOOL_STR_r12] = _TO_BOOL_STR,
     [_TO_BOOL_STR_r23] = _TO_BOOL_STR,
+    [_TO_BOOL_SIZED_r11] = _TO_BOOL_SIZED,
     [_REPLACE_WITH_TRUE_r02] = _REPLACE_WITH_TRUE,
     [_REPLACE_WITH_TRUE_r12] = _REPLACE_WITH_TRUE,
     [_REPLACE_WITH_TRUE_r23] = _REPLACE_WITH_TRUE,
@@ -6186,6 +6197,8 @@ const char *const _PyOpcode_uop_name[MAX_UOP_REGS_ID+1] = {
     [_TO_BOOL_NONE_r11] = "_TO_BOOL_NONE_r11",
     [_TO_BOOL_NONE_r22] = "_TO_BOOL_NONE_r22",
     [_TO_BOOL_NONE_r33] = "_TO_BOOL_NONE_r33",
+    [_TO_BOOL_SIZED] = "_TO_BOOL_SIZED",
+    [_TO_BOOL_SIZED_r11] = "_TO_BOOL_SIZED_r11",
     [_TO_BOOL_STR] = "_TO_BOOL_STR",
     [_TO_BOOL_STR_r02] = "_TO_BOOL_STR_r02",
     [_TO_BOOL_STR_r12] = "_TO_BOOL_STR_r12",
@@ -6357,6 +6370,8 @@ int _PyUop_num_popped(int opcode, int oparg)
         case _GUARD_TOS_UNICODE:
             return 0;
         case _TO_BOOL_STR:
+            return 1;
+        case _TO_BOOL_SIZED:
             return 1;
         case _REPLACE_WITH_TRUE:
             return 1;

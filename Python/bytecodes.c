@@ -489,6 +489,7 @@ dummy_func(
             TO_BOOL_INT,
             TO_BOOL_LIST,
             TO_BOOL_NONE,
+            TO_BOOL_SIZED,
             TO_BOOL_STR,
         };
 
@@ -589,6 +590,24 @@ dummy_func(
 
         macro(TO_BOOL_STR) =
             _GUARD_TOS_UNICODE + unused/1 + unused/2 + _TO_BOOL_STR + _POP_TOP_UNICODE;
+
+        // One opcode for every type whose truthiness is a Py_ssize_t size
+        // field at a fixed offset: dict and frozendict (ma_used), tuple,
+        // bytes and bytearray (ob_size), set and frozenset (used). `kind`
+        // indexes _PyToBoolSized_Table, which holds the type to guard on
+        // and the offset of the size field.
+        op(_TO_BOOL_SIZED, (kind/1, value -- res)) {
+            PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+            const _PyToBoolSizedDescr *d = &_PyToBoolSized_Table[kind];
+            EXIT_IF(Py_TYPE(value_o) != d->type);
+            STAT_INC(TO_BOOL, hit);
+            Py_ssize_t size = FT_ATOMIC_LOAD_SSIZE_RELAXED(
+                *(Py_ssize_t *)((char *)value_o + d->offset));
+            res = size ? PyStackRef_True : PyStackRef_False;
+            PyStackRef_CLOSE(value);
+        }
+
+        macro(TO_BOOL_SIZED) = unused/1 + _TO_BOOL_SIZED + unused/1;
 
         op(_REPLACE_WITH_TRUE, (value -- res, v)) {
             res = PyStackRef_True;

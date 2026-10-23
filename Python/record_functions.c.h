@@ -115,6 +115,7 @@ const _PyOpcodeRecordEntry _PyOpcode_RecordEntries[256] = {
         [TO_BOOL_INT] = {1, {_RECORD_TOS_TYPE_INDEX}},
         [TO_BOOL_LIST] = {1, {_RECORD_TOS_TYPE_INDEX}},
         [TO_BOOL_STR] = {1, {_RECORD_TOS_TYPE_INDEX}},
+        [TO_BOOL_SIZED] = {1, {_RECORD_TOS_TYPE_INDEX}},
         [TO_BOOL_ALWAYS_TRUE] = {1, {_RECORD_TOS_TYPE_INDEX}},
         [BINARY_OP_MULTIPLY_INT] = {2, {_RECORD_NOS_INDEX, _RECORD_TOS_TYPE_INDEX}},
         [BINARY_OP_ADD_INT] = {2, {_RECORD_NOS_INDEX, _RECORD_TOS_TYPE_INDEX}},
