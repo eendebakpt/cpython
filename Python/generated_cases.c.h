@@ -13318,14 +13318,35 @@
             (void)(opcode);
             #endif
             frame->instr_ptr = next_instr;
-            next_instr += 1;
+            next_instr += 3;
             INSTRUCTION_STATS(UNARY_NEGATIVE);
+            PREDICTED_UNARY_NEGATIVE:;
+            _Py_CODEUNIT* const this_instr = next_instr - 3;
+            (void)this_instr;
             _PyStackRef value;
             _PyStackRef res;
             _PyStackRef v;
-            // _UNARY_NEGATIVE
+            // _SPECIALIZE_UNARY_NEGATIVE
             {
                 value = stack_pointer[-1];
+                uint16_t counter = read_u16(&this_instr[1].cache);
+                (void)counter;
+                #if ENABLE_SPECIALIZATION
+                if (ADAPTIVE_COUNTER_TRIGGERS(counter)) {
+                    next_instr = this_instr;
+                    _PyFrame_SetStackPointer(frame, stack_pointer);
+                    _PyFrame_StackPointerValidate(frame);
+                    _Py_Specialize_UnaryNegative(value, next_instr);
+                    _PyFrame_StackPointerInvalidate(frame);
+                    DISPATCH_SAME_OPARG();
+                }
+                OPCODE_DEFERRED_INC(UNARY_NEGATIVE);
+                ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
+                #endif  /* ENABLE_SPECIALIZATION */
+            }
+            /* Skip 1 cache entry */
+            // _UNARY_NEGATIVE
+            {
                 _PyFrame_SetStackPointer(frame, stack_pointer);
                 _PyFrame_StackPointerValidate(frame);
                 PyObject *res_o = PyNumber_Negative(PyStackRef_AsPyObjectBorrow(value));
@@ -13345,6 +13366,47 @@
                 PyStackRef_XCLOSE(value);
                 _PyFrame_StackPointerInvalidate(frame);
             }
+            DISPATCH();
+        }
+
+        TARGET(UNARY_NEGATIVE_INPLACE) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = UNARY_NEGATIVE_INPLACE;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 3;
+            INSTRUCTION_STATS(UNARY_NEGATIVE_INPLACE);
+            static_assert(INLINE_CACHE_ENTRIES_UNARY_NEGATIVE == 2, "incorrect cache size");
+            _PyStackRef value;
+            _PyStackRef res;
+            /* Skip 1 cache entry */
+            value = stack_pointer[-1];
+            uint16_t kind = read_u16(&this_instr[2].cache);
+            (void)kind;
+            assert(kind == UNARY_NEGATIVE_INPLACE_FLOAT);
+            if (!PyStackRef_RefcountOnObject(value)) {
+                UPDATE_MISS_STATS(UNARY_NEGATIVE);
+                assert(_PyOpcode_Deopt[opcode] == (UNARY_NEGATIVE));
+                JUMP_TO_PREDICTED(UNARY_NEGATIVE);
+            }
+            PyObject *val_o = PyStackRef_AsPyObjectBorrow(value);
+            if (!PyFloat_CheckExact(val_o)) {
+                UPDATE_MISS_STATS(UNARY_NEGATIVE);
+                assert(_PyOpcode_Deopt[opcode] == (UNARY_NEGATIVE));
+                JUMP_TO_PREDICTED(UNARY_NEGATIVE);
+            }
+            if (!BINARY_OP_INPLACE_IS_UNIQUE(val_o)) {
+                UPDATE_MISS_STATS(UNARY_NEGATIVE);
+                assert(_PyOpcode_Deopt[opcode] == (UNARY_NEGATIVE));
+                JUMP_TO_PREDICTED(UNARY_NEGATIVE);
+            }
+            STAT_INC(UNARY_NEGATIVE, hit);
+            ((PyFloatObject *)val_o)->ob_fval = -((PyFloatObject *)val_o)->ob_fval;
+            res = value;
+            stack_pointer[-1] = res;
             DISPATCH();
         }
 

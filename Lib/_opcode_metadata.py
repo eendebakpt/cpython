@@ -7,6 +7,9 @@ _specializations = frozendict(
             "RESUME_CHECK",
             "RESUME_CHECK_JIT",
     ),
+    UNARY_NEGATIVE=(
+            "UNARY_NEGATIVE_INPLACE",
+    ),
     TO_BOOL=(
             "TO_BOOL_ALWAYS_TRUE",
             "TO_BOOL_BOOL",
@@ -225,9 +228,10 @@ _specialized_opmap = frozendict(
     TO_BOOL_NONE=215,
     TO_BOOL_SIZED=216,
     TO_BOOL_STR=217,
-    UNPACK_SEQUENCE_LIST=218,
-    UNPACK_SEQUENCE_TUPLE=219,
-    UNPACK_SEQUENCE_TWO_TUPLE=220,
+    UNARY_NEGATIVE_INPLACE=218,
+    UNPACK_SEQUENCE_LIST=219,
+    UNPACK_SEQUENCE_TUPLE=220,
+    UNPACK_SEQUENCE_TWO_TUPLE=221,
 )
 
 opmap = frozendict(

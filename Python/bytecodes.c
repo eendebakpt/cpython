@@ -450,7 +450,40 @@ dummy_func(
             PyStackRef_CLOSE(receiver);
         }
 
-        macro(UNARY_NEGATIVE) = _UNARY_NEGATIVE + POP_TOP;
+        family(UNARY_NEGATIVE, INLINE_CACHE_ENTRIES_UNARY_NEGATIVE) = {
+            UNARY_NEGATIVE_INPLACE,
+        };
+
+        specializing op(_SPECIALIZE_UNARY_NEGATIVE, (counter/1, value -- value)) {
+            #if ENABLE_SPECIALIZATION
+            if (ADAPTIVE_COUNTER_TRIGGERS(counter)) {
+                next_instr = this_instr;
+                _Py_Specialize_UnaryNegative(value, next_instr);
+                DISPATCH_SAME_OPARG();
+            }
+            OPCODE_DEFERRED_INC(UNARY_NEGATIVE);
+            ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
+            #endif  /* ENABLE_SPECIALIZATION */
+        }
+
+        macro(UNARY_NEGATIVE) = _SPECIALIZE_UNARY_NEGATIVE + unused/1 + _UNARY_NEGATIVE + POP_TOP;
+
+        // Negate a uniquely referenced operand in place. `kind` is reserved
+        // for more types; only floats for now.
+        op(_UNARY_NEGATIVE_INPLACE, (kind/1, value -- res)) {
+            (void)kind;
+            assert(kind == UNARY_NEGATIVE_INPLACE_FLOAT);
+            EXIT_IF(!PyStackRef_RefcountOnObject(value));
+            PyObject *val_o = PyStackRef_AsPyObjectBorrow(value);
+            EXIT_IF(!PyFloat_CheckExact(val_o));
+            EXIT_IF(!BINARY_OP_INPLACE_IS_UNIQUE(val_o));
+            STAT_INC(UNARY_NEGATIVE, hit);
+            ((PyFloatObject *)val_o)->ob_fval = -((PyFloatObject *)val_o)->ob_fval;
+            res = value;
+            DEAD(value);
+        }
+
+        macro(UNARY_NEGATIVE_INPLACE) = unused/1 + _UNARY_NEGATIVE_INPLACE;
 
         op(_UNARY_NEGATIVE, (value -- res, v)) {
             PyObject *res_o = PyNumber_Negative(PyStackRef_AsPyObjectBorrow(value));

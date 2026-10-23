@@ -508,6 +508,8 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 1;
         case UNARY_NEGATIVE:
             return 1;
+        case UNARY_NEGATIVE_INPLACE:
+            return 1;
         case UNARY_NOT:
             return 1;
         case UNPACK_EX:
@@ -1007,6 +1009,8 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 1;
         case UNARY_NEGATIVE:
             return 1;
+        case UNARY_NEGATIVE_INPLACE:
+            return 1;
         case UNARY_NOT:
             return 1;
         case UNPACK_EX:
@@ -1039,9 +1043,10 @@ enum InstructionFormat {
     INSTR_FMT_IBC00000000 = 6,
     INSTR_FMT_IX = 7,
     INSTR_FMT_IXC = 8,
-    INSTR_FMT_IXC00 = 9,
-    INSTR_FMT_IXC000 = 10,
-    INSTR_FMT_IXC0000 = 11,
+    INSTR_FMT_IXC0 = 9,
+    INSTR_FMT_IXC00 = 10,
+    INSTR_FMT_IXC000 = 11,
+    INSTR_FMT_IXC0000 = 12,
 };
 
 #define IS_VALID_OPCODE(OP) \
@@ -1332,7 +1337,8 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [TO_BOOL_STR] = { true, INSTR_FMT_IXC00, HAS_EXIT_FLAG },
     [TRACE_RECORD] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [UNARY_INVERT] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
-    [UNARY_NEGATIVE] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
+    [UNARY_NEGATIVE] = { true, INSTR_FMT_IXC0, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
+    [UNARY_NEGATIVE_INPLACE] = { true, INSTR_FMT_IXC0, HAS_EXIT_FLAG },
     [UNARY_NOT] = { true, INSTR_FMT_IX, 0 },
     [UNPACK_EX] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [UNPACK_SEQUENCE] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
@@ -1549,7 +1555,8 @@ _PyOpcode_macro_expansion[256] = {
     [TO_BOOL_SIZED] = { .nuops = 1, .uops = { { _TO_BOOL_SIZED, 1, 1 } } },
     [TO_BOOL_STR] = { .nuops = 3, .uops = { { _GUARD_TOS_UNICODE, OPARG_SIMPLE, 0 }, { _TO_BOOL_STR, OPARG_SIMPLE, 3 }, { _POP_TOP_UNICODE, OPARG_SIMPLE, 3 } } },
     [UNARY_INVERT] = { .nuops = 2, .uops = { { _UNARY_INVERT, OPARG_SIMPLE, 0 }, { _POP_TOP, OPARG_SIMPLE, 0 } } },
-    [UNARY_NEGATIVE] = { .nuops = 2, .uops = { { _UNARY_NEGATIVE, OPARG_SIMPLE, 0 }, { _POP_TOP, OPARG_SIMPLE, 0 } } },
+    [UNARY_NEGATIVE] = { .nuops = 2, .uops = { { _UNARY_NEGATIVE, OPARG_SIMPLE, 1 }, { _POP_TOP, OPARG_SIMPLE, 1 } } },
+    [UNARY_NEGATIVE_INPLACE] = { .nuops = 1, .uops = { { _UNARY_NEGATIVE_INPLACE, 1, 1 } } },
     [UNARY_NOT] = { .nuops = 1, .uops = { { _UNARY_NOT, OPARG_SIMPLE, 0 } } },
     [UNPACK_EX] = { .nuops = 1, .uops = { { _UNPACK_EX, OPARG_SIMPLE, 0 } } },
     [UNPACK_SEQUENCE] = { .nuops = 1, .uops = { { _UNPACK_SEQUENCE, OPARG_SIMPLE, 0 } } },
@@ -1800,6 +1807,7 @@ const char *_PyOpcode_OpName[267] = {
     [TRACE_RECORD] = "TRACE_RECORD",
     [UNARY_INVERT] = "UNARY_INVERT",
     [UNARY_NEGATIVE] = "UNARY_NEGATIVE",
+    [UNARY_NEGATIVE_INPLACE] = "UNARY_NEGATIVE_INPLACE",
     [UNARY_NOT] = "UNARY_NOT",
     [UNPACK_EX] = "UNPACK_EX",
     [UNPACK_SEQUENCE] = "UNPACK_SEQUENCE",
@@ -1815,6 +1823,7 @@ PyAPI_DATA(const uint8_t) _PyOpcode_Caches[256];
 #ifdef NEED_OPCODE_METADATA
 const uint8_t _PyOpcode_Caches[256] = {
     [RESUME] = 1,
+    [UNARY_NEGATIVE] = 2,
     [TO_BOOL] = 3,
     [STORE_SUBSCR] = 1,
     [SEND] = 1,
@@ -1853,7 +1862,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [125] = 125,
     [126] = 126,
     [127] = 127,
-    [221] = 221,
     [222] = 222,
     [223] = 223,
     [224] = 224,
@@ -2090,6 +2098,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [TRACE_RECORD] = TRACE_RECORD,
     [UNARY_INVERT] = UNARY_INVERT,
     [UNARY_NEGATIVE] = UNARY_NEGATIVE,
+    [UNARY_NEGATIVE_INPLACE] = UNARY_NEGATIVE,
     [UNARY_NOT] = UNARY_NOT,
     [UNPACK_EX] = UNPACK_EX,
     [UNPACK_SEQUENCE] = UNPACK_SEQUENCE,
@@ -2114,7 +2123,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     case 125: \
     case 126: \
     case 127: \
-    case 221: \
     case 222: \
     case 223: \
     case 224: \

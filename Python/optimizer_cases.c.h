@@ -211,6 +211,13 @@
             break;
         }
 
+        case _UNARY_NEGATIVE_INPLACE: {
+            JitOptRef res;
+            res = sym_new_not_null(ctx);
+            stack_pointer[-1] = res;
+            break;
+        }
+
         case _UNARY_NEGATIVE: {
             JitOptRef value;
             JitOptRef res;

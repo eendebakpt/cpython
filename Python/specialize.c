@@ -2978,6 +2978,26 @@ success:
     specialize(instr, specialized_op);
 }
 
+Py_NO_INLINE void
+_Py_Specialize_UnaryNegative(_PyStackRef value_st, _Py_CODEUNIT *instr)
+{
+    assert(ENABLE_SPECIALIZATION);
+    assert(_PyOpcode_Caches[UNARY_NEGATIVE] == INLINE_CACHE_ENTRIES_UNARY_NEGATIVE);
+    _PyUnaryNegativeCache *cache = (_PyUnaryNegativeCache *)(instr + 1);
+    PyObject *value = PyStackRef_AsPyObjectBorrow(value_st);
+    if (kind_specialization_enabled() &&
+        PyFloat_CheckExact(value) &&
+        PyStackRef_RefcountOnObject(value_st) &&
+        _PyObject_IsUniquelyReferenced(value))
+    {
+        cache->kind = UNARY_NEGATIVE_INPLACE_FLOAT;
+        specialize(instr, UNARY_NEGATIVE_INPLACE);
+        return;
+    }
+    SPECIALIZATION_FAIL(UNARY_NEGATIVE, SPEC_FAIL_OTHER);
+    unspecialize(instr);
+}
+
 #ifdef Py_STATS
 static int
 containsop_fail_kind(PyObject *value) {
