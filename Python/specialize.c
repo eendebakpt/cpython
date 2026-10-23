@@ -2246,6 +2246,49 @@ LONG_FLOAT_ACTION(compactlong_float_multiply, *)
 LONG_FLOAT_ACTION(compactlong_float_true_div, /)
 #undef LONG_FLOAT_ACTION
 
+/* Kind-indexed specializations can be switched off at runtime with
+   sys._inplace_mode = 0, so that A/B measurements can use one binary. */
+static int
+kind_specialization_enabled(void)
+{
+    PyObject *v = PySys_GetObject("_inplace_mode");
+    return v == NULL || !PyLong_CheckExact(v) || PyLong_AsLong(v) != 0;
+}
+
+static int
+binary_op_inplace_target(_PyStackRef lhs_st, _PyStackRef rhs_st)
+{
+    /* The mutated operand must be an owned stack reference to a uniquely
+       referenced object. A borrowed reference (LOAD_FAST_BORROW) can have a
+       refcount of 1 while a local still names the object. */
+    if (PyStackRef_RefcountOnObject(lhs_st) &&
+        _PyObject_IsUniquelyReferenced(PyStackRef_AsPyObjectBorrow(lhs_st))) {
+        return 0;
+    }
+    if (PyStackRef_RefcountOnObject(rhs_st) &&
+        _PyObject_IsUniquelyReferenced(PyStackRef_AsPyObjectBorrow(rhs_st))) {
+        return 1;
+    }
+    return -1;
+}
+
+static int
+specialize_binary_op_inplace(_Py_CODEUNIT *instr, _PyStackRef lhs_st,
+                             _PyStackRef rhs_st, int kind_left)
+{
+    if (!kind_specialization_enabled()) {
+        return 0;
+    }
+    int side = binary_op_inplace_target(lhs_st, rhs_st);
+    if (side < 0) {
+        return 0;
+    }
+    _PyBinaryOpCache *cache = (_PyBinaryOpCache *)(instr + 1);
+    cache->external_cache[0] = (uint16_t)(kind_left + side);
+    specialize(instr, BINARY_OP_INPLACE);
+    return 1;
+}
+
 static _PyBinaryOpSpecializationDescr binaryop_extend_descrs[] = {
     /* long-long arithmetic: guards also check _PyLong_IsCompact, so
        type alone is not sufficient to eliminate the guard. */
@@ -2370,6 +2413,9 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 return;
             }
             if (PyFloat_CheckExact(lhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_FLOAT_ADD_L)) {
+                    return;
+                }
                 specialize(instr, BINARY_OP_ADD_FLOAT);
                 return;
             }
@@ -2384,6 +2430,9 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 return;
             }
             if (PyFloat_CheckExact(lhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_FLOAT_MUL_L)) {
+                    return;
+                }
                 specialize(instr, BINARY_OP_MULTIPLY_FLOAT);
                 return;
             }
@@ -2398,6 +2447,9 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 return;
             }
             if (PyFloat_CheckExact(lhs)) {
+                if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_FLOAT_SUB_L)) {
+                    return;
+                }
                 specialize(instr, BINARY_OP_SUBTRACT_FLOAT);
                 return;
             }

@@ -405,6 +405,66 @@
             DISPATCH();
         }
 
+        TARGET(BINARY_OP_INPLACE) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = BINARY_OP_INPLACE;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 6;
+            INSTRUCTION_STATS(BINARY_OP_INPLACE);
+            static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
+            _PyStackRef left;
+            _PyStackRef right;
+            _PyStackRef res;
+            /* Skip 1 cache entry */
+            // _GUARD_BINARY_OP_INPLACE
+            {
+                right = stack_pointer[-1];
+                left = stack_pointer[-2];
+                uint16_t kind = read_u16(&this_instr[2].cache);
+                _PyStackRef target = (kind & 1) ? right : left;
+                if (!PyStackRef_RefcountOnObject(target)) {
+                    UPDATE_MISS_STATS(BINARY_OP);
+                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                    JUMP_TO_PREDICTED(BINARY_OP);
+                }
+                PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+                PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+                if (!PyFloat_CheckExact(left_o)) {
+                    UPDATE_MISS_STATS(BINARY_OP);
+                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                    JUMP_TO_PREDICTED(BINARY_OP);
+                }
+                if (!PyFloat_CheckExact(right_o)) {
+                    UPDATE_MISS_STATS(BINARY_OP);
+                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                    JUMP_TO_PREDICTED(BINARY_OP);
+                }
+                if (!BINARY_OP_INPLACE_IS_UNIQUE(PyStackRef_AsPyObjectBorrow(target))) {
+                    UPDATE_MISS_STATS(BINARY_OP);
+                    assert(_PyOpcode_Deopt[opcode] == (BINARY_OP));
+                    JUMP_TO_PREDICTED(BINARY_OP);
+                }
+            }
+            /* Skip -1 cache entry */
+            // _BINARY_OP_INPLACE
+            {
+                uint16_t kind = read_u16(&this_instr[2].cache);
+                STAT_INC(BINARY_OP, hit);
+                _PyStackRef target;
+                BINARY_OP_INPLACE_SWITCH(kind, left, right, target);
+                res = target;
+            }
+            /* Skip 3 cache entries */
+            stack_pointer[-2] = res;
+            stack_pointer += -1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            DISPATCH();
+        }
+
         TARGET(BINARY_OP_INPLACE_ADD_UNICODE) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = BINARY_OP_INPLACE_ADD_UNICODE;

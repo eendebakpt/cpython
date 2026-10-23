@@ -632,6 +632,7 @@ dummy_func(
             BINARY_OP_SUBSCR_GETITEM,
             BINARY_OP_INPLACE_ADD_UNICODE,
             BINARY_OP_EXTEND,
+            BINARY_OP_INPLACE,
         };
 
         op(_GUARD_NOS_INT, (left, unused -- left, unused)) {
@@ -848,6 +849,36 @@ dummy_func(
             _GUARD_TOS_FLOAT + _GUARD_NOS_FLOAT + unused/5 + _BINARY_OP_ADD_FLOAT + _POP_TOP_FLOAT + _POP_TOP_FLOAT;
         macro(BINARY_OP_SUBTRACT_FLOAT) =
             _GUARD_TOS_FLOAT + _GUARD_NOS_FLOAT + unused/5 + _BINARY_OP_SUBTRACT_FLOAT + _POP_TOP_FLOAT + _POP_TOP_FLOAT;
+
+        // In-place binary ops for tier 1. A single opcode: `kind` (a uint16
+        // in the cache, see _PyBinaryOpInplaceKind) selects the operator and
+        // the operand that is mutated. The mutated operand must be an owned
+        // stack reference (not borrowed from a local) to a uniquely
+        // referenced object, which the specializer checks when it picks the
+        // kind and the guard re-checks at runtime.
+        op(_GUARD_BINARY_OP_INPLACE, (kind/1, left, right -- left, right)) {
+            _PyStackRef target = (kind & 1) ? right : left;
+            EXIT_IF(!PyStackRef_RefcountOnObject(target));
+            PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
+            PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);
+            EXIT_IF(!PyFloat_CheckExact(left_o));
+            EXIT_IF(!PyFloat_CheckExact(right_o));
+            EXIT_IF(!BINARY_OP_INPLACE_IS_UNIQUE(PyStackRef_AsPyObjectBorrow(target)));
+        }
+
+        op(_BINARY_OP_INPLACE, (kind/1, left, right -- res)) {
+            STAT_INC(BINARY_OP, hit);
+            _PyStackRef target;
+            // The switch lives in ceval_macros.h: the DSL does not accept
+            // switch statements. It mutates the target in place and closes
+            // the other operand.
+            BINARY_OP_INPLACE_SWITCH(kind, left, right, target);
+            res = target;
+            INPUTS_DEAD();
+        }
+
+        macro(BINARY_OP_INPLACE) =
+            unused/1 + _GUARD_BINARY_OP_INPLACE + rewind/-1 + _BINARY_OP_INPLACE + unused/3;
 
         // Inplace float ops: mutate the uniquely-referenced left operand
         // instead of allocating a new float. Tier 2 only.

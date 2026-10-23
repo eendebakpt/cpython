@@ -517,6 +517,18 @@ typedef struct {
     PyTypeObject *rhs_type;
 } _PyBinaryOpSpecializationDescr;
 
+/* Kinds for BINARY_OP_INPLACE. Bit 0 selects the mutated operand
+   (0 = left, 1 = right); the kinds for one operator are consecutive. */
+enum _PyBinaryOpInplaceKind {
+    INPLACE_FLOAT_ADD_L = 0,
+    INPLACE_FLOAT_ADD_R,
+    INPLACE_FLOAT_SUB_L,
+    INPLACE_FLOAT_SUB_R,
+    INPLACE_FLOAT_MUL_L,
+    INPLACE_FLOAT_MUL_R,
+    INPLACE_NKINDS,
+};
+
 /* Comparison bit masks. */
 
 /* Note this evaluates its arguments twice each */

@@ -1024,6 +1024,20 @@
             break;
         }
 
+        case _GUARD_BINARY_OP_INPLACE: {
+            break;
+        }
+
+        case _BINARY_OP_INPLACE: {
+            JitOptRef res;
+            res = sym_new_not_null(ctx);
+            CHECK_STACK_BOUNDS(-1);
+            stack_pointer[-2] = res;
+            stack_pointer += -1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            break;
+        }
+
         case _BINARY_OP_ADD_FLOAT_INPLACE: {
             JitOptRef res;
             JitOptRef l;

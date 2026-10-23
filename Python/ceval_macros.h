@@ -594,6 +594,42 @@ gen_try_set_executing(PyGenObject *gen)
     return false;
 }
 
+// BINARY_OP_INPLACE helpers (tier 1).
+// MSVC does not inline Py_REFCNT() inside the eval loop, so read the field
+// directly in the default build.
+#ifdef Py_GIL_DISABLED
+#  define BINARY_OP_INPLACE_IS_UNIQUE(o) _PyObject_IsUniquelyReferenced(o)
+#else
+#  define BINARY_OP_INPLACE_IS_UNIQUE(o) ((o)->ob_refcnt == 1)
+#endif
+
+// One case of the kind switch: mutate TGT_O in place, hand TGT back as the
+// result and release the other operand.
+#define BINARY_OP_INPLACE_FLOAT_CASE(KIND, TGT_O, TGT, OTH, OP, TARGET)    \
+    case KIND:                                                            \
+        ((PyFloatObject *)(TGT_O))->ob_fval =                             \
+            ((PyFloatObject *)_left_o)->ob_fval OP                        \
+            ((PyFloatObject *)_right_o)->ob_fval;                         \
+        (TARGET) = (TGT);                                                 \
+        PyStackRef_CLOSE_SPECIALIZED((OTH), _PyFloat_ExactDealloc);       \
+        break;
+
+#define BINARY_OP_INPLACE_SWITCH(kind, left, right, TARGET)                \
+    do {                                                                  \
+        PyObject *_left_o = PyStackRef_AsPyObjectBorrow(left);            \
+        PyObject *_right_o = PyStackRef_AsPyObjectBorrow(right);          \
+        switch (kind) {                                                   \
+        BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_ADD_L, _left_o, left, right, +, TARGET)  \
+        BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_ADD_R, _right_o, right, left, +, TARGET) \
+        BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_SUB_L, _left_o, left, right, -, TARGET)  \
+        BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_SUB_R, _right_o, right, left, -, TARGET) \
+        BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_MUL_L, _left_o, left, right, *, TARGET)  \
+        BINARY_OP_INPLACE_FLOAT_CASE(INPLACE_FLOAT_MUL_R, _right_o, right, left, *, TARGET) \
+        default:                                                          \
+            Py_UNREACHABLE();                                             \
+        }                                                                 \
+    } while (0)
+
 // Macro for inplace float binary ops (tier 2 only).
 // Mutates the uniquely-referenced TARGET operand in place.
 // TARGET must be either left or right.
