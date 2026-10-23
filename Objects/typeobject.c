@@ -12680,7 +12680,9 @@ supercheck(PyTypeObject *type, PyObject *obj)
 
     /* Normal case */
     if (PyType_IsSubtype(Py_TYPE(obj), type)) {
-        return (PyTypeObject*)Py_NewRef(Py_TYPE(obj));
+        PyTypeObject *tp = Py_TYPE(obj);
+        _Py_INCREF_TYPE(tp);
+        return tp;
     }
     else {
         /* Try the slow way */
@@ -12729,7 +12731,7 @@ _PySuper_Lookup(PyTypeObject *su_type, PyObject *su_obj, PyObject *name, int *me
         return NULL;
     }
     PyObject *res = do_super_lookup(NULL, su_type, su_obj, su_obj_type, name, method);
-    Py_DECREF(su_obj_type);
+    _Py_DECREF_TYPE(su_obj_type);
     return res;
 }
 
