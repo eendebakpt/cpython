@@ -564,6 +564,66 @@ class CookieTests(unittest.TestCase):
         if ok: self.assertTrue(r)
         else: self.assertFalse(r)
 
+    def test_domains_for_request(self):
+        # The CookieJar only looks up the domains that
+        # DefaultCookiePolicy.domain_return_ok() can accept, instead of
+        # checking every stored domain; both must agree.
+        domains = [
+            "", ".", "com", ".com", "bar.com", ".bar.com", "foo.bar.com",
+            ".foo.bar.com", "rhubarb.foo.bar.com", "blah.com", "ar.com",
+            "foo.com", ".foo.com", "foo", ".foo", "foo.local", ".local",
+            "local", "bar.com.", "Foo.Bar.Com", "..com", "o.bar.com",
+        ]
+        pol = DefaultCookiePolicy()
+        c = CookieJar(pol)
+        for i, domain in enumerate(domains):
+            c.set_cookie(Cookie(0, "name%d" % i, "value", None, False,
+                                domain, True, domain.startswith("."),
+                                "/", True, False, None, True,
+                                None, None, {}))
+        for url in ["http://foo.bar.com/", "http://bar.com/", "http://foo/",
+                    "http://barfoo.com/", "http://com/", "http://foo.bar/",
+                    "http://FOO.BAR.COM:8080/", "http://bar.com./",
+                    "http://./", "http://.bar.com/", "http://foo..com/"]:
+            with self.subTest(url=url):
+                request = urllib.request.Request(url)
+                expected = [domain for domain in c._cookies
+                            if pol.domain_return_ok(domain, request)]
+                self.assertCountEqual(c._domains_for_request(request),
+                                      expected)
+
+    def test_domain_return_ok_override(self):
+        # A policy overriding domain_return_ok() decides which domains
+        # match, so the domain lookup shortcut must not be used.
+        class Policy(DefaultCookiePolicy):
+            def domain_return_ok(self, domain, request):
+                return True
+            def return_ok(self, cookie, request):
+                return True
+        c = CookieJar(Policy())
+        interact_netscape(c, "http://www.acme.com/", "spam=eggs")
+        interact_netscape(c, "http://www.example.org/", "foo=bar")
+        h = interact_netscape(c, "http://www.acme.com/")
+        self.assertCountEqual(h.split("; "), ["spam=eggs", "foo=bar"])
+
+    def test_cookies_from_several_domains(self):
+        c = CookieJar()
+        interact_netscape(c, "http://www.acme.com/", "spam=eggs")
+        interact_netscape(c, "http://www.acme.com/", "foo=bar; domain=.acme.com")
+        interact_netscape(c, "http://other.acme.com/", "ni=ni")
+        interact_netscape(c, "http://www.acme.org/", "nini=nini")
+        interact_netscape(c, "http://acme.com/", "eggs=spam")
+        h = interact_netscape(c, "http://www.acme.com/")
+        self.assertCountEqual(h.split("; "), ["spam=eggs", "foo=bar", "eggs=spam"])
+        h = interact_netscape(c, "http://acme.com/")
+        self.assertCountEqual(h.split("; "), ["foo=bar", "eggs=spam"])
+        h = interact_netscape(c, "http://other.acme.com/")
+        self.assertCountEqual(h.split("; "), ["foo=bar", "ni=ni", "eggs=spam"])
+        self.assertEqual(interact_netscape(c, "http://www.acme.org/"),
+                         "nini=nini")
+        self.assertEqual(interact_netscape(c, "http://wwwacme.com/"), "")
+        self.assertEqual(interact_netscape(c, "http://acme.com.example/"), "")
+
     def test_missing_value(self):
         # missing = sign in Cookie: header is regarded by Mozilla as a missing
         # name, and by http.cookiejar as a missing value

@@ -1,0 +1,4 @@
+:meth:`http.cookiejar.CookieJar.add_cookie_header` now only looks up the
+stored domains that can match the request host instead of checking every
+stored domain, so its cost no longer grows with the number of domains in the
+jar when :class:`~http.cookiejar.DefaultCookiePolicy` is used.

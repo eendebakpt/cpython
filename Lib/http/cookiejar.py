@@ -1295,9 +1295,31 @@ class CookieJar:
     def _cookies_for_request(self, request):
         """Return a list of cookies to be returned to server."""
         cookies = []
-        for domain in self._cookies.keys():
+        for domain in self._domains_for_request(request):
             cookies.extend(self._cookies_for_domain(domain, request))
         return cookies
+
+    def _domains_for_request(self, request):
+        """Return the stored domains that may have cookies for request."""
+        if (type(self._policy).domain_return_ok is not
+                DefaultCookiePolicy.domain_return_ok):
+            return list(self._cookies)
+        # DefaultCookiePolicy.domain_return_ok() only accepts a domain which
+        # is a dot-suffix of the request host or of the effective request
+        # host name, with or without the leading dot.  Look up only those
+        # domains instead of checking every stored domain.
+        req_host, erhn = eff_request_host(request)
+        candidates = {}
+        for host in (req_host,) if req_host == erhn else (req_host, erhn):
+            if not host.startswith("."):
+                host = "." + host
+            i = 0
+            while i >= 0:
+                candidates[host[i:]] = None
+                candidates[host[i+1:]] = None
+                i = host.find(".", i + 1)
+        candidates[""] = None
+        return [domain for domain in candidates if domain in self._cookies]
 
     def _cookie_attrs(self, cookies):
         """Return a list of cookie-attributes to be returned to server.
