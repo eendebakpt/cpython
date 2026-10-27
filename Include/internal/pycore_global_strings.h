@@ -651,6 +651,7 @@ struct _Py_global_strings {
         STRUCT_FOR_ID(maxvalue)
         STRUCT_FOR_ID(memLevel)
         STRUCT_FOR_ID(memlimit)
+        STRUCT_FOR_ID(memo)
         STRUCT_FOR_ID(message)
         STRUCT_FOR_ID(metaclass)
         STRUCT_FOR_ID(metadata)

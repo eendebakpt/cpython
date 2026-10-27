@@ -639,6 +639,7 @@ _PyStaticObjects_CheckAll(PyInterpreterState *interp) {
     _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(maxvalue), "maxvalue", 8);
     _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(memLevel), "memLevel", 8);
     _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(memlimit), "memlimit", 8);
+    _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(memo), "memo", 4);
     _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(message), "message", 7);
     _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(metaclass), "metaclass", 9);
     _PyStaticObject_CheckUnicodeSingleton((PyObject *)&_Py_ID(metadata), "metadata", 8);
