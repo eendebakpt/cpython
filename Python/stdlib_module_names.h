@@ -25,6 +25,7 @@ static const char* _Py_stdlib_module_names[] = {
 "_colorize",
 "_compat_pickle",
 "_contextvars",
+"_copy",
 "_csv",
 "_ctypes",
 "_curses",
