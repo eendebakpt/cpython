@@ -161,6 +161,14 @@ def deepcopy(x, memo=None):
         _keep_alive(x, memo) # Make sure x lives at least as long as d
     return y
 
+_deepcopy_fallback = deepcopy
+try:
+    # The C accelerator handles atomic types, lists, tuples and dicts and
+    # calls _deepcopy_fallback() for everything else.
+    from _copy import deepcopy
+except ImportError:
+    pass
+
 _atomic_types = frozenset({types.NoneType, types.EllipsisType, types.NotImplementedType,
           int, float, bool, complex, bytes, str, types.CodeType, type, range,
           types.BuiltinFunctionType, types.FunctionType, weakref.ref, property})
