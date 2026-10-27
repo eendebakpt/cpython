@@ -1005,6 +1005,14 @@ zlib
 Optimizations
 =============
 
+copy
+----
+
+* :func:`copy.deepcopy` now copies atomic objects, lists, tuples and dicts
+  in C. Deep copies of containers of such objects are 5x to 15x faster, and
+  deep copies of class instances are about 1.8x faster.
+  (Contributed by Pieter Eendebak and Rasmus Villemoes in :gh:`72793`.)
+
 datetime and time
 -----------------
 
