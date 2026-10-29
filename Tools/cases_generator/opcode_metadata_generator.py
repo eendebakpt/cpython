@@ -238,7 +238,7 @@ def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
             pieces = inst.name.split("_")
             # The two fused component instructions need not have the same
             # number of underscore-separated parts (e.g.
-            # LOAD_FAST_BORROW_LOAD_CONST = LOAD_FAST_BORROW + LOAD_CONST), so
+            # STORE_FAST_LOAD_FAST_BORROW = STORE_FAST + LOAD_FAST_BORROW), so
             # try every split point and pick the one where both halves are
             # valid instruction names.
             name1 = name2 = None

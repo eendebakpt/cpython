@@ -3256,7 +3256,7 @@ class TestExpansionTable(unittest.TestCase):
         return buf.getvalue()
 
     def test_super_instruction_uneven_component_names(self):
-        # gh-issue: the two fused halves of a super-instruction need not have
+        # gh-159493: the two fused halves of a super-instruction need not have
         # the same number of underscore-separated parts. Here OP_A_B (3 parts)
         # is fused with OP_C (2 parts); the expansion-table generator must
         # still split the name into the correct component instructions rather
