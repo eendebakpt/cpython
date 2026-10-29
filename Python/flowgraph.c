@@ -2726,10 +2726,13 @@ insert_superinstructions(cfg_builder *g)
                     }
                     break;
                 case STORE_FAST:
-                    /* STORE_FAST; LOAD_FAST is fused in optimize_load_fast(),
-                     * once it is known whether the load can borrow. */
-                    if (nextop == STORE_FAST) {
-                        make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_STORE_FAST);
+                    switch (nextop) {
+                        case LOAD_FAST_BORROW:
+                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_LOAD_FAST_BORROW);
+                            break;
+                        case STORE_FAST:
+                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_STORE_FAST);
+                            break;
                     }
                     break;
             }
@@ -2857,30 +2860,6 @@ load_fast_push_block(basicblock ***sp, basicblock *target,
         target->b_visited = 1;
         *(*sp)++ = target;
     }
-}
-
-/* Fuse STORE_FAST; LOAD_FAST_BORROW into STORE_FAST_LOAD_FAST_BORROW.
- *
- * Unlike the other superinstructions this one is created after
- * optimize_load_fast() rather than in insert_superinstructions(), because
- * it only exists in a borrowing form: a LOAD_FAST that must keep a strong
- * reference is left unfused.
- */
-static int
-fuse_store_fast_load_fast_borrow(cfg_builder *g)
-{
-    for (basicblock *b = g->g_entryblock; b != NULL; b = b->b_next) {
-        for (int i = 0; i + 1 < b->b_iused; i++) {
-            cfg_instr *inst = &b->b_instr[i];
-            if (inst->i_opcode == STORE_FAST &&
-                b->b_instr[i + 1].i_opcode == LOAD_FAST_BORROW)
-            {
-                make_super_instruction(inst, &b->b_instr[i + 1],
-                                       STORE_FAST_LOAD_FAST_BORROW);
-            }
-        }
-    }
-    return remove_redundant_nops(g);
 }
 
 /*
@@ -3201,11 +3180,6 @@ optimize_load_fast(cfg_builder *g)
     }
 
     #undef PUSH_REF
-
-    if (fuse_store_fast_load_fast_borrow(g) < 0) {
-        status = ERROR;
-        goto done;
-    }
 
     status = SUCCESS;
 
@@ -4194,10 +4168,11 @@ _PyCfg_OptimizedCfgToInstructionSequence(cfg_builder *g,
      */
     RETURN_IF_ERROR(optimize_load_fast(g));
 
-    /* Superinstructions are inserted after optimize_load_fast() so that a
-     * LOAD_FAST which can be borrowed is converted to LOAD_FAST_BORROW
-     * instead of being fused into a STORE_FAST_LOAD_FAST. Fusing adjacent
-     * instructions does not change which references are borrowed. */
+    /* Superinstructions are inserted after optimize_load_fast() so that it
+     * is known which loads can borrow: STORE_FAST; LOAD_FAST_BORROW is fused
+     * into STORE_FAST_LOAD_FAST_BORROW, while a LOAD_FAST that must keep a
+     * strong reference is left unfused. Fusing adjacent instructions does
+     * not change which references are borrowed. */
     RETURN_IF_ERROR(insert_superinstructions(g));
 
     /* Can't modify the bytecode after computing jump offsets. */
