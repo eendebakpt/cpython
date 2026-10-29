@@ -12639,10 +12639,10 @@
             (void)(opcode);
             #endif
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(STORE_SUBSCR);
             PREDICTED_STORE_SUBSCR:;
-            _Py_CODEUNIT* const this_instr = next_instr - 2;
+            _Py_CODEUNIT* const this_instr = next_instr - 3;
             (void)this_instr;
             _PyStackRef container;
             _PyStackRef sub;
@@ -12666,6 +12666,7 @@
                 ADVANCE_ADAPTIVE_COUNTER(this_instr[1].counter);
                 #endif  /* ENABLE_SPECIALIZATION */
             }
+            /* Skip 1 cache entry */
             // _STORE_SUBSCR
             {
                 v = stack_pointer[-3];
@@ -12711,9 +12712,9 @@
             _Py_CODEUNIT* const this_instr = next_instr;
             (void)this_instr;
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(STORE_SUBSCR_DICT);
-            static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
+            static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 2, "incorrect cache size");
             _PyStackRef nos;
             _PyStackRef value;
             _PyStackRef dict_st;
@@ -12734,7 +12735,7 @@
                     JUMP_TO_PREDICTED(STORE_SUBSCR);
                 }
             }
-            /* Skip 1 cache entry */
+            /* Skip 2 cache entries */
             // _STORE_SUBSCR_DICT
             {
                 sub = stack_pointer[-1];
@@ -12781,9 +12782,9 @@
             _Py_CODEUNIT* const this_instr = next_instr;
             (void)this_instr;
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(STORE_SUBSCR_LIST_INT);
-            static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
+            static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 2, "incorrect cache size");
             _PyStackRef value;
             _PyStackRef nos;
             _PyStackRef list_st;
@@ -12810,7 +12811,7 @@
                     JUMP_TO_PREDICTED(STORE_SUBSCR);
                 }
             }
-            /* Skip 1 cache entry */
+            /* Skip 2 cache entries */
             // _STORE_SUBSCR_LIST_INT
             {
                 sub_st = value;

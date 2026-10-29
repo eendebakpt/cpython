@@ -776,6 +776,68 @@ gen_try_set_executing(PyGenObject *gen)
         }                                                                 \
         break;                                                            \
     }                                                                     \
+    /* bytes[int] and bytearray[int] with a non-negative compact int index */\
+    case KIND_OP_BINARY_OP_SUBSCR_BYTES_INT:                              \
+    case KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT: {                        \
+        _PyStackRef container = stack_pointer[-2];                        \
+        _PyStackRef sub = stack_pointer[-1];                              \
+        PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);   \
+        PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub);               \
+        int is_bytes = (kind == KIND_OP_BINARY_OP_SUBSCR_BYTES_INT);      \
+        if (is_bytes ? !PyBytes_CheckExact(container_o) : !PyByteArray_CheckExact(container_o)) {\
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        if (!PyLong_CheckExact(sub_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)sub_o)) {\
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        Py_ssize_t index = ((PyLongObject *)sub_o)->long_value.ob_digit[0];\
+        Py_ssize_t size = is_bytes ? PyBytes_GET_SIZE(container_o) : PyByteArray_GET_SIZE(container_o);\
+        if (index >= size) {                                              \
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        STAT_INC(BINARY_OP, hit);                                         \
+        const char *data = is_bytes ? PyBytes_AS_STRING(container_o) : PyByteArray_AS_STRING(container_o);\
+        PyObject *res_o = _PyLong_FromUnsignedChar((unsigned char)data[index]);\
+        stack_pointer[-2] = PyStackRef_FromPyObjectBorrow(res_o);         \
+        stack_pointer += -1;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(sub, _PyLong_ExactDealloc);          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(container);                                      \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
+    /* bytearray[int] = int, in range */                                  \
+    case KIND_OP_STORE_SUBSCR_BYTEARRAY_INT: {                            \
+        _PyStackRef v = stack_pointer[-3];                                \
+        _PyStackRef container = stack_pointer[-2];                        \
+        _PyStackRef sub = stack_pointer[-1];                              \
+        PyObject *v_o = PyStackRef_AsPyObjectBorrow(v);                   \
+        PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);   \
+        PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub);               \
+        if (!PyByteArray_CheckExact(container_o)) {                       \
+            KIND_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        if (!PyLong_CheckExact(sub_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)sub_o)\
+            || !PyLong_CheckExact(v_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)v_o)) {\
+            KIND_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        Py_ssize_t index = ((PyLongObject *)sub_o)->long_value.ob_digit[0];\
+        Py_ssize_t value = ((PyLongObject *)v_o)->long_value.ob_digit[0]; \
+        if (index >= PyByteArray_GET_SIZE(container_o) || value > 255) {  \
+            KIND_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        STAT_INC(STORE_SUBSCR, hit);                                      \
+        PyByteArray_AS_STRING(container_o)[index] = (char)value;          \
+        stack_pointer += -3;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(sub, _PyLong_ExactDealloc);          \
+        PyStackRef_CLOSE_SPECIALIZED(v, _PyLong_ExactDealloc);            \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(container);                                      \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
     default:                                                              \
         Py_UNREACHABLE();                                                 \
     }

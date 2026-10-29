@@ -784,7 +784,7 @@ instrument(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData *moni
     }
     CHECK(opcode != 0);
     if (!is_instrumented(opcode)) {
-        int deopt = _PyOpcode_Deopt[opcode];
+        int deopt = kind_op_deopt(instr, _PyOpcode_Deopt[opcode]);
         int instrumented = INSTRUMENTED_OPCODES[deopt];
         assert(instrumented);
         FT_ATOMIC_STORE_UINT8_RELAXED(*opcode_ptr, instrumented);
@@ -831,7 +831,7 @@ instrument_per_instruction(PyCodeObject *code, _Py_CODEUNIT *bytecode,
         assert(opcode != 0);
         assert(_PyOpcode_Deopt[opcode] != 0);
         assert(_PyOpcode_Deopt[opcode] != RESUME);
-        monitoring->per_instruction_opcodes[i] = _PyOpcode_Deopt[opcode];
+        monitoring->per_instruction_opcodes[i] = kind_op_deopt(instr, _PyOpcode_Deopt[opcode]);
     }
     assert(monitoring->per_instruction_opcodes[i] > 0);
     FT_ATOMIC_STORE_UINT8_RELAXED(*opcode_ptr, INSTRUMENTED_INSTRUCTION);
@@ -1518,7 +1518,7 @@ initialize_tools(PyCodeObject *code)
             opcode = DE_INSTRUMENT[opcode];
             assert(opcode != 0);
         }
-        opcode = _PyOpcode_Deopt[opcode];
+        opcode = kind_op_deopt(instr, _PyOpcode_Deopt[opcode]);
         if (opcode_has_event(opcode)) {
             if (instrumented) {
                 int8_t event;
@@ -1801,7 +1801,8 @@ update_instrumentation_data(PyCodeObject *code, PyInterpreterState *interp)
             // we know what the original opcode was.
             for (int i = 0; i < code_len; i++) {
                 int opcode = _PyCode_CODE(code)[i].op.code;
-                code->_co_monitoring->per_instruction_opcodes[i] = _PyOpcode_Deopt[opcode];
+                code->_co_monitoring->per_instruction_opcodes[i] =
+                    kind_op_deopt(&_PyCode_CODE(code)[i], _PyOpcode_Deopt[opcode]);
             }
         }
         if (multitools && code->_co_monitoring->per_instruction_tools == NULL) {

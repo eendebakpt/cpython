@@ -132,6 +132,7 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyStoreSubscrCache;
 
 #define INLINE_CACHE_ENTRIES_STORE_SUBSCR CACHE_ENTRIES(_PyStoreSubscrCache)
@@ -581,6 +582,10 @@ enum _PyKindOpKind {
     KIND_OP_UNPACK_UNIQUE_TWO_TUPLE,
     KIND_OP_UNPACK_UNIQUE_THREE_TUPLE,
     KIND_OP_UNPACK_UNIQUE_TUPLE,
+    /* bytes[int], bytearray[int], bytearray[int] = int */
+    KIND_OP_BINARY_OP_SUBSCR_BYTES_INT,
+    KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT,
+    KIND_OP_STORE_SUBSCR_BYTEARRAY_INT,
     KIND_OP_NKINDS,
 };
 

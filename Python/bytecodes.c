@@ -1513,10 +1513,10 @@ dummy_func(
             ERROR_IF(err);
         }
 
-        macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;
+        macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + unused/1 + _STORE_SUBSCR;
 
         macro(STORE_SUBSCR_LIST_INT) =
-            _GUARD_TOS_INT + _GUARD_NOS_LIST + unused/1 + _STORE_SUBSCR_LIST_INT + _POP_TOP_INT + POP_TOP;
+            _GUARD_TOS_INT + _GUARD_NOS_LIST + unused/2 + _STORE_SUBSCR_LIST_INT + _POP_TOP_INT + POP_TOP;
 
         op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {
             PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
@@ -1551,7 +1551,7 @@ dummy_func(
 
         macro(STORE_SUBSCR_DICT) =
             _RECORD_NOS_TYPE +
-            _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/1 + _STORE_SUBSCR_DICT + POP_TOP;
+            _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/2 + _STORE_SUBSCR_DICT + POP_TOP;
 
         op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {
             PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);

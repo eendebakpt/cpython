@@ -107,6 +107,7 @@ _cache_format = frozendict(
     ),
     STORE_SUBSCR=frozendict(
         counter=1,
+        kind=1,
     ),
     SEND=frozendict(
         counter=1,

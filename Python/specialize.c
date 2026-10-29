@@ -392,6 +392,8 @@ unspecialize(_Py_CODEUNIT *instr)
     set_counter(counter, adaptive_counter_backoff(cur));
 }
 
+static void specialize_kind_op(_Py_CODEUNIT *instr, uint16_t kind);
+static int kind_specialization_enabled(void);
 static int function_kind(PyCodeObject *code);
 static bool function_check_args(PyObject *o, int expected_argcount, int opcode);
 static uint32_t function_get_version(PyObject *o, int opcode);
@@ -1622,6 +1624,12 @@ _Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_COD
         specialize(instr, STORE_SUBSCR_DICT);
         return;
     }
+    if (kind_specialization_enabled() && container_type == &PyByteArray_Type
+        && PyLong_CheckExact(sub) && _PyLong_IsNonNegativeCompact((PyLongObject *)sub))
+    {
+        specialize_kind_op(instr, KIND_OP_STORE_SUBSCR_BYTEARRAY_INT);
+        return;
+    }
     SPECIALIZATION_FAIL(STORE_SUBSCR, store_subscr_fail_kind(container, sub));
     unspecialize(instr);
 }
@@ -2262,6 +2270,9 @@ const _PyKindOpDescr _PyKindOp_Table[KIND_OP_NKINDS] = {
     [KIND_OP_UNPACK_UNIQUE_TWO_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TWO_TUPLE},
     [KIND_OP_UNPACK_UNIQUE_THREE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
     [KIND_OP_UNPACK_UNIQUE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
+    [KIND_OP_BINARY_OP_SUBSCR_BYTES_INT] = {BINARY_OP, BINARY_OP},
+    [KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT] = {BINARY_OP, BINARY_OP},
+    [KIND_OP_STORE_SUBSCR_BYTEARRAY_INT] = {STORE_SUBSCR, STORE_SUBSCR},
 };
 
 /* Specialize `instr` to KIND_OP with the given kind. The instruction must
@@ -2507,6 +2518,14 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 }
                 if (PyTuple_CheckExact(lhs)) {
                     specialize(instr, BINARY_OP_SUBSCR_TUPLE_INT);
+                    return;
+                }
+                if (kind_specialization_enabled() && PyBytes_CheckExact(lhs)) {
+                    specialize_kind_op(instr, KIND_OP_BINARY_OP_SUBSCR_BYTES_INT);
+                    return;
+                }
+                if (kind_specialization_enabled() && PyByteArray_CheckExact(lhs)) {
+                    specialize_kind_op(instr, KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT);
                     return;
                 }
                 if (PyUnicode_CheckExact(lhs) && _PyLong_IsNonNegativeCompact((PyLongObject*)rhs)) {
@@ -3064,7 +3083,7 @@ _Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)
     PyObject *value = PyStackRef_AsPyObjectBorrow(value_st);
 
     assert(ENABLE_SPECIALIZATION);
-    assert(_PyOpcode_Caches[CONTAINS_OP] == INLINE_CACHE_ENTRIES_COMPARE_OP);
+    assert(_PyOpcode_Caches[CONTAINS_OP] == INLINE_CACHE_ENTRIES_CONTAINS_OP);
     if (PyAnyDict_CheckExact(value)) {
         specialize(instr, CONTAINS_OP_DICT);
         return;

@@ -306,6 +306,7 @@ Known values:
     Python 3.16a1 3706 (Add INTRINSIC_MATCH_CLASS_ISINSTANCE)
     Python 3.16a1 3707 (Add inline cache to UNARY_NEGATIVE)
     Python 3.16a1 3708 (Add kind cache entry to UNPACK_SEQUENCE)
+    Python 3.16a1 3710 (Add kind cache entry to STORE_SUBSCR)
 
     Python 3.17 will start with 3750
 
@@ -315,7 +316,7 @@ Known values:
 
 */
 
-#define PYC_MAGIC_NUMBER 3708
+#define PYC_MAGIC_NUMBER 3710
 /* This is equivalent to converting PYC_MAGIC_NUMBER to 2 bytes
    (little-endian) and then appending b'\r\n'. */
 #define PYC_MAGIC_NUMBER_TOKEN \
