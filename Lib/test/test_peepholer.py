@@ -856,8 +856,8 @@ class TestMarkingVariablesAsUnKnown(BytecodeTestCase):
         self.assertInBytecode(f, 'LOAD_FAST_BORROW_LOAD_FAST_BORROW')
 
     def test_store_fast_load_fast_borrow(self):
-        # gh-159493: a LOAD_FAST that can borrow must not be fused into
-        # STORE_FAST_LOAD_FAST, regardless of how the source is laid out.
+        # gh-159493: the fused STORE_FAST; LOAD_FAST pair pushes a borrowed
+        # reference, like the unfused LOAD_FAST_BORROW it replaces.
         def f(shared, n):
             for i in range(n): shared
 
@@ -865,20 +865,29 @@ class TestMarkingVariablesAsUnKnown(BytecodeTestCase):
             for i in range(n):
                 shared
 
-        for func in (f, g):
-            with self.subTest(func=func.__name__):
-                self.assertNotInBytecode(func, 'STORE_FAST_LOAD_FAST')
-                self.assertInBytecode(func, 'LOAD_FAST_BORROW', 'shared')
-        self.assertEqual([i.opname for i in dis.get_instructions(f)],
-                         [i.opname for i in dis.get_instructions(g)])
+        self.assertInBytecode(f, 'STORE_FAST_LOAD_FAST_BORROW', ('i', 'shared'))
+        self.assertInBytecode(g, 'LOAD_FAST_BORROW', 'shared')
+        self.assertNotInBytecode(g, 'STORE_FAST_LOAD_FAST_BORROW')
+
+        def f(a, it):
+            for x in it: a.append(x)
+        self.assertInBytecode(f, 'STORE_FAST_LOAD_FAST_BORROW', ('x', 'a'))
 
     def test_store_fast_load_fast_not_borrowable(self):
+        # The load of y is stored into z, so it needs a strong reference and
+        # the pair is not fused.
         def f(x):
             y = x; z = y
             return z
-        # The load of y is stored into z, so it needs a strong reference and
-        # can still be fused.
-        self.assertInBytecode(f, 'STORE_FAST_LOAD_FAST', ('y', 'y'))
+        self.assertInBytecode(f, 'LOAD_FAST', 'y')
+        self.assertNotInBytecode(f, 'STORE_FAST_LOAD_FAST_BORROW')
+
+        # The loaded value stays on the stack as the inner loop's iterable,
+        # so it cannot be borrowed and the pair is not fused.
+        def g(it):
+            return [e for s in it for e in s]
+        self.assertInBytecode(g, 'LOAD_FAST', 's')
+        self.assertNotInBytecode(g, 'STORE_FAST_LOAD_FAST_BORROW', ('s', 's'))
 
     def test_load_fast_unknown_simple(self):
         def f():
@@ -2741,6 +2750,81 @@ class OptimizeLoadFastTestCase(DirectCfgOptimizerTests):
             ("LOAD_COMMON_CONSTANT", 7, 2),
             ("STORE_FAST", 0, 3),
             ("POP_TOP", None, 4),
+        ]
+        self.check(insts, expected)
+
+    def test_store_fast_load_fast_fused_if_borrowed(self):
+        insts = [
+            ("LOAD_CONST", 0, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 1, 2),
+            ("POP_TOP", None, 3),
+        ]
+        expected = [
+            ("LOAD_COMMON_CONSTANT", 7, 1),
+            ("STORE_FAST_LOAD_FAST_BORROW", (0 << 4) | 1, 2),
+            ("POP_TOP", None, 3),
+        ]
+        self.check(insts, expected)
+
+        # Storing to and loading from the same local is fine too
+        insts = [
+            ("LOAD_CONST", 0, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 0, 2),
+            ("POP_TOP", None, 3),
+        ]
+        expected = [
+            ("LOAD_COMMON_CONSTANT", 7, 1),
+            ("STORE_FAST_LOAD_FAST_BORROW", (0 << 4) | 0, 2),
+            ("POP_TOP", None, 3),
+        ]
+        self.check(insts, expected)
+
+    def test_store_fast_load_fast_not_fused_across_lines(self):
+        insts = [
+            ("LOAD_CONST", 0, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 1, 3),
+            ("POP_TOP", None, 4),
+        ]
+        expected = [
+            ("LOAD_COMMON_CONSTANT", 7, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST_BORROW", 1, 3),
+            ("POP_TOP", None, 4),
+        ]
+        self.check(insts, expected)
+
+    def test_store_fast_load_fast_not_fused_if_unconsumed(self):
+        insts = [
+            ("LOAD_CONST", 0, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 1, 2),
+        ]
+        expected = [
+            ("LOAD_COMMON_CONSTANT", 7, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 1, 2),
+        ]
+        self.check(insts, expected)
+
+    def test_store_fast_load_fast_not_fused_if_support_killed(self):
+        insts = [
+            ("LOAD_CONST", 0, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 1, 2),
+            ("LOAD_CONST", 0, 3),
+            ("STORE_FAST", 1, 4),
+            ("POP_TOP", None, 5),
+        ]
+        expected = [
+            ("LOAD_COMMON_CONSTANT", 7, 1),
+            ("STORE_FAST", 0, 2),
+            ("LOAD_FAST", 1, 2),
+            ("LOAD_COMMON_CONSTANT", 7, 3),
+            ("STORE_FAST", 1, 4),
+            ("POP_TOP", None, 5),
         ]
         self.check(insts, expected)
 

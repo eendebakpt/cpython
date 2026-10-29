@@ -2727,8 +2727,8 @@ insert_superinstructions(cfg_builder *g)
                     break;
                 case STORE_FAST:
                     switch (nextop) {
-                        case LOAD_FAST:
-                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_LOAD_FAST);
+                        case LOAD_FAST_BORROW:
+                            make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_LOAD_FAST_BORROW);
                             break;
                         case STORE_FAST:
                             make_super_instruction(inst, &b->b_instr[i + 1], STORE_FAST_STORE_FAST);
@@ -2984,7 +2984,7 @@ optimize_load_fast(cfg_builder *g)
                     break;
                 }
 
-                case STORE_FAST_LOAD_FAST: {
+                case STORE_FAST_LOAD_FAST_BORROW: {
                     // STORE_FAST
                     ref r = ref_stack_pop(&refs);
                     store_local(instr_flags, &refs, oparg >> 4, r);
@@ -4168,10 +4168,11 @@ _PyCfg_OptimizedCfgToInstructionSequence(cfg_builder *g,
      */
     RETURN_IF_ERROR(optimize_load_fast(g));
 
-    /* Superinstructions are inserted after optimize_load_fast() so that a
-     * LOAD_FAST which can be borrowed is converted to LOAD_FAST_BORROW
-     * instead of being fused into a STORE_FAST_LOAD_FAST. Fusing adjacent
-     * instructions does not change which references are borrowed. */
+    /* Superinstructions are inserted after optimize_load_fast() so that it
+     * is known which loads can borrow: STORE_FAST; LOAD_FAST_BORROW is fused
+     * into STORE_FAST_LOAD_FAST_BORROW, while a LOAD_FAST that must keep a
+     * strong reference is left unfused. Fusing adjacent instructions does
+     * not change which references are borrowed. */
     RETURN_IF_ERROR(insert_superinstructions(g));
 
     /* Can't modify the bytecode after computing jump offsets. */
