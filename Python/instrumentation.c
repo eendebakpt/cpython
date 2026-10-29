@@ -633,6 +633,18 @@ sanity_check_instrumentation(PyCodeObject *code)
 
 #endif
 
+/* KIND_OP is a generic specialized instruction: its base opcode depends on
+   the kind stored in its cache, which _PyOpcode_Deopt cannot express. */
+static inline int
+kind_op_deopt(_Py_CODEUNIT *src_instr, int opcode)
+{
+    if (opcode == KIND_OP) {
+        uint16_t kind = FT_ATOMIC_LOAD_UINT16_RELAXED(_PyKindOp_Kind(src_instr));
+        return _PyKindOp_Table[kind].deopt;
+    }
+    return opcode;
+}
+
 /* Get the underlying code unit, stripping instrumentation and ENTER_EXECUTOR */
 _Py_CODEUNIT
 _Py_GetBaseCodeUnit(PyCodeObject *code, int i)
@@ -642,13 +654,13 @@ _Py_GetBaseCodeUnit(PyCodeObject *code, int i)
         .cache = FT_ATOMIC_LOAD_UINT16_RELAXED(*(uint16_t *)src_instr)};
     int opcode = inst.op.code;
     if (opcode < MIN_INSTRUMENTED_OPCODE) {
-        inst.op.code = _PyOpcode_Deopt[opcode];
+        inst.op.code = kind_op_deopt(src_instr, _PyOpcode_Deopt[opcode]);
         assert(inst.op.code < MIN_SPECIALIZED_OPCODE);
         return inst;
     }
     if (opcode == ENTER_EXECUTOR) {
         _PyExecutorObject *exec = code->co_executors->executors[inst.op.arg];
-        opcode = _PyOpcode_Deopt[exec->vm_data.opcode];
+        opcode = kind_op_deopt(src_instr, _PyOpcode_Deopt[exec->vm_data.opcode]);
         inst.op.code = opcode;
         inst.op.arg = exec->vm_data.oparg;
         assert(inst.op.code < MIN_SPECIALIZED_OPCODE);
@@ -667,7 +679,7 @@ _Py_GetBaseCodeUnit(PyCodeObject *code, int i)
         inst.op.code = deinstrumented;
     }
     else {
-        inst.op.code = _PyOpcode_Deopt[opcode];
+        inst.op.code = kind_op_deopt(src_instr, _PyOpcode_Deopt[opcode]);
     }
     assert(inst.op.code < MIN_SPECIALIZED_OPCODE);
     return inst;

@@ -8661,6 +8661,26 @@
             DISPATCH();
         }
 
+        TARGET(KIND_OP) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = KIND_OP;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 3;
+            INSTRUCTION_STATS(KIND_OP);
+            /* Skip 1 cache entry */
+            uint16_t kind = read_u16(&this_instr[2].cache);
+            (void)kind;
+            assert(kind < KIND_OP_NKINDS);
+            (void)oparg;
+            next_instr = this_instr + 1 + _PyOpcode_Caches[_PyKindOp_Table[kind].deopt];
+            KIND_OP_SWITCH(kind);
+            DISPATCH();
+        }
+
         TARGET(LIST_APPEND) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = LIST_APPEND;
@@ -13468,10 +13488,10 @@
             (void)(opcode);
             #endif
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(UNPACK_SEQUENCE);
             PREDICTED_UNPACK_SEQUENCE:;
-            _Py_CODEUNIT* const this_instr = next_instr - 2;
+            _Py_CODEUNIT* const this_instr = next_instr - 3;
             (void)this_instr;
             _PyStackRef seq;
             _PyStackRef *top;
@@ -13495,6 +13515,7 @@
                 (void)seq;
                 (void)counter;
             }
+            /* Skip 1 cache entry */
             // _UNPACK_SEQUENCE
             {
                 top = &stack_pointer[-1 + oparg];
@@ -13526,9 +13547,9 @@
             _Py_CODEUNIT* const this_instr = next_instr;
             (void)this_instr;
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(UNPACK_SEQUENCE_LIST);
-            static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
+            static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 2, "incorrect cache size");
             _PyStackRef tos;
             _PyStackRef seq;
             _PyStackRef *values;
@@ -13542,7 +13563,7 @@
                     JUMP_TO_PREDICTED(UNPACK_SEQUENCE);
                 }
             }
-            /* Skip 1 cache entry */
+            /* Skip 2 cache entries */
             // _UNPACK_SEQUENCE_LIST
             {
                 seq = tos;
@@ -13586,9 +13607,9 @@
             _Py_CODEUNIT* const this_instr = next_instr;
             (void)this_instr;
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(UNPACK_SEQUENCE_TUPLE);
-            static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
+            static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 2, "incorrect cache size");
             _PyStackRef tos;
             _PyStackRef seq;
             _PyStackRef *values;
@@ -13602,7 +13623,7 @@
                     JUMP_TO_PREDICTED(UNPACK_SEQUENCE);
                 }
             }
-            /* Skip 1 cache entry */
+            /* Skip 2 cache entries */
             // _UNPACK_SEQUENCE_TUPLE
             {
                 seq = tos;
@@ -13637,9 +13658,9 @@
             _Py_CODEUNIT* const this_instr = next_instr;
             (void)this_instr;
             frame->instr_ptr = next_instr;
-            next_instr += 2;
+            next_instr += 3;
             INSTRUCTION_STATS(UNPACK_SEQUENCE_TWO_TUPLE);
-            static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
+            static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 2, "incorrect cache size");
             _PyStackRef tos;
             _PyStackRef seq;
             _PyStackRef val1;
@@ -13654,7 +13675,7 @@
                     JUMP_TO_PREDICTED(UNPACK_SEQUENCE);
                 }
             }
-            /* Skip 1 cache entry */
+            /* Skip 2 cache entries */
             // _UNPACK_SEQUENCE_TWO_TUPLE
             {
                 seq = tos;

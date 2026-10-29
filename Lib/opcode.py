@@ -66,6 +66,7 @@ _cache_format = frozendict(
     ),
     UNPACK_SEQUENCE=frozendict(
         counter=1,
+        kind=1,
     ),
     COMPARE_OP=frozendict(
         counter=1,

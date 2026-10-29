@@ -379,7 +379,9 @@ unspecialize(_Py_CODEUNIT *instr)
 {
     assert(!PyErr_Occurred());
     uint8_t opcode = FT_ATOMIC_LOAD_UINT8_RELAXED(instr->op.code);
-    uint8_t generic_opcode = _PyOpcode_Deopt[opcode];
+    uint8_t generic_opcode = (opcode == KIND_OP)
+        ? _PyKindOp_Table[_PyKindOp_Kind(instr)].deopt
+        : _PyOpcode_Deopt[opcode];
     STAT_INC(generic_opcode, failure);
     if (!set_opcode(instr, generic_opcode)) {
         SPECIALIZATION_FAIL(generic_opcode, SPEC_FAIL_OTHER);
@@ -2255,6 +2257,28 @@ kind_specialization_enabled(void)
     return v == NULL || !PyLong_CheckExact(v) || PyLong_AsLong(v) != 0;
 }
 
+const _PyKindOpDescr _PyKindOp_Table[KIND_OP_NKINDS] = {
+    [KIND_OP_BINARY_OP_TRUEDIV_FLOAT] = {BINARY_OP, BINARY_OP},
+    [KIND_OP_UNPACK_UNIQUE_TWO_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TWO_TUPLE},
+    [KIND_OP_UNPACK_UNIQUE_THREE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
+    [KIND_OP_UNPACK_UNIQUE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
+};
+
+/* Specialize `instr` to KIND_OP with the given kind. The instruction must
+   belong to the family of _PyKindOp_Table[kind].deopt, so that the kind
+   cache entry exists. */
+static void
+specialize_kind_op(_Py_CODEUNIT *instr, uint16_t kind)
+{
+    assert(kind < KIND_OP_NKINDS);
+    assert(_PyOpcode_Deopt[instr->op.code] == _PyKindOp_Table[kind].deopt
+           || (instr->op.code == KIND_OP
+               && _PyKindOp_Table[_PyKindOp_Kind(instr)].deopt == _PyKindOp_Table[kind].deopt));
+    assert(_PyOpcode_Caches[_PyKindOp_Table[kind].deopt] >= 2);
+    _PyKindOp_Kind(instr) = kind;
+    specialize(instr, KIND_OP);
+}
+
 static int
 binary_op_inplace_target(_PyStackRef lhs_st, _PyStackRef rhs_st)
 {
@@ -2469,6 +2493,10 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_FLOAT_TRUEDIV_L)) {
                     return;
                 }
+                if (kind_specialization_enabled()) {
+                    specialize_kind_op(instr, KIND_OP_BINARY_OP_TRUEDIV_FLOAT);
+                    return;
+                }
             }
             break;
         case NB_SUBSCR:
@@ -2648,6 +2676,19 @@ _Py_Specialize_UnpackSequence(_PyStackRef seq_st, _Py_CODEUNIT *instr, int oparg
         if (PyTuple_GET_SIZE(seq) != oparg) {
             SPECIALIZATION_FAIL(UNPACK_SEQUENCE, SPEC_FAIL_EXPECTED_ERROR);
             unspecialize(instr);
+            return;
+        }
+        /* A tuple that is only referenced from the stack (a fresh return
+           value, typically) can give up its items without refcount traffic.
+           The handler falls back to increfing when a later tuple is shared. */
+        if (kind_specialization_enabled() &&
+            PyStackRef_RefcountOnObject(seq_st) &&
+            _PyObject_IsUniquelyReferenced(seq))
+        {
+            uint16_t kind = oparg == 2 ? KIND_OP_UNPACK_UNIQUE_TWO_TUPLE
+                          : oparg == 3 ? KIND_OP_UNPACK_UNIQUE_THREE_TUPLE
+                          : KIND_OP_UNPACK_UNIQUE_TUPLE;
+            specialize_kind_op(instr, kind);
             return;
         }
         if (PyTuple_GET_SIZE(seq) == 2) {

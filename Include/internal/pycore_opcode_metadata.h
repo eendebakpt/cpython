@@ -300,6 +300,8 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 1;
         case JUMP_NO_INTERRUPT:
             return 0;
+        case KIND_OP:
+            return 0;
         case LIST_APPEND:
             return 2 + (oparg-1);
         case LIST_EXTEND:
@@ -801,6 +803,8 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 1;
         case JUMP_NO_INTERRUPT:
             return 0;
+        case KIND_OP:
+            return 0;
         case LIST_APPEND:
             return 1 + (oparg-1);
         case LIST_EXTEND:
@@ -1037,16 +1041,17 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
 enum InstructionFormat {
     INSTR_FMT_IB = 1,
     INSTR_FMT_IBC = 2,
-    INSTR_FMT_IBC00 = 3,
-    INSTR_FMT_IBC000 = 4,
-    INSTR_FMT_IBC0000 = 5,
-    INSTR_FMT_IBC00000000 = 6,
-    INSTR_FMT_IX = 7,
-    INSTR_FMT_IXC = 8,
-    INSTR_FMT_IXC0 = 9,
-    INSTR_FMT_IXC00 = 10,
-    INSTR_FMT_IXC000 = 11,
-    INSTR_FMT_IXC0000 = 12,
+    INSTR_FMT_IBC0 = 3,
+    INSTR_FMT_IBC00 = 4,
+    INSTR_FMT_IBC000 = 5,
+    INSTR_FMT_IBC0000 = 6,
+    INSTR_FMT_IBC00000000 = 7,
+    INSTR_FMT_IX = 8,
+    INSTR_FMT_IXC = 9,
+    INSTR_FMT_IXC0 = 10,
+    INSTR_FMT_IXC00 = 11,
+    INSTR_FMT_IXC000 = 12,
+    INSTR_FMT_IXC0000 = 13,
 };
 
 #define IS_VALID_OPCODE(OP) \
@@ -1240,6 +1245,7 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [JUMP_BACKWARD_NO_INTERRUPT] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_JUMP_FLAG },
     [JUMP_BACKWARD_NO_JIT] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_JUMP_FLAG | HAS_EVAL_BREAK_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [JUMP_FORWARD] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_JUMP_FLAG },
+    [KIND_OP] = { true, INSTR_FMT_IBC0, HAS_ARG_FLAG },
     [LIST_APPEND] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG },
     [LIST_EXTEND] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
     [LOAD_ATTR] = { true, INSTR_FMT_IBC00000000, HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
@@ -1341,10 +1347,10 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [UNARY_NEGATIVE_INPLACE] = { true, INSTR_FMT_IXC0, HAS_EXIT_FLAG },
     [UNARY_NOT] = { true, INSTR_FMT_IX, 0 },
     [UNPACK_EX] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
-    [UNPACK_SEQUENCE] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
-    [UNPACK_SEQUENCE_LIST] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_DEOPT_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
-    [UNPACK_SEQUENCE_TUPLE] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
-    [UNPACK_SEQUENCE_TWO_TUPLE] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
+    [UNPACK_SEQUENCE] = { true, INSTR_FMT_IBC0, HAS_ARG_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
+    [UNPACK_SEQUENCE_LIST] = { true, INSTR_FMT_IBC0, HAS_ARG_FLAG | HAS_DEOPT_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
+    [UNPACK_SEQUENCE_TUPLE] = { true, INSTR_FMT_IBC0, HAS_ARG_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
+    [UNPACK_SEQUENCE_TWO_TUPLE] = { true, INSTR_FMT_IBC0, HAS_ARG_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG },
     [WITH_EXCEPT_START] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [YIELD_VALUE] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_ESCAPES_FLAG | HAS_SYNC_SP_FLAG | HAS_NEEDS_GUARD_IP_FLAG },
     [ANNOTATIONS_PLACEHOLDER] = { true, -1, HAS_PURE_FLAG },
@@ -1559,10 +1565,10 @@ _PyOpcode_macro_expansion[256] = {
     [UNARY_NEGATIVE_INPLACE] = { .nuops = 1, .uops = { { _UNARY_NEGATIVE_INPLACE, 1, 1 } } },
     [UNARY_NOT] = { .nuops = 1, .uops = { { _UNARY_NOT, OPARG_SIMPLE, 0 } } },
     [UNPACK_EX] = { .nuops = 1, .uops = { { _UNPACK_EX, OPARG_SIMPLE, 0 } } },
-    [UNPACK_SEQUENCE] = { .nuops = 1, .uops = { { _UNPACK_SEQUENCE, OPARG_SIMPLE, 0 } } },
-    [UNPACK_SEQUENCE_LIST] = { .nuops = 2, .uops = { { _GUARD_TOS_LIST, OPARG_SIMPLE, 0 }, { _UNPACK_SEQUENCE_LIST, OPARG_SIMPLE, 1 } } },
-    [UNPACK_SEQUENCE_TUPLE] = { .nuops = 2, .uops = { { _GUARD_TOS_TUPLE, OPARG_SIMPLE, 0 }, { _UNPACK_SEQUENCE_TUPLE, OPARG_SIMPLE, 1 } } },
-    [UNPACK_SEQUENCE_TWO_TUPLE] = { .nuops = 2, .uops = { { _GUARD_TOS_TUPLE, OPARG_SIMPLE, 0 }, { _UNPACK_SEQUENCE_TWO_TUPLE, OPARG_SIMPLE, 1 } } },
+    [UNPACK_SEQUENCE] = { .nuops = 1, .uops = { { _UNPACK_SEQUENCE, OPARG_SIMPLE, 1 } } },
+    [UNPACK_SEQUENCE_LIST] = { .nuops = 2, .uops = { { _GUARD_TOS_LIST, OPARG_SIMPLE, 0 }, { _UNPACK_SEQUENCE_LIST, OPARG_SIMPLE, 2 } } },
+    [UNPACK_SEQUENCE_TUPLE] = { .nuops = 2, .uops = { { _GUARD_TOS_TUPLE, OPARG_SIMPLE, 0 }, { _UNPACK_SEQUENCE_TUPLE, OPARG_SIMPLE, 2 } } },
+    [UNPACK_SEQUENCE_TWO_TUPLE] = { .nuops = 2, .uops = { { _GUARD_TOS_TUPLE, OPARG_SIMPLE, 0 }, { _UNPACK_SEQUENCE_TWO_TUPLE, OPARG_SIMPLE, 2 } } },
     [WITH_EXCEPT_START] = { .nuops = 1, .uops = { { _WITH_EXCEPT_START, OPARG_SIMPLE, 0 } } },
     [YIELD_VALUE] = { .nuops = 2, .uops = { { _MAKE_HEAP_SAFE, OPARG_SIMPLE, 0 }, { _YIELD_VALUE, OPARG_SIMPLE, 0 } } },
 };
@@ -1703,6 +1709,7 @@ const char *_PyOpcode_OpName[267] = {
     [JUMP_IF_FALSE] = "JUMP_IF_FALSE",
     [JUMP_IF_TRUE] = "JUMP_IF_TRUE",
     [JUMP_NO_INTERRUPT] = "JUMP_NO_INTERRUPT",
+    [KIND_OP] = "KIND_OP",
     [LIST_APPEND] = "LIST_APPEND",
     [LIST_EXTEND] = "LIST_EXTEND",
     [LOAD_ATTR] = "LOAD_ATTR",
@@ -1828,7 +1835,7 @@ const uint8_t _PyOpcode_Caches[256] = {
     [STORE_SUBSCR] = 1,
     [SEND] = 1,
     [FOR_ITER] = 1,
-    [UNPACK_SEQUENCE] = 1,
+    [UNPACK_SEQUENCE] = 2,
     [STORE_ATTR] = 4,
     [LOAD_GLOBAL] = 4,
     [LOAD_SUPER_ATTR] = 1,
@@ -1836,6 +1843,7 @@ const uint8_t _PyOpcode_Caches[256] = {
     [COMPARE_OP] = 1,
     [CONTAINS_OP] = 1,
     [JUMP_BACKWARD] = 1,
+    [KIND_OP] = 2,
     [POP_JUMP_IF_TRUE] = 1,
     [POP_JUMP_IF_FALSE] = 1,
     [POP_JUMP_IF_NONE] = 1,
@@ -1851,7 +1859,6 @@ const uint8_t _PyOpcode_Caches[256] = {
 PyAPI_DATA(const uint8_t) _PyOpcode_Deopt[256];
 #ifdef NEED_OPCODE_METADATA
 const uint8_t _PyOpcode_Deopt[256] = {
-    [117] = 117,
     [118] = 118,
     [119] = 119,
     [120] = 120,
@@ -2000,6 +2007,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [JUMP_BACKWARD_NO_INTERRUPT] = JUMP_BACKWARD_NO_INTERRUPT,
     [JUMP_BACKWARD_NO_JIT] = JUMP_BACKWARD,
     [JUMP_FORWARD] = JUMP_FORWARD,
+    [KIND_OP] = KIND_OP,
     [LIST_APPEND] = LIST_APPEND,
     [LIST_EXTEND] = LIST_EXTEND,
     [LOAD_ATTR] = LOAD_ATTR,
@@ -2112,7 +2120,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
 #endif // NEED_OPCODE_METADATA
 
 #define EXTRA_CASES \
-    case 117: \
     case 118: \
     case 119: \
     case 120: \

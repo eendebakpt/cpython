@@ -681,6 +681,105 @@ gen_try_set_executing(PyGenObject *gen)
         }                                                                 \
     } while (0)
 
+// KIND_OP helpers (tier 1). See _PyKindOpKind in pycore_code.h.
+// The cases manipulate the stack directly: KIND_OP has no DSL stack effect
+// because its stack shape depends on the kind.
+
+// Re-execute this instruction as its base opcode. The base handler reads
+// the adaptive counter and may re-specialize, exactly as after a DEOPT_IF.
+#define KIND_OP_DEOPT(BASE)                                               \
+    do {                                                                  \
+        opcode = (BASE);                                                  \
+        next_instr = this_instr;                                          \
+        PRE_DISPATCH_GOTO();                                              \
+        DISPATCH_GOTO();                                                  \
+    } while (0)
+
+// Write the oparg items of a tuple to values[] in reverse order, unrolled
+// for the two- and three-tuple kinds.
+#define KIND_OP_UNPACK_ITEMS(kind, MAKE)                                  \
+    do {                                                                  \
+        if ((kind) == KIND_OP_UNPACK_UNIQUE_TWO_TUPLE) {                  \
+            values[0] = MAKE(items[1]);                                   \
+            values[1] = MAKE(items[0]);                                   \
+        }                                                                 \
+        else if ((kind) == KIND_OP_UNPACK_UNIQUE_THREE_TUPLE) {           \
+            values[0] = MAKE(items[2]);                                   \
+            values[1] = MAKE(items[1]);                                   \
+            values[2] = MAKE(items[0]);                                   \
+        }                                                                 \
+        else {                                                            \
+            for (int _i = oparg; --_i >= 0; ) {                           \
+                *values++ = MAKE(items[_i]);                              \
+            }                                                             \
+        }                                                                 \
+    } while (0)
+
+#define KIND_OP_SWITCH(kind)                                              \
+    switch (kind) {                                                       \
+    /* Tier 1 counterpart of _BINARY_OP_TRUEDIV_FLOAT: float / float */   \
+    case KIND_OP_BINARY_OP_TRUEDIV_FLOAT: {                               \
+        _PyStackRef left = stack_pointer[-2];                             \
+        _PyStackRef right = stack_pointer[-1];                            \
+        PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);             \
+        PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);           \
+        if (!PyFloat_CheckExact(left_o) || !PyFloat_CheckExact(right_o)) { \
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        STAT_INC(BINARY_OP, hit);                                         \
+        double divisor = ((PyFloatObject *)right_o)->ob_fval;             \
+        if (divisor == 0.0) {                                             \
+            PyErr_SetString(PyExc_ZeroDivisionError, "division by zero"); \
+            JUMP_TO_LABEL(error);                                         \
+        }                                                                 \
+        PyObject *d = PyFloat_FromDouble(                                 \
+            ((PyFloatObject *)left_o)->ob_fval / divisor);                \
+        if (d == NULL) {                                                  \
+            JUMP_TO_LABEL(error);                                         \
+        }                                                                 \
+        stack_pointer[-2] = PyStackRef_FromPyObjectSteal(d);              \
+        stack_pointer += -1;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(right, _PyFloat_ExactDealloc);       \
+        PyStackRef_CLOSE_SPECIALIZED(left, _PyFloat_ExactDealloc);        \
+        break;                                                            \
+    }                                                                     \
+    /* Tier 1 counterparts of _UNPACK_SEQUENCE_UNIQUE_{TWO_,THREE_,}TUPLE: \
+       a tuple whose only reference is the stack slot gives up its items  \
+       without incref/decref traffic and its shell goes straight back to   \
+       the freelist. A shared tuple takes the increfing path (a hit, not   \
+       a deopt), so only a type or length mismatch re-dispatches. */      \
+    case KIND_OP_UNPACK_UNIQUE_TWO_TUPLE:                                 \
+    case KIND_OP_UNPACK_UNIQUE_THREE_TUPLE:                               \
+    case KIND_OP_UNPACK_UNIQUE_TUPLE: {                                   \
+        _PyStackRef seq = stack_pointer[-1];                              \
+        PyObject *seq_o = PyStackRef_AsPyObjectBorrow(seq);               \
+        if (!PyTuple_CheckExact(seq_o) || PyTuple_GET_SIZE(seq_o) != oparg) { \
+            KIND_OP_DEOPT(UNPACK_SEQUENCE);                               \
+        }                                                                 \
+        STAT_INC(UNPACK_SEQUENCE, hit);                                   \
+        PyObject **items = _PyTuple_ITEMS(seq_o);                         \
+        _PyStackRef *values = stack_pointer - 1;                          \
+        if (PyStackRef_RefcountOnObject(seq) &&                           \
+            BINARY_OP_INPLACE_IS_UNIQUE(seq_o)) {                         \
+            KIND_OP_UNPACK_ITEMS(kind, PyStackRef_FromPyObjectSteal);     \
+            stack_pointer += oparg - 1;                                   \
+            PyObject_GC_UnTrack(seq_o);                                   \
+            _PyStolenTuple_Free(seq_o);                                   \
+        }                                                                 \
+        else {                                                            \
+            KIND_OP_UNPACK_ITEMS(kind, PyStackRef_FromPyObjectNew);       \
+            stack_pointer += oparg - 1;                                   \
+            _PyFrame_SetStackPointer(frame, stack_pointer);               \
+            _PyFrame_StackPointerValidate(frame);                         \
+            PyStackRef_CLOSE(seq);                                        \
+            _PyFrame_StackPointerInvalidate(frame);                       \
+        }                                                                 \
+        break;                                                            \
+    }                                                                     \
+    default:                                                              \
+        Py_UNREACHABLE();                                                 \
+    }
+
 // Macro for inplace float binary ops (tier 2 only).
 // Mutates the uniquely-referenced TARGET operand in place.
 // TARGET must be either left or right.

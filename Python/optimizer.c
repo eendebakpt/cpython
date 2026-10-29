@@ -711,6 +711,12 @@ _PyJit_translate_single_bytecode_to_trace(
         oparg = (oparg & ~255) | executor->vm_data.oparg;
     }
 
+    if (opcode == KIND_OP) {
+        /* Translate through the tier 1 opcode whose expansion describes
+           the kind; the tier 2 optimizer re-derives the specialization. */
+        opcode = _PyKindOp_Table[_PyKindOp_Kind(this_instr)].trace;
+    }
+
     if (_PyOpcode_Caches[_PyOpcode_Deopt[opcode]] > 0) {
         uint16_t backoff = (this_instr + 1)->counter.value_and_backoff;
         // adaptive_counter_cooldown is a fresh specialization.

@@ -2136,10 +2136,10 @@ dummy_func(
             ERROR_IF(res == 0);
         }
 
-        macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + _UNPACK_SEQUENCE;
+        macro(UNPACK_SEQUENCE) = _SPECIALIZE_UNPACK_SEQUENCE + unused/1 + _UNPACK_SEQUENCE;
 
         macro(UNPACK_SEQUENCE_TWO_TUPLE) =
-            _GUARD_TOS_TUPLE + unused/1 + _UNPACK_SEQUENCE_TWO_TUPLE;
+            _GUARD_TOS_TUPLE + unused/2 + _UNPACK_SEQUENCE_TWO_TUPLE;
 
         op(_UNPACK_SEQUENCE_TWO_TUPLE, (seq -- val1, val0)) {
             assert(oparg == 2);
@@ -2172,7 +2172,7 @@ dummy_func(
         }
 
         macro(UNPACK_SEQUENCE_TUPLE) =
-            _GUARD_TOS_TUPLE + unused/1 + _UNPACK_SEQUENCE_TUPLE;
+            _GUARD_TOS_TUPLE + unused/2 + _UNPACK_SEQUENCE_TUPLE;
 
         op(_UNPACK_SEQUENCE_TUPLE, (seq -- values[oparg])) {
             PyObject *seq_o = PyStackRef_AsPyObjectBorrow(seq);
@@ -2201,7 +2201,7 @@ dummy_func(
         }
 
         macro(UNPACK_SEQUENCE_LIST) =
-            _GUARD_TOS_LIST + unused/1 + _UNPACK_SEQUENCE_LIST;
+            _GUARD_TOS_LIST + unused/2 + _UNPACK_SEQUENCE_LIST;
 
         op(_UNPACK_SEQUENCE_LIST, (seq -- values[oparg])) {
             PyObject *seq_o = PyStackRef_AsPyObjectBorrow(seq);
@@ -3644,6 +3644,26 @@ dummy_func(
         pseudo(JUMP_IF_TRUE, (cond -- cond)) = [
             COPY, TO_BOOL, POP_JUMP_IF_TRUE,
         ];
+
+        // KIND_OP: one generic specialized instruction shared by several
+        // instruction families, for specializations that would otherwise
+        // each need a tier 1 opcode. The cache keeps the layout of the base
+        // opcode (counter first); the second entry holds the kind, which
+        // selects the behaviour (_PyKindOpKind) and the base opcode to
+        // re-dispatch to when a guard fails (_PyKindOp_Table). The switch
+        // lives in ceval_macros.h because the DSL does not accept switch
+        // statements; the cases manipulate the stack directly since the
+        // stack shape depends on the kind.
+        tier1 op(_KIND_OP, (kind/1 -- )) {
+            assert(kind < KIND_OP_NKINDS);
+            (void)oparg;
+            // The instruction is as long as its base opcode, not as long
+            // as this macro declares.
+            next_instr = this_instr + 1 + _PyOpcode_Caches[_PyKindOp_Table[kind].deopt];
+            KIND_OP_SWITCH(kind);
+        }
+
+        macro(KIND_OP) = unused/1 + _KIND_OP;
 
         tier1 inst(ENTER_EXECUTOR, (--)) {
             #ifdef _Py_TIER2

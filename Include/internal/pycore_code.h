@@ -82,6 +82,7 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyUnpackSequenceCache;
 
 #define INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE \
@@ -188,7 +189,7 @@ enum _PyToBoolSizedKind {
     TO_BOOL_SIZED_NKINDS,
 };
 
-extern const _PyToBoolSizedDescr _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS];
+PyAPI_DATA(const _PyToBoolSizedDescr) _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS];
 
 typedef struct {
     _Py_BackoffCounter counter;
@@ -568,6 +569,30 @@ enum _PyBinaryOpInplaceKind {
     INPLACE_NKINDS,
 };
 #define INPLACE_FIRST_INT_KIND INPLACE_INT_ADD_L
+
+/* KIND_OP: one generic specialized instruction shared by several
+   instruction families. The instruction keeps the cache layout of its base
+   opcode; the second cache entry (after the counter) holds the kind, which
+   selects the behaviour and, through _PyKindOp_Table, the base opcode to
+   fall back to when a guard fails and the tier 1 opcode whose tier 2
+   expansion is used when the instruction is traced. */
+enum _PyKindOpKind {
+    KIND_OP_BINARY_OP_TRUEDIV_FLOAT = 0,
+    KIND_OP_UNPACK_UNIQUE_TWO_TUPLE,
+    KIND_OP_UNPACK_UNIQUE_THREE_TUPLE,
+    KIND_OP_UNPACK_UNIQUE_TUPLE,
+    KIND_OP_NKINDS,
+};
+
+typedef struct {
+    uint8_t deopt;   /* base opcode to re-dispatch to on a guard failure */
+    uint8_t trace;   /* tier 1 opcode whose uop expansion describes the kind */
+} _PyKindOpDescr;
+
+PyAPI_DATA(const _PyKindOpDescr) _PyKindOp_Table[KIND_OP_NKINDS];
+
+/* The kind of a KIND_OP instruction: the cache entry after the counter. */
+#define _PyKindOp_Kind(instr) ((instr)[2].cache)
 
 /* Comparison bit masks. */
 
