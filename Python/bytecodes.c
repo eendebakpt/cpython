@@ -1513,10 +1513,10 @@ dummy_func(
             ERROR_IF(err);
         }
 
-        macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + _STORE_SUBSCR;
+        macro(STORE_SUBSCR) = _SPECIALIZE_STORE_SUBSCR + unused/1 + _STORE_SUBSCR;
 
         macro(STORE_SUBSCR_LIST_INT) =
-            _GUARD_TOS_INT + _GUARD_NOS_LIST + unused/1 + _STORE_SUBSCR_LIST_INT + _POP_TOP_INT + POP_TOP;
+            _GUARD_TOS_INT + _GUARD_NOS_LIST + unused/2 + _STORE_SUBSCR_LIST_INT + _POP_TOP_INT + POP_TOP;
 
         op(_STORE_SUBSCR_LIST_INT, (value, list_st, sub_st -- ls, ss)) {
             PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
@@ -1551,7 +1551,7 @@ dummy_func(
 
         macro(STORE_SUBSCR_DICT) =
             _RECORD_NOS_TYPE +
-            _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/1 + _STORE_SUBSCR_DICT + POP_TOP;
+            _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/2 + _STORE_SUBSCR_DICT + POP_TOP;
 
         op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {
             PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);
@@ -1818,7 +1818,7 @@ dummy_func(
             }
         }
 
-        macro(SEND) = _SPECIALIZE_SEND + _SEND;
+        macro(SEND) = _SPECIALIZE_SEND + unused/1 + _SEND;
 
         op(_SEND_GEN_FRAME, (receiver, null, v -- receiver, null, gen_frame)) {
             PyGenObject *gen = (PyGenObject *)PyStackRef_AsPyObjectBorrow(receiver);
@@ -1837,7 +1837,7 @@ dummy_func(
         }
 
         macro(SEND_GEN) =
-            unused/1 +
+            unused/2 +
             _RECORD_3OS_GEN_FUNC +
             _CHECK_PEP_523 +
             _SEND_GEN_FRAME +
@@ -1847,7 +1847,7 @@ dummy_func(
             EXIT_IF(!PyStackRef_IsNone(val));
         }
 
-        macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _FOR_ITER;
+        macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + unused/1 + _FOR_ITER;
 
         op(_GUARD_NOS_NOT_NULL, (nos, unused -- nos, unused)) {
             EXIT_IF(PyStackRef_IsNull(nos));
@@ -1892,7 +1892,7 @@ dummy_func(
         }
 
         macro(SEND_VIRTUAL) =
-            unused/1 +
+            unused/2 +
             _GUARD_TOS_IS_NONE +
             _GUARD_NOS_NOT_NULL +
             _SEND_VIRTUAL;
@@ -1924,7 +1924,7 @@ dummy_func(
         }
 
         macro(SEND_ASYNC_GEN) =
-            unused/1 +
+            unused/2 +
             _GUARD_3OS_ASYNC_GEN_ASEND +
             _SEND_ASYNC_GEN;
 
@@ -3427,7 +3427,7 @@ dummy_func(
             #endif  /* ENABLE_SPECIALIZATION */
         }
 
-        macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + _CONTAINS_OP + POP_TOP + POP_TOP;
+        macro(CONTAINS_OP) = _SPECIALIZE_CONTAINS_OP + unused/1 + _CONTAINS_OP + POP_TOP + POP_TOP;
 
         op(_GUARD_TOS_ANY_SET, (tos -- tos)) {
             PyObject *o = PyStackRef_AsPyObjectBorrow(tos);
@@ -3444,7 +3444,7 @@ dummy_func(
             EXIT_IF(!PyFrozenSet_CheckExact(o));
         }
 
-        macro(CONTAINS_OP_SET) = _GUARD_TOS_ANY_SET + unused/1 + _CONTAINS_OP_SET + POP_TOP + POP_TOP;
+        macro(CONTAINS_OP_SET) = _GUARD_TOS_ANY_SET + unused/2 + _CONTAINS_OP_SET + POP_TOP + POP_TOP;
 
         op(_CONTAINS_OP_SET, (left, right -- b, l, r)) {
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
@@ -3463,7 +3463,7 @@ dummy_func(
             INPUTS_DEAD();
         }
 
-        macro(CONTAINS_OP_DICT) = _GUARD_TOS_ANY_DICT + unused/1 + _CONTAINS_OP_DICT + POP_TOP + POP_TOP;
+        macro(CONTAINS_OP_DICT) = _GUARD_TOS_ANY_DICT + unused/2 + _CONTAINS_OP_DICT + POP_TOP + POP_TOP;
 
         op(_CONTAINS_OP_DICT, (left, right -- b, l, r)) {
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
@@ -3909,7 +3909,7 @@ dummy_func(
             next = item;
         }
 
-        macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + _RECORD_NOS_TYPE + _FOR_ITER;
+        macro(FOR_ITER) = _SPECIALIZE_FOR_ITER + unused/1 + _RECORD_NOS_TYPE + _FOR_ITER;
 
         op(_FOR_ITER_TIER_TWO, (iter, null_or_index -- iter, null_or_index, next)) {
             _PyStackRef item = _PyForIter_VirtualIteratorNext(tstate, frame, iter, &null_or_index);
@@ -3977,7 +3977,7 @@ dummy_func(
         }
 
         macro(FOR_ITER_VIRTUAL) =
-            unused/1 +  // Skip over the counter
+            unused/2 +  // Skip over the counter
             _GUARD_TOS_NOT_NULL +
             _FOR_ITER_VIRTUAL;
 
@@ -3999,7 +3999,7 @@ dummy_func(
             null_or_index = PyStackRef_TagInt(index);
         }
 
-        inst(INSTRUMENTED_FOR_ITER, (unused/1, iter, null_or_index -- iter, null_or_index, next)) {
+        inst(INSTRUMENTED_FOR_ITER, (unused/2, iter, null_or_index -- iter, null_or_index, next)) {
             _PyStackRef item = _PyForIter_VirtualIteratorNext(tstate, frame, iter, &null_or_index);
             if (!PyStackRef_IsValid(item)) {
                 if (PyStackRef_IsError(item)) {
@@ -4093,7 +4093,7 @@ dummy_func(
         }
 
         macro(FOR_ITER_LIST) =
-            unused/1 +  // Skip over the counter
+            unused/2 +  // Skip over the counter
             _ITER_CHECK_LIST +
             _ITER_JUMP_LIST +
             _ITER_NEXT_LIST;
@@ -4134,7 +4134,7 @@ dummy_func(
         }
 
         macro(FOR_ITER_TUPLE) =
-            unused/1 +  // Skip over the counter
+            unused/2 +  // Skip over the counter
             _ITER_CHECK_TUPLE +
             _ITER_JUMP_TUPLE +
             _ITER_NEXT_TUPLE;
@@ -4184,7 +4184,7 @@ dummy_func(
         }
 
         macro(FOR_ITER_RANGE) =
-            unused/1 +  // Skip over the counter
+            unused/2 +  // Skip over the counter
             _ITER_CHECK_RANGE +
             _ITER_JUMP_RANGE +
             _ITER_NEXT_RANGE;
@@ -4206,7 +4206,7 @@ dummy_func(
 
         macro(FOR_ITER_GEN) =
             _RECORD_NOS_GEN_FUNC +
-            unused/1 +
+            unused/2 +
             _CHECK_PEP_523 +
             _FOR_ITER_GEN_FRAME +
             _PUSH_FRAME;

@@ -132,12 +132,14 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyStoreSubscrCache;
 
 #define INLINE_CACHE_ENTRIES_STORE_SUBSCR CACHE_ENTRIES(_PyStoreSubscrCache)
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyForIterCache;
 
 #define INLINE_CACHE_ENTRIES_FOR_ITER CACHE_ENTRIES(_PyForIterCache)
@@ -150,6 +152,7 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t unused;   /* keeps INLINE_CACHE_ENTRIES_SEND == INLINE_CACHE_ENTRIES_FOR_ITER */
 } _PySendCache;
 
 #define INLINE_CACHE_ENTRIES_SEND CACHE_ENTRIES(_PySendCache)
@@ -193,6 +196,7 @@ PyAPI_DATA(const _PyToBoolSizedDescr) _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS]
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyContainsOpCache;
 
 #define INLINE_CACHE_ENTRIES_CONTAINS_OP CACHE_ENTRIES(_PyContainsOpCache)
@@ -581,8 +585,41 @@ enum _PyKindOpKind {
     KIND_OP_UNPACK_UNIQUE_TWO_TUPLE,
     KIND_OP_UNPACK_UNIQUE_THREE_TUPLE,
     KIND_OP_UNPACK_UNIQUE_TUPLE,
+    /* FOR_ITER on a known iterator type: consecutive, index into
+       _PyKindOpIter_Table */
+    KIND_OP_FOR_ITER_DICT_KEYS,
+    KIND_OP_FOR_ITER_DICT_VALUES,
+    KIND_OP_FOR_ITER_DICT_ITEMS,
+    KIND_OP_FOR_ITER_ENUMERATE,
+    KIND_OP_FOR_ITER_ZIP,
+    KIND_OP_FOR_ITER_SEQ_ITER,
+    KIND_OP_FOR_ITER_REVERSED,
+    KIND_OP_FOR_ITER_SET_ITER,
+    KIND_OP_FOR_ITER_MAP,
+    KIND_OP_FOR_ITER_FILTER,
+    KIND_OP_FOR_ITER_LIST_REV,
+    /* CONTAINS_OP on exact str / tuple / list */
+    KIND_OP_CONTAINS_OP_STR,
+    KIND_OP_CONTAINS_OP_TUPLE,
+    KIND_OP_CONTAINS_OP_LIST,
+    /* bytes[int], bytearray[int], bytearray[int] = int */
+    KIND_OP_BINARY_OP_SUBSCR_BYTES_INT,
+    KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT,
+    KIND_OP_STORE_SUBSCR_BYTEARRAY_INT,
     KIND_OP_NKINDS,
 };
+#define KIND_OP_FOR_ITER_FIRST KIND_OP_FOR_ITER_DICT_KEYS
+#define KIND_OP_FOR_ITER_NTYPES (KIND_OP_FOR_ITER_LIST_REV - KIND_OP_FOR_ITER_DICT_KEYS + 1)
+
+/* Iterator types handled by the FOR_ITER kinds. `iternext` is copied from
+   the type's tp_iternext when the kind is first specialized, so the handler
+   loads it from a fixed address instead of through the type. */
+typedef struct {
+    PyTypeObject *type;
+    iternextfunc iternext;
+} _PyKindOpIterDescr;
+
+PyAPI_DATA(_PyKindOpIterDescr) _PyKindOpIter_Table[KIND_OP_FOR_ITER_NTYPES];
 
 typedef struct {
     uint8_t deopt;   /* base opcode to re-dispatch to on a guard failure */

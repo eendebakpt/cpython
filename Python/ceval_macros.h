@@ -715,6 +715,35 @@ gen_try_set_executing(PyGenObject *gen)
         }                                                                 \
     } while (0)
 
+
+// CONTAINS_OP kinds: the loops of tuplecontains()/list_contains() inlined.
+static inline int
+_PyKindOp_TupleContains(PyObject *tuple, PyObject *el)
+{
+    int cmp = 0;
+    for (Py_ssize_t i = 0; cmp == 0 && i < PyTuple_GET_SIZE(tuple); i++) {
+        cmp = PyObject_RichCompareBool(PyTuple_GET_ITEM(tuple, i), el, Py_EQ);
+    }
+    return cmp;
+}
+
+static inline int
+_PyKindOp_ListContains(PyObject *list, PyObject *el)
+{
+#ifdef Py_GIL_DISABLED
+    return PySequence_Contains(list, el);
+#else
+    int cmp = 0;
+    for (Py_ssize_t i = 0; cmp == 0 && i < PyList_GET_SIZE(list); i++) {
+        PyObject *item = PyList_GET_ITEM(list, i);
+        Py_INCREF(item);
+        cmp = PyObject_RichCompareBool(item, el, Py_EQ);
+        Py_DECREF(item);
+    }
+    return cmp;
+#endif
+}
+
 #define KIND_OP_SWITCH(kind)                                              \
     switch (kind) {                                                       \
     /* Tier 1 counterpart of _BINARY_OP_TRUEDIV_FLOAT: float / float */   \
@@ -774,6 +803,158 @@ gen_try_set_executing(PyGenObject *gen)
             PyStackRef_CLOSE(seq);                                        \
             _PyFrame_StackPointerInvalidate(frame);                       \
         }                                                                 \
+        break;                                                            \
+    }                                                                     \
+    /* FOR_ITER on a known iterator type (tier 1 counterpart of           \
+       _GUARD_NOS_TYPE + _ITER_NEXT_INLINE): call the type's tp_iternext  \
+       through a fixed table slot instead of the generic helper. */       \
+    case KIND_OP_FOR_ITER_DICT_KEYS:                                      \
+    case KIND_OP_FOR_ITER_DICT_VALUES:                                    \
+    case KIND_OP_FOR_ITER_DICT_ITEMS:                                     \
+    case KIND_OP_FOR_ITER_ENUMERATE:                                      \
+    case KIND_OP_FOR_ITER_ZIP:                                            \
+    case KIND_OP_FOR_ITER_SEQ_ITER:                                       \
+    case KIND_OP_FOR_ITER_REVERSED:                                       \
+    case KIND_OP_FOR_ITER_SET_ITER:                                       \
+    case KIND_OP_FOR_ITER_MAP:                                            \
+    case KIND_OP_FOR_ITER_FILTER:                                         \
+    case KIND_OP_FOR_ITER_LIST_REV: {                                     \
+        _PyStackRef iter = stack_pointer[-2];                             \
+        PyObject *iter_o = PyStackRef_AsPyObjectBorrow(iter);             \
+        const _PyKindOpIterDescr *d = &_PyKindOpIter_Table[kind - KIND_OP_FOR_ITER_FIRST];\
+        if (Py_TYPE(iter_o) != d->type) {                                 \
+            KIND_OP_DEOPT(FOR_ITER);                                      \
+        }                                                                 \
+        STAT_INC(FOR_ITER, hit);                                          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyObject *next_o = d->iternext(iter_o);                           \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        if (next_o == NULL) {                                             \
+            if (_PyErr_Occurred(tstate)) {                                \
+                if (!_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)) {\
+                    JUMP_TO_LABEL(error);                                 \
+                }                                                         \
+                _PyFrame_SetStackPointer(frame, stack_pointer);           \
+                _PyFrame_StackPointerValidate(frame);                     \
+                _PyEval_MonitorRaise(tstate, frame, frame->instr_ptr);    \
+                _PyErr_Clear(tstate);                                     \
+                _PyFrame_StackPointerInvalidate(frame);                   \
+            }                                                             \
+            /* Jump forward by oparg and skip the following END_FOR */    \
+            next_instr += oparg + 1;                                      \
+            break;                                                        \
+        }                                                                 \
+        stack_pointer[0] = PyStackRef_FromPyObjectSteal(next_o);          \
+        stack_pointer += 1;                                               \
+        break;                                                            \
+    }                                                                     \
+    /* CONTAINS_OP on exact str / tuple / list */                         \
+    case KIND_OP_CONTAINS_OP_STR:                                         \
+    case KIND_OP_CONTAINS_OP_TUPLE:                                       \
+    case KIND_OP_CONTAINS_OP_LIST: {                                      \
+        _PyStackRef left = stack_pointer[-2];                             \
+        _PyStackRef right = stack_pointer[-1];                            \
+        PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);             \
+        PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);           \
+        int res;                                                          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        if (kind == KIND_OP_CONTAINS_OP_STR) {                            \
+            if (!PyUnicode_CheckExact(right_o) || !PyUnicode_CheckExact(left_o)) {\
+                _PyFrame_StackPointerInvalidate(frame);                   \
+                KIND_OP_DEOPT(CONTAINS_OP);                               \
+            }                                                             \
+            res = PyUnicode_Contains(right_o, left_o);                    \
+        }                                                                 \
+        else if (kind == KIND_OP_CONTAINS_OP_TUPLE) {                     \
+            if (!PyTuple_CheckExact(right_o)) {                           \
+                _PyFrame_StackPointerInvalidate(frame);                   \
+                KIND_OP_DEOPT(CONTAINS_OP);                               \
+            }                                                             \
+            res = _PyKindOp_TupleContains(right_o, left_o);               \
+        }                                                                 \
+        else {                                                            \
+            if (!PyList_CheckExact(right_o)) {                            \
+                _PyFrame_StackPointerInvalidate(frame);                   \
+                KIND_OP_DEOPT(CONTAINS_OP);                               \
+            }                                                             \
+            res = _PyKindOp_ListContains(right_o, left_o);                \
+        }                                                                 \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        if (res < 0) {                                                    \
+            JUMP_TO_LABEL(error);                                         \
+        }                                                                 \
+        STAT_INC(CONTAINS_OP, hit);                                       \
+        stack_pointer[-2] = (res ^ oparg) ? PyStackRef_True : PyStackRef_False;\
+        stack_pointer += -1;                                              \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(right);                                          \
+        PyStackRef_CLOSE(left);                                           \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
+    /* bytes[int] and bytearray[int] with a non-negative compact int index */\
+    case KIND_OP_BINARY_OP_SUBSCR_BYTES_INT:                              \
+    case KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT: {                        \
+        _PyStackRef container = stack_pointer[-2];                        \
+        _PyStackRef sub = stack_pointer[-1];                              \
+        PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);   \
+        PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub);               \
+        int is_bytes = (kind == KIND_OP_BINARY_OP_SUBSCR_BYTES_INT);      \
+        if (is_bytes ? !PyBytes_CheckExact(container_o) : !PyByteArray_CheckExact(container_o)) {\
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        if (!PyLong_CheckExact(sub_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)sub_o)) {\
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        Py_ssize_t index = ((PyLongObject *)sub_o)->long_value.ob_digit[0];\
+        Py_ssize_t size = is_bytes ? PyBytes_GET_SIZE(container_o) : PyByteArray_GET_SIZE(container_o);\
+        if (index >= size) {                                              \
+            KIND_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        STAT_INC(BINARY_OP, hit);                                         \
+        const char *data = is_bytes ? PyBytes_AS_STRING(container_o) : PyByteArray_AS_STRING(container_o);\
+        PyObject *res_o = _PyLong_FromUnsignedChar((unsigned char)data[index]);\
+        stack_pointer[-2] = PyStackRef_FromPyObjectBorrow(res_o);         \
+        stack_pointer += -1;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(sub, _PyLong_ExactDealloc);          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(container);                                      \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
+    /* bytearray[int] = int, in range */                                  \
+    case KIND_OP_STORE_SUBSCR_BYTEARRAY_INT: {                            \
+        _PyStackRef v = stack_pointer[-3];                                \
+        _PyStackRef container = stack_pointer[-2];                        \
+        _PyStackRef sub = stack_pointer[-1];                              \
+        PyObject *v_o = PyStackRef_AsPyObjectBorrow(v);                   \
+        PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);   \
+        PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub);               \
+        if (!PyByteArray_CheckExact(container_o)) {                       \
+            KIND_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        if (!PyLong_CheckExact(sub_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)sub_o)\
+            || !PyLong_CheckExact(v_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)v_o)) {\
+            KIND_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        Py_ssize_t index = ((PyLongObject *)sub_o)->long_value.ob_digit[0];\
+        Py_ssize_t value = ((PyLongObject *)v_o)->long_value.ob_digit[0]; \
+        if (index >= PyByteArray_GET_SIZE(container_o) || value > 255) {  \
+            KIND_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        STAT_INC(STORE_SUBSCR, hit);                                      \
+        PyByteArray_AS_STRING(container_o)[index] = (char)value;          \
+        stack_pointer += -3;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(sub, _PyLong_ExactDealloc);          \
+        PyStackRef_CLOSE_SPECIALIZED(v, _PyLong_ExactDealloc);            \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(container);                                      \
+        _PyFrame_StackPointerInvalidate(frame);                           \
         break;                                                            \
     }                                                                     \
     default:                                                              \

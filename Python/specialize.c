@@ -392,6 +392,8 @@ unspecialize(_Py_CODEUNIT *instr)
     set_counter(counter, adaptive_counter_backoff(cur));
 }
 
+static void specialize_kind_op(_Py_CODEUNIT *instr, uint16_t kind);
+static int kind_specialization_enabled(void);
 static int function_kind(PyCodeObject *code);
 static bool function_check_args(PyObject *o, int expected_argcount, int opcode);
 static uint32_t function_get_version(PyObject *o, int opcode);
@@ -1622,6 +1624,12 @@ _Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_COD
         specialize(instr, STORE_SUBSCR_DICT);
         return;
     }
+    if (kind_specialization_enabled() && container_type == &PyByteArray_Type
+        && PyLong_CheckExact(sub) && _PyLong_IsNonNegativeCompact((PyLongObject *)sub))
+    {
+        specialize_kind_op(instr, KIND_OP_STORE_SUBSCR_BYTEARRAY_INT);
+        return;
+    }
     SPECIALIZATION_FAIL(STORE_SUBSCR, store_subscr_fail_kind(container, sub));
     unspecialize(instr);
 }
@@ -2262,6 +2270,37 @@ const _PyKindOpDescr _PyKindOp_Table[KIND_OP_NKINDS] = {
     [KIND_OP_UNPACK_UNIQUE_TWO_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TWO_TUPLE},
     [KIND_OP_UNPACK_UNIQUE_THREE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
     [KIND_OP_UNPACK_UNIQUE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
+    [KIND_OP_FOR_ITER_DICT_KEYS] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_DICT_VALUES] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_DICT_ITEMS] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_ENUMERATE] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_ZIP] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_SEQ_ITER] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_REVERSED] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_SET_ITER] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_MAP] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_FILTER] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_FOR_ITER_LIST_REV] = {FOR_ITER, FOR_ITER},
+    [KIND_OP_CONTAINS_OP_STR] = {CONTAINS_OP, CONTAINS_OP},
+    [KIND_OP_CONTAINS_OP_TUPLE] = {CONTAINS_OP, CONTAINS_OP},
+    [KIND_OP_CONTAINS_OP_LIST] = {CONTAINS_OP, CONTAINS_OP},
+    [KIND_OP_BINARY_OP_SUBSCR_BYTES_INT] = {BINARY_OP, BINARY_OP},
+    [KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT] = {BINARY_OP, BINARY_OP},
+    [KIND_OP_STORE_SUBSCR_BYTEARRAY_INT] = {STORE_SUBSCR, STORE_SUBSCR},
+};
+
+_PyKindOpIterDescr _PyKindOpIter_Table[KIND_OP_FOR_ITER_NTYPES] = {
+    [KIND_OP_FOR_ITER_DICT_KEYS - KIND_OP_FOR_ITER_FIRST] = {&PyDictIterKey_Type, NULL},
+    [KIND_OP_FOR_ITER_DICT_VALUES - KIND_OP_FOR_ITER_FIRST] = {&PyDictIterValue_Type, NULL},
+    [KIND_OP_FOR_ITER_DICT_ITEMS - KIND_OP_FOR_ITER_FIRST] = {&PyDictIterItem_Type, NULL},
+    [KIND_OP_FOR_ITER_ENUMERATE - KIND_OP_FOR_ITER_FIRST] = {&PyEnum_Type, NULL},
+    [KIND_OP_FOR_ITER_ZIP - KIND_OP_FOR_ITER_FIRST] = {&PyZip_Type, NULL},
+    [KIND_OP_FOR_ITER_SEQ_ITER - KIND_OP_FOR_ITER_FIRST] = {&PySeqIter_Type, NULL},
+    [KIND_OP_FOR_ITER_REVERSED - KIND_OP_FOR_ITER_FIRST] = {&PyReversed_Type, NULL},
+    [KIND_OP_FOR_ITER_SET_ITER - KIND_OP_FOR_ITER_FIRST] = {&PySetIter_Type, NULL},
+    [KIND_OP_FOR_ITER_MAP - KIND_OP_FOR_ITER_FIRST] = {&PyMap_Type, NULL},
+    [KIND_OP_FOR_ITER_FILTER - KIND_OP_FOR_ITER_FIRST] = {&PyFilter_Type, NULL},
+    [KIND_OP_FOR_ITER_LIST_REV - KIND_OP_FOR_ITER_FIRST] = {&PyListRevIter_Type, NULL},
 };
 
 /* Specialize `instr` to KIND_OP with the given kind. The instruction must
@@ -2507,6 +2546,14 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 }
                 if (PyTuple_CheckExact(lhs)) {
                     specialize(instr, BINARY_OP_SUBSCR_TUPLE_INT);
+                    return;
+                }
+                if (kind_specialization_enabled() && PyBytes_CheckExact(lhs)) {
+                    specialize_kind_op(instr, KIND_OP_BINARY_OP_SUBSCR_BYTES_INT);
+                    return;
+                }
+                if (kind_specialization_enabled() && PyByteArray_CheckExact(lhs)) {
+                    specialize_kind_op(instr, KIND_OP_BINARY_OP_SUBSCR_BYTEARRAY_INT);
                     return;
                 }
                 if (PyUnicode_CheckExact(lhs) && _PyLong_IsNonNegativeCompact((PyLongObject*)rhs)) {
@@ -2818,6 +2865,19 @@ _Py_Specialize_ForIter(_PyStackRef iter, _PyStackRef null_or_index, _Py_CODEUNIT
             specialize(instr, FOR_ITER_GEN);
             return;
         }
+        else if (kind_specialization_enabled()) {
+            for (int i = 0; i < KIND_OP_FOR_ITER_NTYPES; i++) {
+                _PyKindOpIterDescr *d = &_PyKindOpIter_Table[i];
+                if (tp == d->type) {
+                    if (d->iternext == NULL) {
+                        d->iternext = tp->tp_iternext;
+                    }
+                    assert(d->iternext == tp->tp_iternext);
+                    specialize_kind_op(instr, (uint16_t)(KIND_OP_FOR_ITER_FIRST + i));
+                    return;
+                }
+            }
+        }
     }
     else {
         if (tp->_tp_iteritem != NULL) {
@@ -3064,7 +3124,7 @@ _Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)
     PyObject *value = PyStackRef_AsPyObjectBorrow(value_st);
 
     assert(ENABLE_SPECIALIZATION);
-    assert(_PyOpcode_Caches[CONTAINS_OP] == INLINE_CACHE_ENTRIES_COMPARE_OP);
+    assert(_PyOpcode_Caches[CONTAINS_OP] == INLINE_CACHE_ENTRIES_CONTAINS_OP);
     if (PyAnyDict_CheckExact(value)) {
         specialize(instr, CONTAINS_OP_DICT);
         return;
@@ -3072,6 +3132,20 @@ _Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)
     if (PySet_CheckExact(value) || PyFrozenSet_CheckExact(value)) {
         specialize(instr, CONTAINS_OP_SET);
         return;
+    }
+    if (kind_specialization_enabled()) {
+        if (PyUnicode_CheckExact(value)) {
+            specialize_kind_op(instr, KIND_OP_CONTAINS_OP_STR);
+            return;
+        }
+        if (PyTuple_CheckExact(value)) {
+            specialize_kind_op(instr, KIND_OP_CONTAINS_OP_TUPLE);
+            return;
+        }
+        if (PyList_CheckExact(value)) {
+            specialize_kind_op(instr, KIND_OP_CONTAINS_OP_LIST);
+            return;
+        }
     }
 
     SPECIALIZATION_FAIL(CONTAINS_OP, containsop_fail_kind(value));

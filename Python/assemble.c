@@ -694,7 +694,8 @@ error:
 
 
 // The offset (in code units) of the END_SEND from the SEND in the `yield from` sequence.
-#define END_SEND_OFFSET 6
+/* SEND + YIELD_VALUE + RESUME + JUMP_BACKWARD_NO_INTERRUPT, with caches */
+#define END_SEND_OFFSET (5 + _PyOpcode_Caches[SEND])
 
 static int
 resolve_jump_offsets(instr_sequence *instrs)
