@@ -1,0 +1,2 @@
+Speed up creating :class:`str` objects from non-ASCII data and :meth:`bytes.isascii`
+by letting the compiler vectorize the scan for the widest character.
