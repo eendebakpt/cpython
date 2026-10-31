@@ -157,6 +157,55 @@ type_get_tp_mro(PyObject *self, PyObject *arg)
 }
 
 
+/* A static type whose tp_dict is a dict subclass instance, set up before
+   PyType_Ready() like extension modules (e.g. ctypes before 3.13) may do. */
+
+static PyObject *
+dict_subclass_tp_dict_type_len(PyObject *Py_UNUSED(self),
+                               PyObject *Py_UNUSED(ignored))
+{
+    return PyLong_FromLong(3);
+}
+
+static PyMethodDef dict_subclass_tp_dict_type_methods[] = {
+    {"__len__", dict_subclass_tp_dict_type_len, METH_NOARGS},
+    {NULL},
+};
+
+static PyTypeObject DictSubclassTpDictType = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "_testcapi.DictSubclassTpDictType",
+    .tp_basicsize = sizeof(PyObject),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE,
+    .tp_methods = dict_subclass_tp_dict_type_methods,
+    .tp_new = PyType_GenericNew,
+};
+
+static int
+init_dict_subclass_tp_dict_type(PyObject *m)
+{
+    PyTypeObject *type = &DictSubclassTpDictType;
+    if (type->tp_dict == NULL) {
+        PyObject *cls = PyObject_CallFunction((PyObject *)&PyType_Type,
+                                              "s(O){}", "DictSubclass",
+                                              &PyDict_Type);
+        if (cls == NULL) {
+            return -1;
+        }
+        PyObject *dict = PyObject_CallNoArgs(cls);
+        Py_DECREF(cls);
+        if (dict == NULL) {
+            return -1;
+        }
+        type->tp_dict = dict;
+    }
+    if (PyType_Ready(type) < 0) {
+        return -1;
+    }
+    return PyModule_AddType(m, type);
+}
+
+
 static PyMethodDef test_methods[] = {
     {"test_get_type_dict", test_get_type_dict, METH_NOARGS},
     {"test_get_statictype_slots", test_get_statictype_slots,     METH_NOARGS},
@@ -190,5 +239,9 @@ _PyTestCapi_Init_Type(PyObject *m)
     ADD_INT(Py_TPFLAGS_MAPPING);
 
 #undef ADD_INT
+
+    if (init_dict_subclass_tp_dict_type(m) < 0) {
+        return -1;
+    }
     return 0;
 }
