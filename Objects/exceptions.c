@@ -2691,6 +2691,21 @@ AttributeError_init(PyObject *op, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+/* Create an AttributeError(msg) with the name and obj attributes set,
+   without going through type_call() and AttributeError_init(). */
+PyObject *
+_PyAttributeError_New(PyObject *msg, PyObject *name, PyObject *obj)
+{
+    PyObject *op = BaseException_vectorcall(PyExc_AttributeError, &msg, 1, NULL);
+    if (op != NULL) {
+        PyAttributeErrorObject *self = PyAttributeErrorObject_CAST(op);
+        assert(self->name == NULL && self->obj == NULL);
+        self->name = Py_NewRef(name);
+        self->obj = Py_NewRef(obj);
+    }
+    return op;
+}
+
 static int
 AttributeError_clear(PyObject *op)
 {

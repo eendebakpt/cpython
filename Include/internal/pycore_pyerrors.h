@@ -18,6 +18,7 @@ extern void _PyErr_GetExcInfo(PyThreadState *, PyObject **, PyObject **, PyObjec
 
 // Export for '_testinternalcapi' shared extension
 PyAPI_FUNC(void) _PyErr_SetKeyError(PyObject *);
+extern PyObject *_PyAttributeError_New(PyObject *msg, PyObject *name, PyObject *obj);
 
 
 // Like PyErr_Format(), but saves current exception as __context__ and

@@ -1,0 +1,2 @@
+Speed up raising :exc:`AttributeError` for a missing attribute by building the
+message and the exception instance directly.

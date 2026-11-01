@@ -1297,14 +1297,85 @@ _PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)
         goto restore;
     }
     // Augment the exception with the name and object
-    if (PyObject_SetAttr(exc, &_Py_ID(name), name) ||
-        PyObject_SetAttr(exc, &_Py_ID(obj), v)) {
+    if (Py_IS_TYPE(exc, (PyTypeObject *)PyExc_AttributeError)) {
+        the_exc->name = Py_NewRef(name);
+        the_exc->obj = Py_NewRef(v);
+    }
+    else if (PyObject_SetAttr(exc, &_Py_ID(name), name) ||
+             PyObject_SetAttr(exc, &_Py_ID(obj), v)) {
         Py_DECREF(exc);
         return 1;
     }
 restore:
     PyErr_SetRaisedException(exc);
     return 0;
+}
+
+/* Build the message "'<type>' object has no attribute '<name>'". Equivalent
+   to PyUnicode_FromFormat("'%.100s' object has no attribute '%U'", ...). */
+static PyObject *
+attribute_error_message(PyTypeObject *tp, PyObject *name)
+{
+    static const char mid[] = "' object has no attribute '";
+    const char *tp_name = tp->tp_name;
+    size_t tp_len = strlen(tp_name);
+    if (tp_len > 100) {
+        goto slow;
+    }
+    for (size_t i = 0; i < tp_len; i++) {
+        if ((unsigned char)tp_name[i] >= 128) {
+            goto slow;
+        }
+    }
+    Py_ssize_t name_len = PyUnicode_GET_LENGTH(name);
+    Py_ssize_t len = 1 + (Py_ssize_t)tp_len + (sizeof(mid) - 1) + name_len + 1;
+    PyObject *msg = PyUnicode_New(len, PyUnicode_MAX_CHAR_VALUE(name));
+    if (msg == NULL) {
+        return NULL;
+    }
+    int kind = PyUnicode_KIND(msg);
+    void *data = PyUnicode_DATA(msg);
+    Py_ssize_t pos = 0;
+    PyUnicode_WRITE(kind, data, pos++, '\'');
+    for (size_t i = 0; i < tp_len; i++) {
+        PyUnicode_WRITE(kind, data, pos++, (unsigned char)tp_name[i]);
+    }
+    for (size_t i = 0; i < sizeof(mid) - 1; i++) {
+        PyUnicode_WRITE(kind, data, pos++, (unsigned char)mid[i]);
+    }
+    _PyUnicode_FastCopyCharacters(msg, pos, name, 0, name_len);
+    pos += name_len;
+    PyUnicode_WRITE(kind, data, pos++, '\'');
+    assert(pos == len);
+    assert(_PyUnicode_CheckConsistency(msg, 1));
+    return msg;
+
+slow:
+    return PyUnicode_FromFormat("'%.100s' object has no attribute '%U'",
+                                tp_name, name);
+}
+
+/* Raise AttributeError for a failed lookup of 'name' on 'obj', with the
+   'name' and 'obj' attributes of the exception set. Equivalent to
+   PyErr_Format(PyExc_AttributeError, "'%.100s' object has no attribute '%U'",
+                Py_TYPE(obj)->tp_name, name);
+   _PyObject_SetAttributeErrorContext(obj, name);
+   but cheaper. */
+static void
+raise_attribute_error(PyObject *obj, PyObject *name)
+{
+    PyThreadState *tstate = _PyThreadState_GET();
+    _PyErr_Clear(tstate);
+    PyObject *msg = attribute_error_message(Py_TYPE(obj), name);
+    if (msg == NULL) {
+        return;
+    }
+    PyObject *exc = _PyAttributeError_New(msg, name, obj);
+    Py_DECREF(msg);
+    if (exc != NULL) {
+        _PyErr_SetObject(tstate, PyExc_AttributeError, exc);
+        Py_DECREF(exc);
+    }
 }
 
 PyObject *
@@ -1330,9 +1401,8 @@ PyObject_GetAttr(PyObject *v, PyObject *name)
         result = (*tp->tp_getattr)(v, (char *)name_str);
     }
     else {
-        PyErr_Format(PyExc_AttributeError,
-                    "'%.100s' object has no attribute '%U'",
-                    tp->tp_name, name);
+        raise_attribute_error(v, name);
+        return NULL;
     }
 
     if (result == NULL) {
@@ -1377,9 +1447,8 @@ _PyObject_GetAttrStackRef(PyObject *v, PyObject *name)
         result = (*tp->tp_getattr)(v, (char *)name_str);
     }
     else {
-        PyErr_Format(PyExc_AttributeError,
-                    "'%.100s' object has no attribute '%U'",
-                    tp->tp_name, name);
+        raise_attribute_error(v, name);
+        return PyStackRef_NULL;
     }
 
     if (result == NULL) {
@@ -1737,11 +1806,7 @@ _PyObject_GetMethod(PyObject *obj, PyObject *name, PyObject **method)
         return 0;
     }
 
-    PyErr_Format(PyExc_AttributeError,
-                 "'%.100s' object has no attribute '%U'",
-                 tp->tp_name, name);
-
-    _PyObject_SetAttributeErrorContext(obj, name);
+    raise_attribute_error(obj, name);
     return 0;
 }
 
@@ -1871,11 +1936,7 @@ _PyObject_GetMethodStackRef(PyThreadState *ts, _PyStackRef *self,
         return 0;
     }
 
-    PyErr_Format(PyExc_AttributeError,
-                 "'%.100s' object has no attribute '%U'",
-                 tp->tp_name, name);
-
-    _PyObject_SetAttributeErrorContext(obj, name);
+    raise_attribute_error(obj, name);
     assert(PyStackRef_IsNull(*method));
     PyStackRef_CLEAR(*self);
     return -1;
@@ -2008,11 +2069,7 @@ _PyObject_GenericGetAttrWithDict(PyObject *obj, PyObject *name,
     }
 
     if (!suppress) {
-        PyErr_Format(PyExc_AttributeError,
-                     "'%.100s' object has no attribute '%U'",
-                     tp->tp_name, name);
-
-        _PyObject_SetAttributeErrorContext(obj, name);
+        raise_attribute_error(obj, name);
     }
   done:
     _PyThreadState_PopCStackRef(tstate, &cref);

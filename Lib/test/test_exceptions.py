@@ -2115,6 +2115,43 @@ class AttributeErrorTests(unittest.TestCase):
         self.assertEqual(exc.name, 'carry')
         self.assertIs(exc.obj, sentinel)
 
+    def test_getattr_error_message_unicode(self):
+        class NoAttr:
+            pass
+        obj = NoAttr()
+        for name in 'x', 'ättr', '\u3042', '\U0001f600x':
+            with self.subTest(name=name):
+                with self.assertRaises(AttributeError) as cm:
+                    getattr(obj, name)
+                self.assertEqual(str(cm.exception),
+                                 f"'NoAttr' object has no attribute '{name}'")
+                self.assertEqual(cm.exception.name, name)
+                self.assertIs(cm.exception.obj, obj)
+
+        Unicode = type('\u00dcn\u00efcode', (), {})
+        with self.assertRaises(AttributeError) as cm:
+            Unicode().ättr
+        self.assertEqual(str(cm.exception),
+                         "'\u00dcn\u00efcode' object has no attribute 'ättr'")
+
+        # The type name is truncated to 100 characters.
+        Long = type('L' * 150, (), {})
+        with self.assertRaises(AttributeError) as cm:
+            Long().x
+        self.assertEqual(str(cm.exception),
+                         f"'{'L' * 100}' object has no attribute 'x'")
+
+    def test_getattr_error_context(self):
+        class NoAttr:
+            pass
+        try:
+            raise ValueError
+        except ValueError as exc:
+            context = exc
+            with self.assertRaises(AttributeError) as cm:
+                NoAttr().missing
+        self.assertIs(cm.exception.__context__, context)
+
     def test_getattr_has_name_and_obj(self):
         class A:
             blech = None
