@@ -317,18 +317,32 @@ _PyTraceBack_FromFrame(PyObject *tb_next, PyFrameObject *frame)
 int
 PyTraceBack_Here(PyFrameObject *frame)
 {
-    PyObject *exc = PyErr_GetRaisedException();
+    PyThreadState *tstate = _PyThreadState_GET();
+    PyObject *exc = _PyErr_GetRaisedException(tstate);
     assert(PyExceptionInstance_Check(exc));
-    PyObject *tb = PyException_GetTraceback(exc);
-    PyObject *newtb = _PyTraceBack_FromFrame(tb, frame);
-    Py_XDECREF(tb);
-    if (newtb == NULL) {
-        _PyErr_ChainExceptions1(exc);
-        return -1;
+    assert(frame != NULL);
+    PyTracebackObject *tb = _Py_FREELIST_POP(PyTracebackObject, tracebacks);
+    if (tb == NULL) {
+        tb = PyObject_GC_New(PyTracebackObject, &PyTraceBack_Type);
+        if (tb == NULL) {
+            _PyErr_ChainExceptions1(exc);
+            return -1;
+        }
     }
-    PyException_SetTraceback(exc, newtb);
-    Py_XDECREF(newtb);
-    PyErr_SetRaisedException(exc);
+    tb->tb_frame = (PyFrameObject *)Py_NewRef(frame);
+    tb->tb_lasti = _PyInterpreterFrame_LASTI(frame->f_frame) * sizeof(_Py_CODEUNIT);
+    tb->tb_lineno = -1;
+    PyBaseExceptionObject *exc_obj = (PyBaseExceptionObject *)exc;
+    Py_BEGIN_CRITICAL_SECTION(exc);
+    /* The exception's current traceback (NULL or a traceback object, see
+       BaseException.__traceback__ setter) becomes tb_next of the new
+       traceback, and the new traceback becomes the exception's traceback.
+       Both references are moved, not copied. */
+    tb->tb_next = (PyTracebackObject *)exc_obj->traceback;
+    exc_obj->traceback = (PyObject *)tb;
+    Py_END_CRITICAL_SECTION();
+    PyObject_GC_Track(tb);
+    _PyErr_SetRaisedException(tstate, exc);
     return 0;
 }
 
