@@ -1527,25 +1527,33 @@ PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
                      Py_TYPE(name)->tp_name);
         return -1;
     }
-    Py_INCREF(name);
-
-    _PyUnicode_InternMortal(tstate->interp, &name);
+    // Intern the name, unless it is already immortal and interned (which is
+    // the case for all _Py_ID() names and code object names).
+    // _PyUnicode_InternMortal() steals a reference and may replace the
+    // string by the interned one, so a reference must be owned for it; the
+    // caller keeps 'name' alive otherwise.
+    PyObject *interned = NULL;
+    if (PyUnicode_CHECK_INTERNED(name) < SSTATE_INTERNED_IMMORTAL) {
+        interned = Py_NewRef(name);
+        _PyUnicode_InternMortal(tstate->interp, &interned);
+        name = interned;
+    }
     if (tp->tp_setattro != NULL) {
         err = (*tp->tp_setattro)(v, name, value);
-        Py_DECREF(name);
+        Py_XDECREF(interned);
         return err;
     }
     if (tp->tp_setattr != NULL) {
         const char *name_str = PyUnicode_AsUTF8(name);
         if (name_str == NULL) {
-            Py_DECREF(name);
+            Py_XDECREF(interned);
             return -1;
         }
         err = (*tp->tp_setattr)(v, (char *)name_str, value);
-        Py_DECREF(name);
+        Py_XDECREF(interned);
         return err;
     }
-    Py_DECREF(name);
+    Py_XDECREF(interned);
     _PyObject_ASSERT(name, Py_REFCNT(name) >= 1);
     if (tp->tp_getattr == NULL && tp->tp_getattro == NULL)
         PyErr_Format(PyExc_TypeError,

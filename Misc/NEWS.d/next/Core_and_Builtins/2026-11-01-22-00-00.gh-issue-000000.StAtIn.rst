@@ -1,0 +1,2 @@
+Speed up :c:func:`PyObject_SetAttr` for attribute names that are already
+interned, such as the names in code objects.
