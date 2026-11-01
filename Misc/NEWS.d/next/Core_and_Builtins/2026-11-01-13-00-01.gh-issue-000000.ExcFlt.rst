@@ -1,0 +1,2 @@
+Speed up raising exceptions by keeping instances of the builtin exception
+types and traceback objects on free lists.

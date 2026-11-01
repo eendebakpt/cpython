@@ -9,6 +9,7 @@
 #include "pycore_abstract.h"      // _PyObject_RealIsSubclass()
 #include "pycore_ceval.h"         // _Py_EnterRecursiveCall
 #include "pycore_exceptions.h"    // struct _Py_exc_state
+#include "pycore_freelist.h"      // _Py_FREELIST_POP()
 #include "pycore_initconfig.h"
 #include "pycore_modsupport.h"    // _PyArg_NoKeywords()
 #include "pycore_moduleobject.h"  // _PyModule_CAST()
@@ -50,12 +51,69 @@ PyBaseExceptionObject_CAST(PyObject *exc)
 /*
  *    BaseException
  */
+/* Instances of static exception types with at most two extra pointer
+   fields are kept on freelists, one per size. Returns the freelist index or
+   -1 if the type cannot use a freelist. */
+static inline int
+base_exception_freelist_index(PyTypeObject *type)
+{
+    if (_PyType_HasFeature(type, Py_TPFLAGS_HEAPTYPE)
+        || type->tp_alloc != PyType_GenericAlloc
+        || type->tp_free != PyObject_GC_Del)
+    {
+        return -1;
+    }
+    Py_ssize_t extra = type->tp_basicsize - (Py_ssize_t)sizeof(PyBaseExceptionObject);
+    if (extra < 0 || extra % sizeof(PyObject *) != 0) {
+        return -1;
+    }
+    Py_ssize_t index = extra / sizeof(PyObject *);
+    if (index >= Py_exceptions_NUM_SIZES) {
+        return -1;
+    }
+    return (int)index;
+}
+
+static PyBaseExceptionObject *
+base_exception_alloc(PyTypeObject *type)
+{
+    int index = base_exception_freelist_index(type);
+    if (index >= 0) {
+        PyBaseExceptionObject *self = _Py_FREELIST_POP(PyBaseExceptionObject, exceptions[index]);
+        if (self != NULL) {
+            // Same state as a fresh PyType_GenericAlloc() allocation
+            memset((char *)self + sizeof(PyObject), 0,
+                   type->tp_basicsize - sizeof(PyObject));
+            Py_SET_TYPE(self, type);
+            _PyObject_GC_TRACK(self);
+            return self;
+        }
+    }
+    return (PyBaseExceptionObject *)type->tp_alloc(type, 0);
+}
+
+/* Free an (untracked, cleared) exception instance, keeping it on a freelist
+   if possible. */
+static void
+base_exception_free(PyObject *self)
+{
+    int index = base_exception_freelist_index(Py_TYPE(self));
+    if (index >= 0) {
+        if (!_Py_FREELIST_PUSH(exceptions[index], self, Py_exceptions_MAXFREELIST)) {
+            PyObject_GC_Del(self);
+        }
+    }
+    else {
+        Py_TYPE(self)->tp_free(self);
+    }
+}
+
 static PyObject *
 BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     PyBaseExceptionObject *self;
 
-    self = (PyBaseExceptionObject *)type->tp_alloc(type, 0);
+    self = base_exception_alloc(type);
     if (!self)
         return NULL;
     /* the dict is created on the fly in PyObject_GenericSetAttr */
@@ -100,7 +158,7 @@ BaseException_vectorcall(PyObject *type_obj, PyObject * const*args,
     }
 
     PyBaseExceptionObject *self;
-    self = (PyBaseExceptionObject *)type->tp_alloc(type, 0);
+    self = base_exception_alloc(type);
     if (!self) {
         return NULL;
     }
@@ -145,7 +203,7 @@ BaseException_dealloc(PyObject *op)
     // long chains of exceptions. For example, exceptions can be chained
     // through the __context__ attributes or the __traceback__ attribute.
     (void)BaseException_clear(op);
-    Py_TYPE(self)->tp_free(self);
+    base_exception_free(op);
 }
 
 static int
@@ -755,7 +813,7 @@ StopIteration_dealloc(PyObject *self)
 {
     PyObject_GC_UnTrack(self);
     (void)StopIteration_clear(self);
-    Py_TYPE(self)->tp_free(self);
+    base_exception_free(self);
 }
 
 static int
@@ -822,7 +880,7 @@ SystemExit_dealloc(PyObject *self)
 {
     _PyObject_GC_UNTRACK(self);
     (void)SystemExit_clear(self);
-    Py_TYPE(self)->tp_free(self);
+    base_exception_free(self);
 }
 
 static int
@@ -2619,7 +2677,7 @@ NameError_dealloc(PyObject *self)
 {
     _PyObject_GC_UNTRACK(self);
     (void)NameError_clear(self);
-    Py_TYPE(self)->tp_free(self);
+    base_exception_free(self);
 }
 
 static int
@@ -2705,7 +2763,7 @@ AttributeError_dealloc(PyObject *self)
 {
     _PyObject_GC_UNTRACK(self);
     (void)AttributeError_clear(self);
-    Py_TYPE(self)->tp_free(self);
+    base_exception_free(self);
 }
 
 static PyObject *

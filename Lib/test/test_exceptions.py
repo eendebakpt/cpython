@@ -747,6 +747,41 @@ class ExceptionTests(unittest.TestCase):
                 delattr(exc, name)
                 self.assertIsNone(getattr(exc, name))
 
+    def test_recycled_instances_are_clean(self):
+        # Instances of the builtin exception types are recycled internally.
+        # A recycled instance must not carry over any state.
+        sentinel = object()
+        types = (ValueError, KeyError, StopIteration, NameError,
+                 UnboundLocalError, SystemExit, AttributeError)
+        for i in range(50):
+            exc = AttributeError('msg', name='n', obj=sentinel)
+            exc.extra = 1
+            exc.add_note('note')
+            exc.__cause__ = StopIteration(sentinel)
+            try:
+                raise exc from exc.__cause__
+            except AttributeError:
+                pass
+            del exc
+            exc = NameError('n', name='x')
+            exc.__context__ = SystemExit(3)
+            del exc
+            if i % 10 == 0:
+                gc_collect()
+            for tp in types:
+                with self.subTest(tp=tp):
+                    exc = tp()
+                    self.assertEqual(exc.args, ())
+                    self.assertEqual(exc.__dict__, {})
+                    self.assertIsNone(exc.__traceback__)
+                    self.assertIsNone(exc.__cause__)
+                    self.assertIsNone(exc.__context__)
+                    self.assertFalse(exc.__suppress_context__)
+                    self.assertFalse(hasattr(exc, '__notes__'))
+                    for attr in 'value', 'name', 'obj', 'code':
+                        if hasattr(tp, attr):
+                            self.assertIsNone(getattr(exc, attr))
+
     def test_invalid_delattr(self):
         AE = AttributeError
         try:

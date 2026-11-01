@@ -956,6 +956,10 @@ _PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)
     clear_freelist(&freelists->pycfunctionobject, is_finalization, PyObject_GC_Del);
     clear_freelist(&freelists->pycmethodobject, is_finalization, PyObject_GC_Del);
     clear_freelist(&freelists->pymethodobjects, is_finalization, free_object);
+    clear_freelist(&freelists->tracebacks, is_finalization, PyObject_GC_Del);
+    for (Py_ssize_t i = 0; i < Py_exceptions_NUM_SIZES; i++) {
+        clear_freelist(&freelists->exceptions[i], is_finalization, PyObject_GC_Del);
+    }
 }
 
 /*
