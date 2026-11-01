@@ -1282,20 +1282,22 @@ _Py_COMP_DIAG_POP
 int
 _PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)
 {
-    assert(PyErr_Occurred());
-    if (!PyErr_ExceptionMatches(PyExc_AttributeError)){
-        return 0;
-    }
+    PyThreadState *tstate = _PyThreadState_GET();
+    // The current exception is always a normalized instance
+    PyObject *exc = tstate->current_exception;
+    assert(exc != NULL && PyExceptionInstance_Check(exc));
     // Intercept AttributeError exceptions and augment them to offer suggestions later.
-    PyObject *exc = PyErr_GetRaisedException();
-    if (!PyErr_GivenExceptionMatches(exc, PyExc_AttributeError)) {
-        goto restore;
+    if (!Py_IS_TYPE(exc, (PyTypeObject *)PyExc_AttributeError)
+        && !PyErr_GivenExceptionMatches(exc, PyExc_AttributeError))
+    {
+        return 0;
     }
     PyAttributeErrorObject* the_exc = (PyAttributeErrorObject*) exc;
     // Check if this exception was already augmented
     if (the_exc->name || the_exc->obj) {
-        goto restore;
+        return 0;
     }
+    exc = _PyErr_GetRaisedException(tstate);
     // Augment the exception with the name and object
     if (Py_IS_TYPE(exc, (PyTypeObject *)PyExc_AttributeError)) {
         the_exc->name = Py_NewRef(name);
@@ -1306,8 +1308,7 @@ _PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)
         Py_DECREF(exc);
         return 1;
     }
-restore:
-    PyErr_SetRaisedException(exc);
+    _PyErr_SetRaisedException(tstate, exc);
     return 0;
 }
 
