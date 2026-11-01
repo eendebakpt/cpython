@@ -2691,6 +2691,39 @@ AttributeError_init(PyObject *op, PyObject *args, PyObject *kwds)
     return 0;
 }
 
+/* AttributeError(*args, name=None, obj=None) without type_call() and
+   argument parsing. Only used for the exact AttributeError type. */
+static PyObject *
+AttributeError_vectorcall(PyObject *type, PyObject * const*args,
+                          size_t nargsf, PyObject *kwnames)
+{
+    PyObject *op = BaseException_vectorcall(type, args, nargsf, NULL);
+    if (op == NULL || kwnames == NULL) {
+        return op;
+    }
+    PyAttributeErrorObject *self = PyAttributeErrorObject_CAST(op);
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    Py_ssize_t nkwargs = PyTuple_GET_SIZE(kwnames);
+    for (Py_ssize_t i = 0; i < nkwargs; i++) {
+        PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+        PyObject *value = args[nargs + i];
+        if (_PyUnicode_Equal(key, &_Py_ID(name))) {
+            Py_XSETREF(self->name, Py_NewRef(value));
+        }
+        else if (_PyUnicode_Equal(key, &_Py_ID(obj))) {
+            Py_XSETREF(self->obj, Py_NewRef(value));
+        }
+        else {
+            PyErr_Format(PyExc_TypeError,
+                         "AttributeError() got an unexpected keyword "
+                         "argument '%U'", key);
+            Py_DECREF(op);
+            return NULL;
+        }
+    }
+    return op;
+}
+
 static int
 AttributeError_clear(PyObject *op)
 {
@@ -4564,6 +4597,9 @@ _PyExc_InitTypes(PyInterpreterState *interp)
             && exc->tp_init == BaseException_init)
         {
             exc->tp_vectorcall = BaseException_vectorcall;
+        }
+        else if (exc == (PyTypeObject *)PyExc_AttributeError) {
+            exc->tp_vectorcall = AttributeError_vectorcall;
         }
     }
     return 0;

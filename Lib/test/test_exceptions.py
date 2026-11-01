@@ -2115,6 +2115,29 @@ class AttributeErrorTests(unittest.TestCase):
         self.assertEqual(exc.name, 'carry')
         self.assertIs(exc.obj, sentinel)
 
+    def test_kwargs(self):
+        sentinel = object()
+        exc = AttributeError('Ouch', 'again', name='carry', obj=sentinel)
+        self.assertEqual(exc.args, ('Ouch', 'again'))
+        self.assertEqual(exc.name, 'carry')
+        self.assertIs(exc.obj, sentinel)
+        exc = AttributeError(obj=sentinel)
+        self.assertEqual(exc.args, ())
+        self.assertIsNone(exc.name)
+        self.assertIs(exc.obj, sentinel)
+        msg = r"AttributeError\(\) got an unexpected keyword argument 'invalid'"
+        with self.assertRaisesRegex(TypeError, msg):
+            AttributeError('Ouch', invalid=1)
+
+        # Subclasses still go through __init__()
+        class Sub(AttributeError):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.initialized = True
+        exc = Sub('Ouch', name='carry')
+        self.assertTrue(exc.initialized)
+        self.assertEqual(exc.name, 'carry')
+
     def test_getattr_has_name_and_obj(self):
         class A:
             blech = None
