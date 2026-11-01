@@ -1,4 +1,4 @@
 Speed up :c:func:`PyUnicode_FromFormat` for format strings that only use
-``%s``, ``%U``, ``%c`` and ``%%`` conversions, and speed up the creation of
+``%s`` and ``%U`` conversions, and speed up the creation of
 :exc:`AttributeError` instances. Raising :exc:`AttributeError` for a missing
 attribute is about 1.4x faster.

@@ -3175,150 +3175,102 @@ unicode_from_format(_PyUnicodeWriter *writer, const char *format, va_list vargs)
     return -1;
 }
 
-static inline void
-unicode_write_ascii(int kind, void *data, Py_ssize_t pos,
-                    const char *str, Py_ssize_t len)
-{
-    if (kind == PyUnicode_1BYTE_KIND) {
-        memcpy((Py_UCS1 *)data + pos, str, (size_t)len);
-    }
-    else {
-        for (Py_ssize_t i = 0; i < len; i++) {
-            PyUnicode_WRITE(kind, data, pos + i, (Py_UCS4)(unsigned char)str[i]);
-        }
-    }
-}
-
-/* Fast path for PyUnicode_FromFormatV(): formats which only contain literal
-   text and the %s (with an optional precision), %U, %c and %% conversions,
-   with ASCII %s arguments. A first pass splits the format into pieces and
-   computes the exact length and maximum character of the result, so that the
-   string is created with its final size and filled directly: no writer
-   overallocation, no final resize and no per-chunk write calls.
+/* Fast path for the most common error message formats: ASCII literal text
+   with %s (optionally with a precision, and only for ASCII arguments) and %U
+   conversions, such as "'%.100s' object has no attribute '%U'". The exact
+   length and maximum character of the result are computed first, so the
+   string is created with its final size and filled directly, which is much
+   cheaper than the generic _PyUnicodeWriter based path.
 
    Return 1 and set *result on success, 0 if the format is not handled here
    (nothing is consumed from vargs), or -1 with an exception set. */
-#define FROMFORMAT_FAST_MAXPIECES 16
-
-struct fromformat_piece {
-    const char *str;    /* ASCII bytes: format text or a %s argument */
-    PyObject *obj;      /* a %U argument */
-    Py_ssize_t len;     /* number of characters, or the character itself */
-};
+#define FROMFORMAT_SIMPLE_MAXPIECES 8
 
 static int
-unicode_from_format_fast(const char *format, va_list vargs, PyObject **result)
+unicode_from_format_simple(const char *format, va_list vargs,
+                           PyObject **result)
 {
-    struct fromformat_piece pieces[FROMFORMAT_FAST_MAXPIECES];
+    /* A piece is either ASCII bytes (str, len) or a str object (obj, len) */
+    struct {
+        const char *str;
+        PyObject *obj;
+        Py_ssize_t len;
+    } pieces[FROMFORMAT_SIMPLE_MAXPIECES];
     int npieces = 0;
     Py_ssize_t total = 0;
     Py_UCS4 maxchar = 127;
+
+    Py_ssize_t format_len = strlen(format);
+    const char *format_end = format + format_len;
+    if (ucs1lib_find_max_char((const Py_UCS1 *)format,
+                              (const Py_UCS1 *)format_end) >= 128) {
+        return 0;
+    }
 
     va_list vargs2;
     va_copy(vargs2, vargs);
     const char *f = format;
     while (*f) {
-        if (npieces >= FROMFORMAT_FAST_MAXPIECES) {
+        if (npieces == FROMFORMAT_SIMPLE_MAXPIECES) {
             goto unsupported;
         }
-        struct fromformat_piece *piece = &pieces[npieces];
         if (*f != '%') {
             const char *end = strchr(f, '%');
-            Py_ssize_t len = (end != NULL) ? end - f : (Py_ssize_t)strlen(f);
-            if (ucs1lib_find_max_char((const Py_UCS1 *)f,
-                                      (const Py_UCS1 *)f + len) >= 128) {
-                goto unsupported;
-            }
-            piece->str = f;
-            piece->obj = NULL;
-            piece->len = len;
+            Py_ssize_t len = (end != NULL ? end : format_end) - f;
+            pieces[npieces].str = f;
+            pieces[npieces].obj = NULL;
+            pieces[npieces].len = len;
             total += len;
             f += len;
-            npieces++;
-            continue;
         }
-        f++;
-        if (*f == '%') {
-            piece->str = NULL;
-            piece->obj = NULL;
-            piece->len = '%';
-            total++;
+        else {
             f++;
-            npieces++;
-            continue;
-        }
-        Py_ssize_t precision = -1;
-        if (*f == '.') {
-            f++;
-            precision = 0;
-            while (Py_ISDIGIT((unsigned)*f)) {
-                precision = precision * 10 + (*f - '0');
-                if (precision > 1000000) {
-                    goto unsupported;
-                }
+            Py_ssize_t precision = -1;
+            if (*f == '.') {
                 f++;
+                precision = 0;
+                while (Py_ISDIGIT((unsigned)*f)) {
+                    if (precision > 100000) {
+                        goto unsupported;
+                    }
+                    precision = precision * 10 + (*f++ - '0');
+                }
             }
-        }
-        switch (*f) {
-        case 's': {
-            const char *s = va_arg(vargs2, const char *);
-            Py_ssize_t len;
-            if (precision < 0) {
-                len = (Py_ssize_t)strlen(s);
-            }
-            else {
-                len = 0;
-                while (len < precision && s[len] != '\0') {
+            if (*f == 's') {
+                const char *s = va_arg(vargs2, const char *);
+                Py_ssize_t len = 0;
+                while (s[len] != '\0' && len != precision) {
+                    if ((unsigned char)s[len] >= 128) {
+                        goto unsupported;
+                    }
                     len++;
                 }
+                pieces[npieces].str = s;
+                pieces[npieces].obj = NULL;
+                pieces[npieces].len = len;
+                total += len;
             }
-            if (ucs1lib_find_max_char((const Py_UCS1 *)s,
-                                      (const Py_UCS1 *)s + len) >= 128) {
+            else if (*f == 'U' && precision < 0) {
+                PyObject *obj = va_arg(vargs2, PyObject *);
+                assert(obj && _PyUnicode_CHECK(obj));
+                Py_ssize_t len = PyUnicode_GET_LENGTH(obj);
+                pieces[npieces].str = NULL;
+                pieces[npieces].obj = obj;
+                pieces[npieces].len = len;
+                total += len;
+                maxchar = Py_MAX(maxchar, PyUnicode_MAX_CHAR_VALUE(obj));
+            }
+            else {
                 goto unsupported;
             }
-            piece->str = s;
-            piece->obj = NULL;
-            piece->len = len;
-            total += len;
-            break;
-        }
-        case 'U': {
-            PyObject *obj = va_arg(vargs2, PyObject *);
-            assert(obj && _PyUnicode_CHECK(obj));
-            Py_ssize_t len = PyUnicode_GET_LENGTH(obj);
-            if (precision >= 0 && precision < len) {
-                goto unsupported;
-            }
-            piece->str = NULL;
-            piece->obj = obj;
-            piece->len = len;
-            total += len;
-            maxchar = Py_MAX(maxchar, PyUnicode_MAX_CHAR_VALUE(obj));
-            break;
-        }
-        case 'c': {
-            int ch = va_arg(vargs2, int);
-            if (precision >= 0 || ch < 0 || ch > MAX_UNICODE) {
-                goto unsupported;
-            }
-            piece->str = NULL;
-            piece->obj = NULL;
-            piece->len = ch;
-            total++;
-            maxchar = Py_MAX(maxchar, (Py_UCS4)ch);
-            break;
-        }
-        default:
-            goto unsupported;
+            f++;
         }
         npieces++;
-        f++;
     }
     va_end(vargs2);
 
     if (total <= 1) {
-        /* let the generic path return the empty and single character
-           singletons */
+        /* the generic path returns the empty and latin-1 singletons */
         return 0;
     }
     PyObject *str = PyUnicode_New(total, maxchar);
@@ -3329,22 +3281,22 @@ unicode_from_format_fast(const char *format, va_list vargs, PyObject **result)
     void *data = PyUnicode_DATA(str);
     Py_ssize_t pos = 0;
     for (int i = 0; i < npieces; i++) {
-        struct fromformat_piece *piece = &pieces[i];
-        if (piece->str != NULL) {
-            unicode_write_ascii(kind, data, pos, piece->str, piece->len);
-            pos += piece->len;
-        }
-        else if (piece->obj != NULL) {
-            if (piece->len > 0) {
-                _PyUnicode_FastCopyCharacters(str, pos, piece->obj, 0,
-                                              piece->len);
+        Py_ssize_t len = pieces[i].len;
+        if (pieces[i].obj != NULL) {
+            if (len > 0) {
+                _PyUnicode_FastCopyCharacters(str, pos, pieces[i].obj, 0, len);
             }
-            pos += piece->len;
+        }
+        else if (kind == PyUnicode_1BYTE_KIND) {
+            memcpy((Py_UCS1 *)data + pos, pieces[i].str, (size_t)len);
         }
         else {
-            PyUnicode_WRITE(kind, data, pos, (Py_UCS4)piece->len);
-            pos++;
+            for (Py_ssize_t j = 0; j < len; j++) {
+                PyUnicode_WRITE(kind, data, pos + j,
+                                (Py_UCS4)(unsigned char)pieces[i].str[j]);
+            }
         }
+        pos += len;
     }
     assert(pos == total);
     assert(_PyUnicode_CheckConsistency(str, 1));
@@ -3360,7 +3312,7 @@ PyObject *
 PyUnicode_FromFormatV(const char *format, va_list vargs)
 {
     PyObject *result;
-    int res = unicode_from_format_fast(format, vargs, &result);
+    int res = unicode_from_format_simple(format, vargs, &result);
     if (res != 0) {
         return res < 0 ? NULL : result;
     }
