@@ -9,6 +9,7 @@
 #include "pycore_abstract.h"      // _PyObject_RealIsSubclass()
 #include "pycore_ceval.h"         // _Py_EnterRecursiveCall
 #include "pycore_exceptions.h"    // struct _Py_exc_state
+#include "pycore_freelist.h"      // _Py_FREELIST_POP()
 #include "pycore_initconfig.h"
 #include "pycore_modsupport.h"    // _PyArg_NoKeywords()
 #include "pycore_moduleobject.h"  // _PyModule_CAST()
@@ -50,12 +51,37 @@ PyBaseExceptionObject_CAST(PyObject *exc)
 /*
  *    BaseException
  */
+/* Instances of the static exception types without extra fields (ValueError,
+   KeyError, TypeError, ...) are kept on a freelist. All these types use the
+   generic tp_alloc and tp_free. */
+static inline int
+base_exception_use_freelist(PyTypeObject *type)
+{
+    return (type->tp_basicsize == sizeof(PyBaseExceptionObject)
+            && !_PyType_HasFeature(type, Py_TPFLAGS_HEAPTYPE));
+}
+
+static PyBaseExceptionObject *
+base_exception_alloc(PyTypeObject *type)
+{
+    if (base_exception_use_freelist(type)) {
+        assert(type->tp_alloc == PyType_GenericAlloc);
+        PyBaseExceptionObject *self = _Py_FREELIST_POP(PyBaseExceptionObject, exceptions);
+        if (self != NULL) {
+            Py_SET_TYPE(self, type);
+            _PyObject_GC_TRACK(self);
+            return self;
+        }
+    }
+    return (PyBaseExceptionObject *)type->tp_alloc(type, 0);
+}
+
 static PyObject *
 BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     PyBaseExceptionObject *self;
 
-    self = (PyBaseExceptionObject *)type->tp_alloc(type, 0);
+    self = base_exception_alloc(type);
     if (!self)
         return NULL;
     /* the dict is created on the fly in PyObject_GenericSetAttr */
@@ -100,7 +126,7 @@ BaseException_vectorcall(PyObject *type_obj, PyObject * const*args,
     }
 
     PyBaseExceptionObject *self;
-    self = (PyBaseExceptionObject *)type->tp_alloc(type, 0);
+    self = base_exception_alloc(type);
     if (!self) {
         return NULL;
     }
@@ -145,7 +171,13 @@ BaseException_dealloc(PyObject *op)
     // long chains of exceptions. For example, exceptions can be chained
     // through the __context__ attributes or the __traceback__ attribute.
     (void)BaseException_clear(op);
-    Py_TYPE(self)->tp_free(self);
+    if (base_exception_use_freelist(Py_TYPE(self))) {
+        assert(Py_TYPE(self)->tp_free == PyObject_GC_Del);
+        _Py_FREELIST_FREE(exceptions, self, PyObject_GC_Del);
+    }
+    else {
+        Py_TYPE(self)->tp_free(self);
+    }
 }
 
 static int

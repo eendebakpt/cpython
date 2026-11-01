@@ -747,6 +747,33 @@ class ExceptionTests(unittest.TestCase):
                 delattr(exc, name)
                 self.assertIsNone(getattr(exc, name))
 
+    def test_recycled_instances_are_clean(self):
+        # Instances of the builtin exception types are recycled internally.
+        # A recycled instance must not carry over any state.
+        types = (ValueError, KeyError, TypeError, IndexError, RuntimeError)
+        for i in range(50):
+            exc = ValueError('msg', 2)
+            exc.extra = 1
+            exc.add_note('note')
+            exc.__cause__ = KeyError('cause')
+            try:
+                raise exc from exc.__cause__
+            except ValueError:
+                pass
+            del exc
+            if i % 10 == 0:
+                gc_collect()
+            for tp in types:
+                with self.subTest(tp=tp):
+                    exc = tp()
+                    self.assertEqual(exc.args, ())
+                    self.assertEqual(exc.__dict__, {})
+                    self.assertIsNone(exc.__traceback__)
+                    self.assertIsNone(exc.__cause__)
+                    self.assertIsNone(exc.__context__)
+                    self.assertFalse(exc.__suppress_context__)
+                    self.assertFalse(hasattr(exc, '__notes__'))
+
     def test_invalid_delattr(self):
         AE = AttributeError
         try:
