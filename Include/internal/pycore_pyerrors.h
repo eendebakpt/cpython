@@ -34,6 +34,10 @@ PyAPI_FUNC(int) _PyException_AddNote(
      PyObject *exc,
      PyObject *note);
 
+// Like PyException_SetTraceback(), but steals a reference to tb,
+// which must be a traceback object or NULL.
+extern void _PyException_SetTracebackSteal(PyObject *exc, PyObject *tb);
+
 extern int _PyErr_CheckSignals(void);
 
 /* Support for adding program text to SyntaxErrors */

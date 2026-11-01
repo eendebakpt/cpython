@@ -510,6 +510,15 @@ PyException_SetTraceback(PyObject *self, PyObject *tb)
     return res;
 }
 
+void
+_PyException_SetTracebackSteal(PyObject *self, PyObject *tb)
+{
+    assert(tb == NULL || PyTraceBack_Check(tb));
+    Py_BEGIN_CRITICAL_SECTION(self);
+    Py_XSETREF(PyBaseExceptionObject_CAST(self)->traceback, tb);
+    Py_END_CRITICAL_SECTION();
+}
+
 PyObject *
 PyException_GetCause(PyObject *self)
 {

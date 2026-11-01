@@ -75,6 +75,7 @@ static PF_GET_THREAD_DESCRIPTION pGetThreadDescription = NULL;
 #endif
 
 
+/* Create a traceback object. Steals a reference to next. */
 static PyObject *
 tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti,
               int lineno)
@@ -82,6 +83,7 @@ tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti,
     PyTracebackObject *tb;
     if ((next != NULL && !PyTraceBack_Check(next)) ||
                     frame == NULL || !PyFrame_Check(frame)) {
+        Py_XDECREF(next);
         PyErr_BadInternalCall();
         return NULL;
     }
@@ -89,8 +91,11 @@ tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti,
     if (tb == NULL) {
         tb = PyObject_GC_New(PyTracebackObject, &PyTraceBack_Type);
     }
-    if (tb != NULL) {
-        tb->tb_next = (PyTracebackObject*)Py_XNewRef(next);
+    if (tb == NULL) {
+        Py_XDECREF(next);
+    }
+    else {
+        tb->tb_next = next;
         tb->tb_frame = (PyFrameObject*)Py_XNewRef(frame);
         tb->tb_lasti = lasti;
         tb->tb_lineno = lineno;
@@ -124,8 +129,8 @@ tb_new_impl(PyTypeObject *type, PyObject *tb_next, PyFrameObject *tb_frame,
                             Py_TYPE(tb_next)->tp_name);
     }
 
-    return tb_create_raw((PyTracebackObject *)tb_next, tb_frame, tb_lasti,
-                         tb_lineno);
+    return tb_create_raw((PyTracebackObject *)Py_XNewRef(tb_next), tb_frame,
+                         tb_lasti, tb_lineno);
 }
 
 static PyObject *
@@ -310,7 +315,8 @@ _PyTraceBack_FromFrame(PyObject *tb_next, PyFrameObject *frame)
     assert(tb_next == NULL || PyTraceBack_Check(tb_next));
     assert(frame != NULL);
     int addr = _PyInterpreterFrame_LASTI(frame->f_frame) * sizeof(_Py_CODEUNIT);
-    return tb_create_raw((PyTracebackObject *)tb_next, frame, addr, -1);
+    return tb_create_raw((PyTracebackObject *)Py_XNewRef(tb_next), frame,
+                         addr, -1);
 }
 
 
@@ -319,15 +325,16 @@ PyTraceBack_Here(PyFrameObject *frame)
 {
     PyObject *exc = PyErr_GetRaisedException();
     assert(PyExceptionInstance_Check(exc));
+    /* The reference to the current traceback is moved into tb_next of the
+       new traceback, and the new traceback into the exception. */
     PyObject *tb = PyException_GetTraceback(exc);
-    PyObject *newtb = _PyTraceBack_FromFrame(tb, frame);
-    Py_XDECREF(tb);
+    int addr = _PyInterpreterFrame_LASTI(frame->f_frame) * sizeof(_Py_CODEUNIT);
+    PyObject *newtb = tb_create_raw((PyTracebackObject *)tb, frame, addr, -1);
     if (newtb == NULL) {
         _PyErr_ChainExceptions1(exc);
         return -1;
     }
-    PyException_SetTraceback(exc, newtb);
-    Py_XDECREF(newtb);
+    _PyException_SetTracebackSteal(exc, newtb);
     PyErr_SetRaisedException(exc);
     return 0;
 }
