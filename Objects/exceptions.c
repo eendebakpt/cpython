@@ -9,6 +9,7 @@
 #include "pycore_abstract.h"      // _PyObject_RealIsSubclass()
 #include "pycore_ceval.h"         // _Py_EnterRecursiveCall
 #include "pycore_exceptions.h"    // struct _Py_exc_state
+#include "pycore_freelist.h"      // _Py_FREELIST_POP()
 #include "pycore_initconfig.h"
 #include "pycore_modsupport.h"    // _PyArg_NoKeywords()
 #include "pycore_moduleobject.h"  // _PyModule_CAST()
@@ -47,9 +48,46 @@ PyBaseExceptionObject_CAST(PyObject *exc)
     return (PyBaseExceptionObject *)exc;
 }
 
+/* tp_alloc and tp_free of the builtin exception types whose instances are
+   plain PyBaseExceptionObjects (ValueError, KeyError, TypeError, ...), see
+   _PyExc_InitTypes(): those instances are kept on a freelist.
+   Python subclasses always get PyType_GenericAlloc and PyObject_GC_Del from
+   type_new(), but extension types that inherit these slots can have a
+   different layout, so only the builtin types themselves use the freelist. */
+static PyObject *
+BaseException_alloc(PyTypeObject *type, Py_ssize_t nitems)
+{
+    if (_PyType_HasFeature(type, _Py_TPFLAGS_STATIC_BUILTIN)) {
+        assert(type->tp_basicsize == sizeof(PyBaseExceptionObject));
+        assert(nitems == 0);
+        PyObject *self = _Py_FREELIST_POP(PyObject, exceptions);
+        if (self != NULL) {
+            Py_SET_TYPE(self, type);
+            memset((char *)self + sizeof(PyObject), 0,
+                   sizeof(PyBaseExceptionObject) - sizeof(PyObject));
+            _PyObject_GC_TRACK(self);
+            return self;
+        }
+    }
+    return PyType_GenericAlloc(type, nitems);
+}
+
+static void
+BaseException_free(void *op)
+{
+    if (_PyType_HasFeature(Py_TYPE(op), _Py_TPFLAGS_STATIC_BUILTIN)) {
+        assert(Py_TYPE(op)->tp_basicsize == sizeof(PyBaseExceptionObject));
+        _Py_FREELIST_FREE(exceptions, op, PyObject_GC_Del);
+    }
+    else {
+        PyObject_GC_Del(op);
+    }
+}
+
 /*
  *    BaseException
  */
+
 static PyObject *
 BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
@@ -4557,6 +4595,15 @@ _PyExc_InitTypes(PyInterpreterState *interp)
 {
     for (size_t i=0; i < Py_ARRAY_LENGTH(static_exceptions); i++) {
         PyTypeObject *exc = static_exceptions[i].exc;
+        if (exc->tp_basicsize == sizeof(PyBaseExceptionObject)) {
+            exc->tp_alloc = BaseException_alloc;
+            exc->tp_free = BaseException_free;
+        }
+        else {
+            // Do not inherit the freelist allocator from the base class.
+            exc->tp_alloc = PyType_GenericAlloc;
+            exc->tp_free = PyObject_GC_Del;
+        }
         if (_PyStaticType_InitBuiltin(interp, exc) < 0) {
             return -1;
         }

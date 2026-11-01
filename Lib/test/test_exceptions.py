@@ -747,6 +747,52 @@ class ExceptionTests(unittest.TestCase):
                 delattr(exc, name)
                 self.assertIsNone(getattr(exc, name))
 
+    def test_recycled_instances_are_clean(self):
+        # Instances of the builtin exception types are recycled internally.
+        # A recycled instance must not carry over any state.
+        types = (ValueError, KeyError, TypeError, IndexError, RuntimeError)
+        for i in range(50):
+            exc = ValueError('msg', 2)
+            exc.extra = 1
+            exc.add_note('note')
+            exc.__cause__ = KeyError('cause')
+            try:
+                raise exc from exc.__cause__
+            except ValueError:
+                pass
+            del exc
+            if i % 10 == 0:
+                gc_collect()
+            for tp in types:
+                with self.subTest(tp=tp):
+                    exc = tp()
+                    self.assertEqual(exc.args, ())
+                    self.assertEqual(exc.__dict__, {})
+                    self.assertIsNone(exc.__traceback__)
+                    self.assertIsNone(exc.__cause__)
+                    self.assertIsNone(exc.__context__)
+                    self.assertFalse(exc.__suppress_context__)
+                    self.assertFalse(hasattr(exc, '__notes__'))
+
+
+    @cpython_only
+    def test_extension_subclass_uses_generic_allocator(self):
+        # A type created with PyType_FromSpec inherits tp_alloc and tp_free
+        # from its builtin base, but has a different layout (managed weakref
+        # pre-header); it must not share the freelist of the builtin types.
+        _testcapi = import_module("_testcapi")
+        Sub = _testcapi.make_type_with_base(ValueError)
+        for i in range(50):
+            try:
+                raise Sub("x")
+            except Sub as exc:
+                self.assertIs(type(exc), Sub)
+            try:
+                raise ValueError("y")
+            except ValueError as exc:
+                self.assertIs(type(exc), ValueError)
+            if i % 10 == 0:
+                gc_collect()
     def test_invalid_delattr(self):
         AE = AttributeError
         try:
