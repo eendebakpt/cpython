@@ -493,6 +493,10 @@ PyObject *
 PyException_GetTraceback(PyObject *self)
 {
     PyObject *traceback;
+    if (_PyObject_IsUniquelyReferenced(self)) {
+        // No other thread can hold a reference, so no lock is needed.
+        return Py_XNewRef(PyBaseExceptionObject_CAST(self)->traceback);
+    }
     Py_BEGIN_CRITICAL_SECTION(self);
     traceback = Py_XNewRef(PyBaseExceptionObject_CAST(self)->traceback);
     Py_END_CRITICAL_SECTION();
@@ -514,6 +518,11 @@ void
 _PyException_SetTracebackSteal(PyObject *self, PyObject *tb)
 {
     assert(tb == NULL || PyTraceBack_Check(tb));
+    if (_PyObject_IsUniquelyReferenced(self)) {
+        // No other thread can hold a reference, so no lock is needed.
+        Py_XSETREF(PyBaseExceptionObject_CAST(self)->traceback, tb);
+        return;
+    }
     Py_BEGIN_CRITICAL_SECTION(self);
     Py_XSETREF(PyBaseExceptionObject_CAST(self)->traceback, tb);
     Py_END_CRITICAL_SECTION();
