@@ -81,6 +81,11 @@ class State:
         self.groupwidths = [None]  # group 0
         self.lookbehindgroups = None
         self.grouprefpos = {}
+        # True once the pattern holds a construct that _optimizer._walk can
+        # fuse: a negative lookbehind, or an alternation of one-character
+        # matchers with a complemented member.  The compiler skips the walk
+        # (an extra pass over the whole parse tree) otherwise.
+        self.fusable = False
     @property
     def groups(self):
         return len(self.groupwidths)
@@ -506,21 +511,29 @@ def _parse_sub(source, state, verbose, nested):
 
     # check if the branch can be replaced by a character set
     set = []
+    complement = False
     for item in items:
         if len(item) != 1:
             break
         op, av = item[0]
         if op in _SETITEMCODES:
             set.append((op, av))
-        elif op is IN and av[0][0] is not NEGATE:
-            set.extend(av)
+        elif op is IN:
+            if av[0][0] is NEGATE:
+                # a complemented class can only be folded in by the
+                # optimizer's _fuse_branch (it must trail the others)
+                complement = True
+            else:
+                set.extend(av)
         else:
             break
     else:
-        # we can store this as a character set instead of a
-        # branch (the compiler may optimize this even more)
-        subpattern.append((IN, _uniq(set)))
-        return subpattern
+        if not complement:
+            # we can store this as a character set instead of a
+            # branch (the compiler may optimize this even more)
+            subpattern.append((IN, _uniq(set)))
+            return subpattern
+        state.fusable = True
 
     subpattern.append((BRANCH, (None, items)))
     return subpattern
@@ -555,6 +568,7 @@ def _union(left, right, state):
     right_items = _flat_items(right)
     if left_items is not None and right_items is not None:
         return [_charset_node(_uniq(left_items + right_items))]
+    state.fusable = True
     return [(BRANCH, (None, [SubPattern(state, left),
                              SubPattern(state, right)]))]
 
@@ -564,6 +578,7 @@ def _intersect(left, right, state):
 
 def _difference(left, right, state):
     # A -- B: A, then require the character not to match B (lookbehind).
+    state.fusable = True
     return left + [(ASSERT_NOT, (-1, SubPattern(state, right)))]
 
 # Map a set-operator token to the function combining the accumulated result
@@ -937,6 +952,8 @@ def _parse(source, state, verbose, nested, first=False):
                     if char == "=":
                         subpatternappend((ASSERT, (dir, p)))
                     elif p:
+                        if dir < 0:
+                            state.fusable = True
                         subpatternappend((ASSERT_NOT, (dir, p)))
                     else:
                         subpatternappend((FAILURE, ()))

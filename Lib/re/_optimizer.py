@@ -505,5 +505,8 @@ def _walk(seq):
 
 def optimize(pattern):
     """Rewrite a parsed pattern in place and return it."""
-    _walk(pattern.data)
+    # The parser flags the (rare) patterns the peepholes below can act on;
+    # for all others the walk would only cost a full pass over the tree.
+    if pattern.state.fusable:
+        _walk(pattern.data)
     return pattern

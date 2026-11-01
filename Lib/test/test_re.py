@@ -2176,6 +2176,20 @@ class ReTests(unittest.TestCase):
         self.assertIsNone(re.fullmatch(rb'\w(?<!b)', b'B', IL))
         self.assertTrue(re.fullmatch(rb'\w(?<!b)', b'A', IL))
 
+    def test_optimizer_pass_only_for_fusable_patterns(self):
+        # The parser marks patterns the _optimizer peepholes can rewrite; the
+        # compiler skips the extra tree walk for all others.
+        parse = re._parser.parse
+        for pattern in ('abc', 'a|bc', 'a|b', '[^a]', '[^a]b|c', '(?<=a)b',
+                        '(?!a)b', '[^a]||b', '[a-f&&[^bc]]', r'[\w||[a-z]]',
+                        '(a|[^b])c*'):
+            with self.subTest(pattern=pattern):
+                self.assertFalse(parse(pattern).state.fusable)
+        for pattern in ('a|[^bc]', '(?:x|[^bc])+', r'\w(?<!b)', '[a-c--b]',
+                        r'[\w&&[a-c--b]]', '[a||[^b]]', '(a(?<!b))c'):
+            with self.subTest(pattern=pattern):
+                self.assertTrue(parse(pattern).state.fusable)
+
     def test_scoped_flags(self):
         self.assertTrue(re.match(r'(?i:a)b', 'Ab'))
         self.assertIsNone(re.match(r'(?i:a)b', 'aB'))
