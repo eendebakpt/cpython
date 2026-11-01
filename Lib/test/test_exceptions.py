@@ -2115,6 +2115,73 @@ class AttributeErrorTests(unittest.TestCase):
         self.assertEqual(exc.name, 'carry')
         self.assertIs(exc.obj, sentinel)
 
+    def test_constructor_keywords(self):
+        sentinel = object()
+        exc = AttributeError(name='carry', obj=sentinel)
+        self.assertEqual(exc.args, ())
+        self.assertEqual(exc.name, 'carry')
+        self.assertIs(exc.obj, sentinel)
+
+        exc = AttributeError('Ouch', 'twice', obj=sentinel)
+        self.assertEqual(exc.args, ('Ouch', 'twice'))
+        self.assertIsNone(exc.name)
+        self.assertIs(exc.obj, sentinel)
+
+        with self.assertRaises(TypeError):
+            AttributeError('Ouch', nme='carry')
+        with self.assertRaises(TypeError):
+            AttributeError(name='carry', bad=1)
+
+        class Sub(AttributeError):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.initialized = True
+
+        exc = Sub('Ouch', name='carry', obj=sentinel)
+        self.assertTrue(exc.initialized)
+        self.assertEqual(exc.args, ('Ouch',))
+        self.assertEqual(exc.name, 'carry')
+        self.assertIs(exc.obj, sentinel)
+        with self.assertRaises(TypeError):
+            Sub('Ouch', nme='carry')
+
+    def test_getattr_error_message_unicode(self):
+        class NoAttr:
+            pass
+        obj = NoAttr()
+        for name in 'x', 'ättr', '\u3042', '\U0001f600x':
+            with self.subTest(name=name):
+                with self.assertRaises(AttributeError) as cm:
+                    getattr(obj, name)
+                self.assertEqual(str(cm.exception),
+                                 f"'NoAttr' object has no attribute '{name}'")
+                self.assertEqual(cm.exception.name, name)
+                self.assertIs(cm.exception.obj, obj)
+
+        Ünicode = type('\u00dcn\u00efcode', (), {})
+        with self.assertRaises(AttributeError) as cm:
+            Ünicode().ättr
+        self.assertEqual(str(cm.exception),
+                         "'\u00dcn\u00efcode' object has no attribute 'ättr'")
+
+        # The type name is truncated to 100 characters.
+        Long = type('L' * 150, (), {})
+        with self.assertRaises(AttributeError) as cm:
+            Long().x
+        self.assertEqual(str(cm.exception),
+                         f"'{'L' * 100}' object has no attribute 'x'")
+
+    def test_getattr_error_context(self):
+        class NoAttr:
+            pass
+        try:
+            raise ValueError
+        except ValueError as exc:
+            context = exc
+            with self.assertRaises(AttributeError) as cm:
+                NoAttr().missing
+        self.assertIs(cm.exception.__context__, context)
+
     def test_getattr_has_name_and_obj(self):
         class A:
             blech = None

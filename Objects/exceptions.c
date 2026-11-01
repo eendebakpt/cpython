@@ -2673,22 +2673,74 @@ AttributeError_init(PyObject *op, PyObject *args, PyObject *kwds)
         return -1;
     }
 
-    PyObject *empty_tuple = PyTuple_New(0);
-    if (!empty_tuple) {
-        return -1;
-    }
-    if (!PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO:AttributeError", kwlist,
-                                     &name, &obj)) {
+    if (kwds != NULL) {
+        PyObject *empty_tuple = PyTuple_New(0);
+        if (!empty_tuple) {
+            return -1;
+        }
+        if (!PyArg_ParseTupleAndKeywords(empty_tuple, kwds, "|$OO:AttributeError", kwlist,
+                                         &name, &obj)) {
+            Py_DECREF(empty_tuple);
+            return -1;
+        }
         Py_DECREF(empty_tuple);
-        return -1;
     }
-    Py_DECREF(empty_tuple);
 
     PyAttributeErrorObject *self = PyAttributeErrorObject_CAST(op);
     Py_XSETREF(self->name, Py_XNewRef(name));
     Py_XSETREF(self->obj, Py_XNewRef(obj));
 
     return 0;
+}
+
+static PyObject *
+AttributeError_vectorcall(PyObject *type_obj, PyObject * const*args,
+                          size_t nargsf, PyObject *kwnames)
+{
+    PyTypeObject *type = _PyType_CAST(type_obj);
+    Py_ssize_t nargs = PyVectorcall_NARGS(nargsf);
+    PyObject *name = NULL;
+    PyObject *obj = NULL;
+    if (kwnames != NULL) {
+        Py_ssize_t nkwargs = PyTuple_GET_SIZE(kwnames);
+        for (Py_ssize_t i = 0; i < nkwargs; i++) {
+            PyObject *key = PyTuple_GET_ITEM(kwnames, i);
+            if (PyUnicode_CompareWithASCIIString(key, "name") == 0) {
+                name = args[nargs + i];
+            }
+            else if (PyUnicode_CompareWithASCIIString(key, "obj") == 0) {
+                obj = args[nargs + i];
+            }
+            else {
+                PyErr_Format(PyExc_TypeError,
+                             "AttributeError() got an unexpected keyword "
+                             "argument '%U'", key);
+                return NULL;
+            }
+        }
+    }
+
+    PyAttributeErrorObject *self;
+    self = (PyAttributeErrorObject *)type->tp_alloc(type, 0);
+    if (!self) {
+        return NULL;
+    }
+    // The dict is created on the fly in PyObject_GenericSetAttr()
+    self->dict = NULL;
+    self->notes = NULL;
+    self->traceback = NULL;
+    self->cause = NULL;
+    self->context = NULL;
+    self->suppress_context = 0;
+    self->name = Py_XNewRef(name);
+    self->obj = Py_XNewRef(obj);
+
+    self->args = PyTuple_FromArray(args, nargs);
+    if (!self->args) {
+        Py_DECREF(self);
+        return NULL;
+    }
+    return (PyObject *)self;
 }
 
 static int
@@ -4564,6 +4616,9 @@ _PyExc_InitTypes(PyInterpreterState *interp)
             && exc->tp_init == BaseException_init)
         {
             exc->tp_vectorcall = BaseException_vectorcall;
+        }
+        else if (exc == &_PyExc_AttributeError) {
+            exc->tp_vectorcall = AttributeError_vectorcall;
         }
     }
     return 0;
