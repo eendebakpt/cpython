@@ -6043,6 +6043,89 @@ class SharedKeyTests(unittest.TestCase):
         self.assertLess(sys.getsizeof(vars(b)), sys.getsizeof({"a":1}))
 
 
+class SingleBaseSlotsTest(unittest.TestCase):
+    """
+    gh-132042: a class with a single base copies the base's slots and only
+    re-resolves the special methods it defines itself.  Check the cases where
+    that could differ from resolving every slot along the MRO.
+    """
+
+    def test_next_from_later_mro_entry(self):
+        # The best base (Iter, because of the list layout) provides the same
+        # tp_iternext as Both, while NoNext comes first in the MRO without
+        # __next__; a subclass of Both must still find __next__.
+        class NoNext:
+            pass
+        class Iter(list):
+            def __next__(self):
+                return 1
+        class Both(NoNext, Iter):
+            pass
+        class Sub(Both):
+            pass
+        self.assertEqual(next(Sub()), 1)
+        self.assertEqual(next(Both()), 1)
+
+    def test_hash_without_eq(self):
+        class Hashable:
+            def __hash__(self):
+                return 7
+        class Sub(Hashable):
+            pass
+        a, b = Sub(), Sub()
+        self.assertEqual(hash(a), 7)
+        self.assertNotEqual(a, b)
+        self.assertEqual(a, a)
+
+    def test_eq_without_hash(self):
+        class Eq:
+            def __eq__(self, other):
+                return True
+        class Sub(Eq):
+            pass
+        self.assertEqual(Sub(), 1)
+        self.assertRaises(TypeError, hash, Sub())
+        class SubHash(Eq):
+            def __hash__(self):
+                return 3
+        self.assertEqual(hash(SubHash()), 3)
+
+    def test_overridden_special_methods(self):
+        class Base:
+            def __repr__(self):
+                return "base"
+            def __len__(self):
+                return 1
+            def __add__(self, other):
+                return "base+"
+        class Sub(Base):
+            def __repr__(self):
+                return "sub"
+            def __add__(self, other):
+                return "sub+"
+            def __iadd__(self, other):
+                return "sub+="
+        s = Sub()
+        self.assertEqual(repr(s), "sub")
+        self.assertEqual(len(s), 1)
+        self.assertEqual(s + 1, "sub+")
+        s += 1
+        self.assertEqual(s, "sub+=")
+        self.assertRaises(TypeError, next, Sub())
+
+    def test_custom_mro(self):
+        class Base:
+            def __repr__(self):
+                return "base"
+        class Meta(type):
+            def mro(cls):
+                return (cls, object)
+        class Sub(Base, metaclass=Meta):
+            pass
+        self.assertEqual(Sub.__mro__, (Sub, object))
+        self.assertNotEqual(repr(Sub()), "base")
+
+
 class DebugHelperMeta(type):
     """
     Sets default __doc__ and simplifies repr() output.

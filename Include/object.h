@@ -544,6 +544,11 @@ given type object has a specified feature.
 // subject itself (rather than a mapped attribute on it):
 #define _Py_TPFLAGS_MATCH_SELF (1UL << 22)
 
+/* The special method slots (tp_repr, nb_add, ...) were resolved from the dicts
+   along the MRO when the type was created by type() and are kept up to date
+   when the type's attributes change.  See fixup_slot_dispatchers(). */
+#define _Py_TPFLAGS_SLOTS_RESOLVED (1UL << 21)
+
 /* Items (ob_size*tp_itemsize) are found at the end of an instance's memory */
 #define Py_TPFLAGS_ITEMS_AT_END (1UL << 23)
 

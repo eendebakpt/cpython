@@ -11741,6 +11741,12 @@ static uint8_t slotdefs_dups[Py_ARRAY_LENGTH(slotdefs)][1 + MAX_EQUIV];
    Built by _PyType_InitSlotDefs(). */
 #define SLOTNAME_TABLE_SIZE 512
 static uint16_t slotname_table[SLOTNAME_TABLE_SIZE];
+
+/* The distinct offsets of the slots in slotdefs that live directly in
+   PyTypeObject (e.g. tp_repr) rather than in a tp_as_* struct.  Filled by
+   _PyType_InitSlotDefs(). */
+static uint16_t slot_direct_offsets[Py_ARRAY_LENGTH(slotdefs)];
+static int n_slot_direct_offsets = 0;
 #ifndef NDEBUG
 static bool slotname_table_initialized = false;
 #endif
@@ -12210,12 +12216,10 @@ update_slot(PyTypeObject *type, PyObject *name, slot_update_t *queued_updates)
    definition time, based upon which operations the class overrides in its
    dict.  The type must not be revealed to other threads yet, so that the
    slots can be updated directly rather than with the world stopped. */
+/* Resolve every slot from the dicts along the MRO. */
 static void
-fixup_slot_dispatchers(PyTypeObject *type)
+fixup_slot_dispatchers_full(PyTypeObject *type)
 {
-    ASSERT_TYPE_LOCK_HELD();
-    ASSERT_WORLD_STOPPED_OR_NEW_TYPE(type);
-    assert(!PyErr_Occurred());
     PyObject *descrs_buf[Py_ARRAY_LENGTH(slotdefs) - 1];
     PyObject **descrs = descrs_buf;
     if (collect_slot_descrs(type, descrs_buf) < 0) {
@@ -12230,6 +12234,133 @@ fixup_slot_dispatchers(PyTypeObject *type)
     if (descrs != NULL) {
         clear_slot_descrs(descrs);
     }
+}
+
+/* Fast path for a type whose only base is object or another type created by
+   type(): copy the base's slots and re-resolve just the slots whose special
+   method names the new type defines itself.
+
+   This gives the same result as fixup_slot_dispatchers_full(): the MRO is the
+   base's MRO with the new type prepended, and the base's slots already match
+   the dicts along its MRO (they were resolved the same way when the base was
+   created, and type_setattro() keeps them up to date).  Static types do not
+   qualify: their slot tables are written by hand, and the slots resolved from
+   their dict for a subclass can differ (e.g. a list subclass gets
+   nb_inplace_add from __iadd__ while list itself only has sq_inplace_concat).
+
+   Return 0 if the slots were set, -1 if the type does not qualify. */
+static int
+fixup_slot_dispatchers_from_base(PyTypeObject *type)
+{
+    PyObject *bases = lookup_tp_bases(type);
+    if (PyTuple_GET_SIZE(bases) != 1) {
+        return -1;
+    }
+    PyTypeObject *base = _PyType_CAST(PyTuple_GET_ITEM(bases, 0));
+    if (base != &PyBaseObject_Type
+        && !_PyType_HasFeature(base, _Py_TPFLAGS_SLOTS_RESOLVED)) {
+        return -1;
+    }
+    /* A metaclass can define mro() to return anything. */
+    PyObject *mro = lookup_tp_mro(type);
+    PyObject *base_mro = lookup_tp_mro(base);
+    Py_ssize_t n = PyTuple_GET_SIZE(base_mro);
+    if (PyTuple_GET_SIZE(mro) != n + 1
+        || PyTuple_GET_ITEM(mro, 0) != (PyObject *)type) {
+        return -1;
+    }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        if (PyTuple_GET_ITEM(mro, i + 1) != PyTuple_GET_ITEM(base_mro, i)) {
+            return -1;
+        }
+    }
+    PyObject *dict = lookup_tp_dict(type);
+    assert(dict != NULL && PyDict_Check(dict));
+    if (!DK_IS_UNICODE(((PyDictObject *)dict)->ma_keys)
+        || PyDict_GET_SIZE(dict) > SLOT_SCAN_MAX_DICT_SIZE) {
+        return -1;
+    }
+
+    /* Copy the base's slots.  inherit_slots() has already filled in most of
+       them, but it walks the whole MRO with a heuristic (SLOTDEFINED()) that
+       can pick a later entry's value when the base has multiple inheritance
+       in its ancestry, so do not rely on it. */
+    for (int i = 0; i < n_slot_direct_offsets; i++) {
+        size_t offset = slot_direct_offsets[i];
+        *(void **)((char *)type + offset) = *(void **)((char *)base + offset);
+    }
+#define COPY_SUBSLOTS(FIELD, TYPE)                                  \
+    do {                                                            \
+        assert(type->FIELD != NULL);                                \
+        if (base->FIELD != NULL) {                                  \
+            memcpy(type->FIELD, base->FIELD, sizeof(TYPE));         \
+        }                                                           \
+        else {                                                      \
+            memset(type->FIELD, 0, sizeof(TYPE));                   \
+        }                                                           \
+    } while (0)
+    COPY_SUBSLOTS(tp_as_async, PyAsyncMethods);
+    COPY_SUBSLOTS(tp_as_number, PyNumberMethods);
+    COPY_SUBSLOTS(tp_as_sequence, PySequenceMethods);
+    COPY_SUBSLOTS(tp_as_mapping, PyMappingMethods);
+    COPY_SUBSLOTS(tp_as_buffer, PyBufferProcs);
+#undef COPY_SUBSLOTS
+
+    /* Re-resolve the slots named in the new type's own dict. */
+    bool todo[Py_ARRAY_LENGTH(slotdefs) - 1];
+    memset(todo, 0, sizeof(todo));
+    Py_ssize_t pos = 0;
+    PyObject *key, *value;
+    Py_hash_t hash;
+    while (_PyDict_Next(dict, &pos, &key, &value, &hash)) {
+        if (!is_dunder_name(key)) {
+            continue;
+        }
+        Py_ssize_t idx = slotname_lookup(key, hash);
+        if (idx < 0) {
+            continue;
+        }
+        const uint8_t *dups = slotdefs_dups[idx];
+        for (uint8_t k = 1; k <= dups[0]; k++) {
+            todo[dups[k]] = true;
+        }
+    }
+    for (size_t i = 0; i < Py_ARRAY_LENGTH(slotdefs) - 1; ) {
+        if (!todo[i]) {
+            i++;
+            continue;
+        }
+        /* update_one_slot() handles all slotdefs sharing an offset, starting
+           from the first of them. */
+        pytype_slotdef *p = &slotdefs[i];
+        while (p > slotdefs && (p - 1)->offset == p->offset) {
+            p--;
+        }
+        int rv = update_one_slot(type, p, &p, NULL, NULL);
+        // always returns 0 if queued_updates == NULL
+        assert(rv == 0);
+        (void)rv;
+        i = (size_t)(p - slotdefs);
+    }
+
+    if (type->tp_iternext == NULL) {
+        /* As update_one_slot() does when no __next__ is found. */
+        type->tp_iternext = _PyObject_NextNotImplemented;
+    }
+    return 0;
+}
+
+static void
+fixup_slot_dispatchers(PyTypeObject *type)
+{
+    ASSERT_TYPE_LOCK_HELD();
+    ASSERT_WORLD_STOPPED_OR_NEW_TYPE(type);
+    assert(!PyErr_Occurred());
+    assert(_PyType_HasFeature(type, Py_TPFLAGS_HEAPTYPE));
+    if (fixup_slot_dispatchers_from_base(type) < 0) {
+        fixup_slot_dispatchers_full(type);
+    }
+    type_add_flags(type, _Py_TPFLAGS_SLOTS_RESOLVED);
 }
 
 #ifdef Py_GIL_DISABLED
@@ -12304,6 +12435,20 @@ _PyType_InitSlotDefs(PyInterpreterState *interp)
             memcpy(slotdefs_dups[idx], slotdefs_dups[first],
                    sizeof(slotdefs_dups[idx]));
         }
+    }
+
+    n_slot_direct_offsets = 0;
+    for (Py_ssize_t idx = 0; slotdefs[idx].name_strobj != NULL; idx++) {
+        int offset = slotdefs[idx].offset;
+        if ((size_t)offset >= offsetof(PyHeapTypeObject, as_async)) {
+            continue;
+        }
+        /* slotdefs sharing an offset are contiguous */
+        if (n_slot_direct_offsets > 0
+            && slot_direct_offsets[n_slot_direct_offsets - 1] == offset) {
+            continue;
+        }
+        slot_direct_offsets[n_slot_direct_offsets++] = (uint16_t)offset;
     }
     return 0;
 }

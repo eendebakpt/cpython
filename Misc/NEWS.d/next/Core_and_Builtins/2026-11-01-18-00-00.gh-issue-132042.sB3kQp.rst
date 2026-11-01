@@ -1,0 +1,4 @@
+Speed up creating a class with a single base class by copying the base
+class's special method slots and only resolving the special methods the new
+class defines itself, instead of resolving every slot from the dicts along
+the MRO.
