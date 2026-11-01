@@ -1297,8 +1297,12 @@ _PyObject_SetAttributeErrorContext(PyObject* v, PyObject* name)
         goto restore;
     }
     // Augment the exception with the name and object
-    if (PyObject_SetAttr(exc, &_Py_ID(name), name) ||
-        PyObject_SetAttr(exc, &_Py_ID(obj), v)) {
+    if (Py_IS_TYPE(exc, (PyTypeObject *)PyExc_AttributeError)) {
+        the_exc->name = Py_NewRef(name);
+        the_exc->obj = Py_NewRef(v);
+    }
+    else if (PyObject_SetAttr(exc, &_Py_ID(name), name) ||
+             PyObject_SetAttr(exc, &_Py_ID(obj), v)) {
         Py_DECREF(exc);
         return 1;
     }

@@ -1,0 +1,2 @@
+Speed up raising :exc:`AttributeError` from attribute lookups by setting the
+``name`` and ``obj`` attributes of the exception directly.

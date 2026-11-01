@@ -2115,6 +2115,31 @@ class AttributeErrorTests(unittest.TestCase):
         self.assertEqual(exc.name, 'carry')
         self.assertIs(exc.obj, sentinel)
 
+    def test_getattr_sets_name_and_obj(self):
+        class Sub(AttributeError):
+            pass
+        class A:
+            def __getattr__(self, name):
+                if name == 'plain':
+                    raise AttributeError('plain')
+                if name == 'sub':
+                    raise Sub('sub')
+                if name == 'augmented':
+                    raise AttributeError('augmented', name='other', obj=None)
+                raise RuntimeError
+        a = A()
+        for attr, exc_type in ('plain', AttributeError), ('sub', Sub):
+            with self.subTest(attr=attr):
+                with self.assertRaises(exc_type) as cm:
+                    getattr(a, attr)
+                self.assertEqual(cm.exception.name, attr)
+                self.assertIs(cm.exception.obj, a)
+        # An exception that already has a name or obj is left alone
+        with self.assertRaises(AttributeError) as cm:
+            a.augmented
+        self.assertEqual(cm.exception.name, 'other')
+        self.assertIsNone(cm.exception.obj)
+
     def test_getattr_has_name_and_obj(self):
         class A:
             blech = None
