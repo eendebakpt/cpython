@@ -14677,8 +14677,8 @@ immortalize_interned(PyObject *s)
 #endif
     _Py_SetImmortal(s);
     // The switch to SSTATE_INTERNED_IMMORTAL must be the last thing done here
-    // to synchronize with the check in intern_common() that avoids locking if
-    // the string is already immortal.
+    // to synchronize with the check in _PyUnicode_InternSlow() that avoids
+    // locking if the string is already immortal.
     FT_ATOMIC_STORE_UINT8(_PyUnicode_STATE(s).interned, SSTATE_INTERNED_IMMORTAL);
 }
 
@@ -14694,9 +14694,9 @@ can_immortalize_safely(PyObject *s)
 }
 #endif
 
-static /* non-null */ PyObject*
-intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
-              bool immortalize)
+/* non-null */ PyObject *
+_PyUnicode_InternSlow(PyInterpreterState *interp, PyObject *s /* stolen */,
+                      int immortalize)
 {
     // Note that this steals a reference to `s`, but in many cases that
     // stolen ref is returned, requiring no decref/incref.
@@ -14873,20 +14873,6 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
 
     FT_MUTEX_UNLOCK(INTERN_MUTEX);
     return s;
-}
-
-void
-_PyUnicode_InternImmortalSlow(PyInterpreterState *interp, PyObject **p)
-{
-    *p = intern_common(interp, *p, 1);
-    assert(*p);
-}
-
-void
-_PyUnicode_InternMortalSlow(PyInterpreterState *interp, PyObject **p)
-{
-    *p = intern_common(interp, *p, 0);
-    assert(*p);
 }
 
 

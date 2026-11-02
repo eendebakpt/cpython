@@ -454,17 +454,19 @@ extern PyTypeObject _PyUnicodeASCIIIter_Type;
 // All these are "ref-neutral", like the public PyUnicode_InternInPlace.
 
 // Explicit interning routines:
-PyAPI_FUNC(void) _PyUnicode_InternMortalSlow(PyInterpreterState *interp, PyObject **);
+// Intern a string in place. The out-of-line function steals *s and returns
+// the interned string; the inline wrappers skip it for already interned
+// strings, which is the common case (names of code objects, _Py_ID()).
+PyAPI_FUNC(PyObject *) _PyUnicode_InternSlow(PyInterpreterState *interp,
+                                             PyObject *s, int immortalize);
 
 static inline void
 _PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
 {
-    // Fast path for strings which are already interned, such as the names
-    // and identifier constants of code objects.
     PyObject *s = *p;
     if (s != NULL && PyUnicode_Check(s)) {
 #ifdef Py_GIL_DISABLED
-        // Interned strings are immortal; the mortal state is transient
+        // interned strings are immortal; the mortal state is transient
         if (PyUnicode_CHECK_INTERNED(s) >= SSTATE_INTERNED_IMMORTAL) {
             return;
         }
@@ -474,21 +476,19 @@ _PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
         }
 #endif
     }
-    _PyUnicode_InternMortalSlow(interp, p);
+    *p = _PyUnicode_InternSlow(interp, s, 0);
 }
-PyAPI_FUNC(void) _PyUnicode_InternImmortalSlow(PyInterpreterState *interp, PyObject **);
 
 static inline void
 _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
 {
-    // Fast path for strings which are already interned and immortal
     PyObject *s = *p;
     if (s != NULL && PyUnicode_Check(s)
         && PyUnicode_CHECK_INTERNED(s) >= SSTATE_INTERNED_IMMORTAL)
     {
         return;
     }
-    _PyUnicode_InternImmortalSlow(interp, p);
+    *p = _PyUnicode_InternSlow(interp, s, 1);
 }
 // Left here to help backporting:
 PyAPI_FUNC(void) _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p);
