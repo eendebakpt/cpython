@@ -59,10 +59,12 @@ BaseException_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (!self)
         return NULL;
     /* the dict is created on the fly in PyObject_GenericSetAttr */
-    self->dict = NULL;
-    self->notes = NULL;
-    self->traceback = self->cause = self->context = NULL;
-    self->suppress_context = 0;
+    assert(self->dict == NULL);
+    assert(self->notes == NULL);
+    assert(self->traceback == NULL);
+    assert(self->cause == NULL);
+    assert(self->context == NULL);
+    assert(self->suppress_context == 0);
 
     if (args) {
         self->args = Py_NewRef(args);
@@ -106,12 +108,12 @@ BaseException_vectorcall(PyObject *type_obj, PyObject * const*args,
     }
 
     // The dict is created on the fly in PyObject_GenericSetAttr()
-    self->dict = NULL;
-    self->notes = NULL;
-    self->traceback = NULL;
-    self->cause = NULL;
-    self->context = NULL;
-    self->suppress_context = 0;
+    assert(self->dict == NULL);
+    assert(self->notes == NULL);
+    assert(self->traceback == NULL);
+    assert(self->cause == NULL);
+    assert(self->context == NULL);
+    assert(self->suppress_context == 0);
 
     self->args = PyTuple_FromArray(args, PyVectorcall_NARGS(nargsf));
     if (!self->args) {
@@ -2219,8 +2221,10 @@ OSError_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
     if (!self)
         goto error;
 
-    self->dict = NULL;
-    self->traceback = self->cause = self->context = NULL;
+    assert(self->dict == NULL);
+    assert(self->traceback == NULL);
+    assert(self->cause == NULL);
+    assert(self->context == NULL);
     self->written = -1;
 
     if (!oserror_use_init(type)) {
