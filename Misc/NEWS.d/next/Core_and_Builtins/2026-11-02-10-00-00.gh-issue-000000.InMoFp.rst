@@ -1,0 +1,3 @@
+Add a fast path for already interned strings to the internal string
+interning function, which speeds up :c:func:`PyObject_SetAttr` and other
+callers that intern attribute names.

@@ -14883,7 +14883,7 @@ _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
 }
 
 void
-_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
+_PyUnicode_InternMortalSlow(PyInterpreterState *interp, PyObject **p)
 {
     *p = intern_common(interp, *p, 0);
     assert(*p);

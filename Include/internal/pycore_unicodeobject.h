@@ -454,7 +454,28 @@ extern PyTypeObject _PyUnicodeASCIIIter_Type;
 // All these are "ref-neutral", like the public PyUnicode_InternInPlace.
 
 // Explicit interning routines:
-PyAPI_FUNC(void) _PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **);
+PyAPI_FUNC(void) _PyUnicode_InternMortalSlow(PyInterpreterState *interp, PyObject **);
+
+static inline void
+_PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
+{
+    // Fast path for strings which are already interned, such as the names
+    // and identifier constants of code objects.
+    PyObject *s = *p;
+    if (s != NULL && PyUnicode_Check(s)) {
+#ifdef Py_GIL_DISABLED
+        // Interned strings are immortal; the mortal state is transient
+        if (PyUnicode_CHECK_INTERNED(s) >= SSTATE_INTERNED_IMMORTAL) {
+            return;
+        }
+#else
+        if (PyUnicode_CHECK_INTERNED(s) != SSTATE_NOT_INTERNED) {
+            return;
+        }
+#endif
+    }
+    _PyUnicode_InternMortalSlow(interp, p);
+}
 PyAPI_FUNC(void) _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **);
 // Left here to help backporting:
 PyAPI_FUNC(void) _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p);
