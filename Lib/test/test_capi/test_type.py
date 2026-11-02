@@ -397,8 +397,11 @@ class TypeTests(unittest.TestCase):
 
         def check_type(test_type, static_type, have_gc=False, have_vectorcall=False,
                        is_base_type=True, sequence=False, mapping=False,
-                       match_self=True, items_at_end=False):
+                       match_self=True, items_at_end=False,
+                       managed_dict=None):
             heap_type = not static_type
+            if managed_dict is None:
+                managed_dict = heap_type
 
             flags = type_getflags(test_type)
             check_flag(flags, _Py_TPFLAGS_STATIC_BUILTIN, static_type)
@@ -417,7 +420,7 @@ class TypeTests(unittest.TestCase):
 
             check_flag(flags, Py_TPFLAGS_INLINE_VALUES, heap_type)
             check_flag(flags, Py_TPFLAGS_MANAGED_WEAKREF, heap_type)
-            check_flag(flags, Py_TPFLAGS_MANAGED_DICT, heap_type)
+            check_flag(flags, Py_TPFLAGS_MANAGED_DICT, managed_dict)
             check_flag(flags, Py_TPFLAGS_ITEMS_AT_END, items_at_end)
             check_flag(flags, Py_TPFLAGS_METHOD_DESCRIPTOR, False)
 
@@ -453,7 +456,7 @@ class TypeTests(unittest.TestCase):
 
         # Other types
         check_type(BaseException, static_type=True, have_gc=True,
-                   match_self=False)
+                   match_self=False, managed_dict=True)
         check_type(type, static_type=True, have_gc=True,
                    have_vectorcall=True,
                    match_self=False,

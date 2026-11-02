@@ -1408,6 +1408,12 @@ Porting to Python 3.16
   but rather leaves it unchanged.
   (Contributed by Sergey B Kirpichev in :gh:`155526`.)
 
+* The ``dict`` field was removed from :c:type:`PyBaseExceptionObject` and the
+  other exception structures: exceptions now use a managed dict
+  (:c:macro:`Py_TPFLAGS_MANAGED_DICT`). Use :c:func:`PyObject_GenericGetDict`
+  to access the instance dict of an exception.
+  (Contributed by Pieter Eendebak in :gh:`000000`.)
+
 Deprecated C APIs
 -----------------
 

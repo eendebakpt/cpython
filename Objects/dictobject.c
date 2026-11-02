@@ -8168,7 +8168,13 @@ ensure_managed_dict(PyObject *obj)
                 goto done;
             }
 #endif
-            dict = (PyDictObject *)new_dict_with_shared_keys(CACHED_KEYS(tp));
+            if (tp->tp_flags & Py_TPFLAGS_HEAPTYPE) {
+                dict = (PyDictObject *)new_dict_with_shared_keys(CACHED_KEYS(tp));
+            }
+            else {
+                // Static types have no cached keys
+                dict = (PyDictObject *)PyDict_New();
+            }
             FT_ATOMIC_STORE_PTR_RELEASE(_PyObject_ManagedDictPointer(obj)->dict,
                                         (PyDictObject *)dict);
 

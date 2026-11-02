@@ -764,6 +764,11 @@ struct _Py_interp_static_objects {
         // hamt_empty is here instead of global because of its weakreflist.
         _PyGC_Head_UNUSED _hamt_empty_gc_not_used;
         PyHamtObject hamt_empty;
+        // Exceptions have a managed dict, so last_resort_memory_error
+        // needs space for the pre-header (the managed dict and weakref
+        // pointers) in front of the (unused) GC header.
+        PyObject *_last_resort_memory_error_preheader[2];
+        _PyGC_Head_UNUSED _last_resort_memory_error_gc_not_used;
         PyBaseExceptionObject last_resort_memory_error;
     } singletons;
 };

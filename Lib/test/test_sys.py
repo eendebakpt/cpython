@@ -1793,14 +1793,14 @@ class SizeofTest(unittest.TestCase):
         # dictproxy
         class C(object): pass
         check(C.__dict__, size('P'))
-        # BaseException
-        check(BaseException(), size('6Pb'))
+        # BaseException (the managed dict pre-header adds two pointers)
+        check(BaseException(), size('5Pb') + 2*self.P)
         # UnicodeEncodeError
-        check(UnicodeEncodeError("", "", 0, 0, ""), size('6Pb 2P2nP'))
+        check(UnicodeEncodeError("", "", 0, 0, ""), size('5Pb 2P2nP') + 2*self.P)
         # UnicodeDecodeError
-        check(UnicodeDecodeError("", b"", 0, 0, ""), size('6Pb 2P2nP'))
+        check(UnicodeDecodeError("", b"", 0, 0, ""), size('5Pb 2P2nP') + 2*self.P)
         # UnicodeTranslateError
-        check(UnicodeTranslateError("", 0, 1, ""), size('6Pb 2P2nP'))
+        check(UnicodeTranslateError("", 0, 1, ""), size('5Pb 2P2nP') + 2*self.P)
         # ellipses
         check(Ellipsis, size(''))
         # EncodingMap

@@ -1,0 +1,5 @@
+Exceptions now store their instance attributes in a managed dict
+(:c:macro:`Py_TPFLAGS_MANAGED_DICT`). Instances of Python subclasses of
+exceptions keep their attributes as inline values instead of in a separate
+dictionary, which makes creating them faster and reduces their memory use.
+The ``dict`` field was removed from :c:type:`PyBaseExceptionObject`.

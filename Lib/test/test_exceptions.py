@@ -1745,6 +1745,56 @@ class ExceptionTests(unittest.TestCase):
         self.assertEqual(error5.a, 1)
         self.assertEqual(error5.__doc__, "")
 
+    def test_instance_dict(self):
+        class MyException(Exception):
+            pass
+
+        for exc_type in (BaseException, Exception, ValueError, OSError,
+                         ImportError, AttributeError, MemoryError,
+                         MyException):
+            with self.subTest(exc_type=exc_type):
+                exc = exc_type('message')
+                self.assertEqual(exc.__dict__, {})
+                exc.attr = 'value'
+                self.assertEqual(exc.attr, 'value')
+                self.assertEqual(exc.__dict__, {'attr': 'value'})
+                exc.__dict__ = {'other': 1}
+                self.assertEqual(exc.other, 1)
+                self.assertNotHasAttr(exc, 'attr')
+                del exc.other
+                self.assertEqual(exc.__dict__, {})
+
+    def test_reduce_instance_dict(self):
+        class MyException(Exception):
+            pass
+
+        # The instance dict is only included in the result of __reduce__()
+        # if the exception has instance attributes.
+        for exc_type in (BaseException, Exception, ValueError, OSError,
+                         MemoryError, MyException):
+            with self.subTest(exc_type=exc_type):
+                exc = exc_type('message')
+                self.assertEqual(exc.__reduce__(), (exc_type, ('message',)))
+                exc.attr = 'value'
+                self.assertEqual(exc.__reduce__(),
+                                 (exc_type, ('message',), {'attr': 'value'}))
+                del exc.attr
+                self.assertEqual(exc.__reduce__(), (exc_type, ('message',)))
+
+    @cpython_only
+    def test_inline_values(self):
+        # Instances of Python subclasses of exceptions store their attributes
+        # as inline values; instances of the builtin exception types create
+        # the dict on demand.
+        _testinternalcapi = import_module("_testinternalcapi")
+        class MyException(Exception):
+            def __init__(self):
+                self.attr = 'value'
+        exc = MyException()
+        self.assertTrue(_testinternalcapi.has_inline_values(exc))
+        self.assertEqual(exc.__dict__, {'attr': 'value'})
+        self.assertFalse(_testinternalcapi.has_inline_values(Exception()))
+
     @cpython_only
     @unittest.skipIf(_testcapi is None, "requires _testcapi")
     def test_memory_error_cleanup(self):
@@ -1955,9 +2005,21 @@ class ExceptionTests(unittest.TestCase):
             del AssertionError
             self.fail('Expected exception')
 
+    def test_memory_error_freelist_attributes(self):
+        # Attributes set on a MemoryError must not survive its reuse
+        # through the freelist.
+        exc = MemoryError()
+        exc.attr = 'value'
+        del exc
+        gc_collect()
+        exc = MemoryError()
+        self.assertNotHasAttr(exc, 'attr')
+        self.assertEqual(exc.__dict__, {})
+        self.assertEqual(exc.args, ())
+
     def test_memory_error_subclasses(self):
         # bpo-41654: MemoryError instances use a freelist of objects that are
-        # linked using the 'dict' attribute when they are inactive/dead.
+        # linked using the 'args' attribute when they are inactive/dead.
         # Subclasses of MemoryError should not participate in the freelist
         # schema. This test creates a MemoryError object and keeps it alive
         # (therefore advancing the freelist) and then it creates and destroys a

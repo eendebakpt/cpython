@@ -2726,7 +2726,10 @@ subtype_clear(PyObject *self)
             PyObject_ClearManagedDict(self);
         }
         else {
-            assert((base->tp_flags & Py_TPFLAGS_INLINE_VALUES) ==
+            // The base clears the dict. A heap subclass of a static type
+            // with a managed dict has inline values, but not the other way
+            // around.
+            assert(!(base->tp_flags & Py_TPFLAGS_INLINE_VALUES) ||
                    (type->tp_flags & Py_TPFLAGS_INLINE_VALUES));
         }
     }
@@ -2868,8 +2871,11 @@ subtype_dealloc(PyObject *self)
         assert(base);
     }
 
-    /* If we added a dict, DECREF it, or free inline values. */
-    if (type->tp_flags & Py_TPFLAGS_MANAGED_DICT) {
+    /* If we added a dict, DECREF it, or free inline values. If the base
+       type already has a managed dict, its tp_dealloc clears it. */
+    if ((type->tp_flags & Py_TPFLAGS_MANAGED_DICT)
+        && !(base->tp_flags & Py_TPFLAGS_MANAGED_DICT))
+    {
         PyObject_ClearManagedDict(self);
     }
     else if (type->tp_dictoffset && !base->tp_dictoffset) {
@@ -9464,11 +9470,9 @@ type_ready_managed_dict(PyTypeObject *type)
         return 0;
     }
     if (!(type->tp_flags & Py_TPFLAGS_HEAPTYPE)) {
-        PyErr_Format(PyExc_SystemError,
-                     "type %s has the Py_TPFLAGS_MANAGED_DICT flag "
-                     "but not Py_TPFLAGS_HEAPTYPE flag",
-                     type->tp_name);
-        return -1;
+        // Static types have no cached keys, so their instances cannot use
+        // inline values. The dict is created on demand in the pre-header.
+        return 0;
     }
     PyHeapTypeObject* et = (PyHeapTypeObject*)type;
     if (et->ht_cached_keys == NULL) {
@@ -9683,7 +9687,6 @@ init_static_type(PyInterpreterState *interp, PyTypeObject *self,
 {
     assert(_Py_IsImmortal((PyObject *)self));
     assert(!(self->tp_flags & Py_TPFLAGS_HEAPTYPE));
-    assert(!(self->tp_flags & Py_TPFLAGS_MANAGED_DICT));
     assert(!(self->tp_flags & Py_TPFLAGS_MANAGED_WEAKREF));
 
     if (initial) {

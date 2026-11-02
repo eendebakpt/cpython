@@ -2,6 +2,7 @@ import collections
 import copy
 import pickle
 import dis
+import functools
 import sys
 import threading
 import types
@@ -890,12 +891,13 @@ class TestRacesDoNotCrash(TestBase):
     @requires_specialization
     def test_load_attr_method_lazy_dict(self):
         def get_items():
-            class C(Exception):
+            # The instance dict of functools.partial objects is created lazily
+            class C(functools.partial):
                 m = lambda self: None
 
             items = []
             for _ in range(self.ITEMS):
-                item = C()
+                item = C(print)
                 items.append(item)
             return items
 

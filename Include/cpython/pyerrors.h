@@ -5,8 +5,8 @@
 /* Error objects */
 
 /* PyException_HEAD defines the initial segment of every exception class. */
-#define PyException_HEAD PyObject_HEAD PyObject *dict;\
-             PyObject *args; PyObject *notes; PyObject *traceback;\
+#define PyException_HEAD PyObject_HEAD PyObject *args;\
+             PyObject *notes; PyObject *traceback;\
              PyObject *context; PyObject *cause;\
              char suppress_context;
 
