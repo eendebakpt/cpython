@@ -476,7 +476,20 @@ _PyUnicode_InternMortal(PyInterpreterState *interp, PyObject **p)
     }
     _PyUnicode_InternMortalSlow(interp, p);
 }
-PyAPI_FUNC(void) _PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **);
+PyAPI_FUNC(void) _PyUnicode_InternImmortalSlow(PyInterpreterState *interp, PyObject **);
+
+static inline void
+_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
+{
+    // Fast path for strings which are already interned and immortal
+    PyObject *s = *p;
+    if (s != NULL && PyUnicode_Check(s)
+        && PyUnicode_CHECK_INTERNED(s) >= SSTATE_INTERNED_IMMORTAL)
+    {
+        return;
+    }
+    _PyUnicode_InternImmortalSlow(interp, p);
+}
 // Left here to help backporting:
 PyAPI_FUNC(void) _PyUnicode_InternInPlace(PyInterpreterState *interp, PyObject **p);
 // Only for singletons in the _PyRuntime struct:

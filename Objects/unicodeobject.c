@@ -14876,7 +14876,7 @@ intern_common(PyInterpreterState *interp, PyObject *s /* stolen */,
 }
 
 void
-_PyUnicode_InternImmortal(PyInterpreterState *interp, PyObject **p)
+_PyUnicode_InternImmortalSlow(PyInterpreterState *interp, PyObject **p)
 {
     *p = intern_common(interp, *p, 1);
     assert(*p);
