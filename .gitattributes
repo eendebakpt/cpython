@@ -107,6 +107,7 @@ Programs/test_frozenmain.h                          generated
 Python/Python-ast.c                                 generated
 Python/executor_cases.c.h                           generated
 Python/generated_cases.c.h                          generated
+Python/generated_switch_op.c.h                      generated
 Python/optimizer_cases.c.h                          generated
 Python/opcode_targets.h                             generated
 Python/record_functions.c.h                         generated

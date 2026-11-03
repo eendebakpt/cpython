@@ -181,6 +181,21 @@ list of annotations and their meanings are as follows:
 * `register`. Currently does nothing.
 * `replicate(N)`. Replicate the instruction N times to store the oparg "inside" the instruction.
 * `no_save_ip`. This instruction does not affect the instruction pointer.
+* `switch_op`. A specialization (a `macro` that is a member of a family) that
+   gets no opcode of its own: it becomes a case of the generic specialized
+   instruction `SWITCH_OP`, which dispatches on the case number stored in the
+   first cache entry in place of the adaptive counter. The instruction keeps
+   the cache layout of its family, and the JIT sees the same uops. A failed
+   guard re-dispatches to the family's generic instruction. Use it for
+   specializations that are not worth one of the 256 opcodes, or when the
+   opcode space is full.
+* `switch_candidate`. Like `switch_op`, but only when the generator runs with
+   `SWITCH_OPS=2` in its environment; otherwise the instruction keeps its
+   own opcode. The cases of `SWITCH_OP` are emitted inline in the
+   interpreter loop, or, when `tier1_generator.py` is given
+   `--switch-output FILE`, as one function per case in `FILE`
+   (`Python/generated_switch_op.c.h`), which keeps the interpreter loop from
+   growing.
 
 ### Special functions/macros
 

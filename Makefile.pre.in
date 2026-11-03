@@ -2134,8 +2134,10 @@ regen-opcode-metadata-py:
 .PHONY: regen-generated-cases
 regen-generated-cases:
 	$(PYTHON_FOR_REGEN) $(srcdir)/Tools/cases_generator/tier1_generator.py \
-	    -o $(srcdir)/Python/generated_cases.c.h.new $(srcdir)/Python/bytecodes.c
+	    -o $(srcdir)/Python/generated_cases.c.h.new \
+	    -s $(srcdir)/Python/generated_switch_op.c.h.new $(srcdir)/Python/bytecodes.c
 	$(UPDATE_FILE) $(srcdir)/Python/generated_cases.c.h $(srcdir)/Python/generated_cases.c.h.new
+	$(UPDATE_FILE) $(srcdir)/Python/generated_switch_op.c.h $(srcdir)/Python/generated_switch_op.c.h.new
 
 .PHONY: regen-record-functions
 regen-record-functions:
@@ -2194,6 +2196,7 @@ Python/ceval.o: \
 		$(srcdir)/Python/ceval_macros.h \
 		$(srcdir)/Python/condvar.h \
 		$(srcdir)/Python/generated_cases.c.h \
+		$(srcdir)/Python/generated_switch_op.c.h \
 		$(srcdir)/Python/executor_cases.c.h \
 		$(srcdir)/Python/opcode_targets.h \
 		$(srcdir)/Python/record_functions.c.h

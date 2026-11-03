@@ -6,6 +6,7 @@ Writes the cases to generated_cases.c.h, which is #included in ceval.c.
 import argparse
 
 from analyzer import (
+    CodeSection,
     Analysis,
     Instruction,
     Uop,
@@ -144,9 +145,30 @@ _PyErr_Format(tstate, PyExc_SystemError,
 JUMP_TO_LABEL(error);
 """
 
-def generate_tier1(
+def generate_switch_op_file(
     filenames: list[str], analysis: Analysis, outfile: TextIO, lines: bool
 ) -> None:
+    """The file that holds _PyEval_SwitchOp; included by ceval.c outside the
+    interpreter loop."""
+    write_header(__file__, filenames, outfile)
+    outfile.write("""
+#ifdef TIER_TWO
+    #error "This file is for Tier 1 only"
+#endif
+#ifndef TIER_ONE
+#define TIER_ONE 1
+#endif
+""")
+    out = CWriter(outfile, 0, lines)
+    write_switch_op_function(analysis, out)
+
+
+def generate_tier1(
+    filenames: list[str], analysis: Analysis, outfile: TextIO, lines: bool,
+    switch_outfile: TextIO | None = None,
+) -> None:
+    if switch_outfile is not None:
+        generate_switch_op_file(filenames, analysis, switch_outfile, lines)
     write_header(__file__, filenames, outfile)
     outfile.write("""
 #ifdef TIER_TWO
@@ -165,7 +187,7 @@ def generate_tier1(
             {INSTRUCTION_START_MARKER}
 """
     )
-    generate_tier1_cases(analysis, outfile, lines)
+    generate_tier1_cases(analysis, outfile, lines, switch_outfile is not None)
     outfile.write(f"""
             {INSTRUCTION_END_MARKER}
 #if !_Py_TAIL_CALL_INTERP
@@ -218,6 +240,8 @@ class SwitchEmitter(Emitter):
     re-dispatches to the family's generic instruction instead of jumping to
     its PREDICTED label."""
 
+    deopt_macro = "SWITCH_OP_DEOPT"
+
     def deopt_if(
         self,
         tkn: Token,
@@ -236,15 +260,56 @@ class SwitchEmitter(Emitter):
         next(tkn_iter)  # Semi colon
         assert inst is not None
         assert inst.family is not None
-        self.emit(f"SWITCH_OP_DEOPT({inst.family.name});\n")
+        self.emit(f"{self.deopt_macro}({inst.family.name});\n")
         self.emit("}\n")
         return not always_true(first_tkn)
 
     exit_if = deopt_if
 
 
+class SwitchFunctionEmitter(SwitchEmitter):
+    """Emitter for the cases of SWITCH_OP when they live in _PyEval_SwitchOp,
+    a function outside the interpreter loop. Control leaves a case by
+    returning (see SWITCH_OP_RETURN in ceval_macros.h), so every jump to a
+    label of the interpreter loop becomes a return."""
+
+    deopt_macro = "SWITCH_OP_DEOPT_RETURN"
+
+    def goto_error(self, offset: int, storage: Storage) -> str:
+        if offset > 0:
+            # What the pop_N_error labels do before falling into 'error'.
+            return f"stack_pointer += -{offset};\nSWITCH_OP_RETURN(NULL);"
+        if offset < 0:
+            storage.copy().flush(self.out)
+        return "SWITCH_OP_RETURN(NULL);"
+
+    def goto_label(self, goto: Token, label: Token, storage: Storage) -> None:
+        if label.text != "error":
+            raise analysis_error(
+                f"A SWITCH_OP case cannot jump to label '{label.text}'", goto
+            )
+        if storage.spilled:
+            raise analysis_error("Cannot jump to error with a spilled stack", goto)
+        self.out.start_line()
+        self.out.emit("SWITCH_OP_RETURN(NULL)")
+
+    def dispatch(
+        self,
+        tkn: Token,
+        tkn_iter: TokenIterator,
+        uop: CodeSection,
+        storage: Storage,
+        inst: Instruction | None,
+    ) -> bool:
+        if storage.spilled:
+            raise analysis_error("stack_pointer needs reloading before dispatch", tkn)
+        storage.stack.flush(self.out)
+        self.out.emit_at("SWITCH_OP_DISPATCH", tkn)
+        return False
+
+
 def write_instruction_body(
-    inst: Instruction, out: CWriter, emitter: Emitter
+    inst: Instruction, out: CWriter, emitter: Emitter, end: str = "DISPATCH();"
 ) -> None:
     """The uops of an instruction, from the cache size check to DISPATCH()."""
     if inst.family is not None:
@@ -265,15 +330,10 @@ def write_instruction_body(
     out.start_line()
     if reachable:
         stack.flush(out)
-        out.emit("DISPATCH();\n")
+        out.emit(f"{end}\n")
 
 
-def write_switch_op(analysis: Analysis, out: CWriter) -> None:
-    """SWITCH_OP: one instruction whose cases are the folded specializations.
-    The case number replaces the adaptive counter in the first cache entry; the
-    instruction otherwise keeps the cache layout of its family."""
-    emitter = SwitchEmitter(out, analysis.labels)
-    switch_op = analysis.instructions["SWITCH_OP"]
+def write_switch_op_prologue(switch_op: Instruction, out: CWriter) -> None:
     out.emit("\n")
     out.emit("TARGET(SWITCH_OP) {\n")
     out.emit("#if _Py_TAIL_CALL_INTERP\n")
@@ -287,6 +347,72 @@ def write_switch_op(analysis: Analysis, out: CWriter) -> None:
     out.emit("INSTRUCTION_STATS(SWITCH_OP);\n")
     out.emit("uint16_t switch_case = read_u16(&this_instr[1].cache) >> SWITCH_OP_CASE_SHIFT;\n")
     out.emit("assert(switch_case < SWITCH_OP_NCASES);\n")
+
+
+def write_switch_op_call(analysis: Analysis, out: CWriter) -> None:
+    """SWITCH_OP as a call of the case's function (see
+    write_switch_op_function). The function returns the next
+    instruction, this_instr to re-dispatch to the family's generic
+    instruction after a failed guard, or NULL on error."""
+    switch_op = analysis.instructions["SWITCH_OP"]
+    write_switch_op_prologue(switch_op, out)
+    out.emit("_PySwitchOpResult result = _PySwitchOp_Func[switch_case](tstate, frame, stack_pointer, this_instr, oparg);\n")
+    out.emit("stack_pointer = result.stack_pointer;\n")
+    out.emit("_Py_CODEUNIT *target = result.next_instr;\n")
+    out.emit("if (target == NULL) {\n")
+    out.emit("// Point into the instruction, as the generic instruction would.\n")
+    out.emit("next_instr = this_instr + 1 + _PyOpcode_Caches[_PySwitchOp_Deopt[switch_case]];\n")
+    out.emit("JUMP_TO_LABEL(error);\n")
+    out.emit("}\n")
+    out.emit("if (target == this_instr) {\n")
+    out.emit("opcode = _PySwitchOp_Deopt[switch_case];\n")
+    out.emit("next_instr = this_instr;\n")
+    out.emit("PRE_DISPATCH_GOTO();\n")
+    out.emit("DISPATCH_GOTO();\n")
+    out.emit("}\n")
+    out.emit("next_instr = target;\n")
+    out.emit("DISPATCH();\n")
+    out.start_line()
+    out.emit("}")
+    out.emit("\n")
+
+
+def write_switch_op_function(analysis: Analysis, out: CWriter) -> None:
+    """The cases of SWITCH_OP as functions outside the interpreter loop, so
+    that folding specializations into SWITCH_OP does not grow the loop. One
+    function per case keeps each prologue minimal; _PySwitchOp_Func maps the
+    case number to its function."""
+    emitter = SwitchFunctionEmitter(out, analysis.labels)
+    for inst in analysis.switch_cases:
+        assert inst.family is not None
+        out.emit("\n")
+        out.emit("static Py_NO_INLINE _PySwitchOpResult\n")
+        out.emit(f"_PyEval_SwitchOp_{inst.name}(PyThreadState *tstate, _PyInterpreterFrame *frame,\n")
+        out.emit("    _PyStackRef *stack_pointer, _Py_CODEUNIT *this_instr, int oparg)\n")
+        out.emit("{\n")
+        out.emit("(void)tstate;\n")
+        out.emit("(void)oparg;\n")
+        out.emit("// The instruction is as long as its family's generic instruction.\n")
+        out.emit(f"_Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_{inst.family.name};\n")
+        write_instruction_body(inst, out, emitter, end="SWITCH_OP_DISPATCH();")
+        out.start_line()
+        out.emit("}\n")
+    out.emit("\n")
+    out.emit("static _PySwitchOpResult (*const _PySwitchOp_Func[SWITCH_OP_NCASES])(\n")
+    out.emit("    PyThreadState *, _PyInterpreterFrame *, _PyStackRef *, _Py_CODEUNIT *, int) = {\n")
+    for inst in analysis.switch_cases:
+        out.emit(f"[SWITCH_CASE_{inst.name}] = _PyEval_SwitchOp_{inst.name},\n")
+    out.emit("};\n")
+
+
+def write_switch_op(analysis: Analysis, out: CWriter) -> None:
+    """SWITCH_OP: one instruction whose cases are the folded specializations.
+    The case number replaces the adaptive counter in the first cache entry; the
+    instruction otherwise keeps the cache layout of its family. This is the
+    inline form, with the cases in the interpreter loop."""
+    emitter = SwitchEmitter(out, analysis.labels)
+    switch_op = analysis.instructions["SWITCH_OP"]
+    write_switch_op_prologue(switch_op, out)
     out.emit("switch (switch_case) {\n")
     for inst in analysis.switch_cases:
         assert inst.family is not None
@@ -309,14 +435,17 @@ def get_popped(inst: Instruction, analysis: Analysis) -> str:
     return (-stack.base_offset).to_c()
 
 def generate_tier1_cases(
-    analysis: Analysis, outfile: TextIO, lines: bool
+    analysis: Analysis, outfile: TextIO, lines: bool, outlined_switch: bool = False
 ) -> None:
     out = CWriter(outfile, 2, lines)
     emitter = Emitter(out, analysis.labels)
     out.emit("\n")
     for name, inst in sorted(analysis.instructions.items()):
         if name == "SWITCH_OP" and analysis.switch_cases:
-            write_switch_op(analysis, out)
+            if outlined_switch:
+                write_switch_op_call(analysis, out)
+            else:
+                write_switch_op(analysis, out)
             continue
         out.emit("\n")
         out.emit(f"TARGET({name}) {{\n")
@@ -380,6 +509,12 @@ arg_parser.add_argument(
 )
 
 arg_parser.add_argument(
+    "-s", "--switch-output", type=str, default=None,
+    help="Emit the cases of SWITCH_OP as a function into this file, "
+         "instead of inline in the interpreter loop",
+)
+
+arg_parser.add_argument(
     "-l", "--emit-line-directives", help="Emit #line directives", action="store_true"
 )
 
@@ -402,4 +537,9 @@ if __name__ == "__main__":
         args.input.append(DEFAULT_INPUT)
     data = analyze_files(args.input)
     with open(args.output, "w") as outfile:
-        generate_tier1(args.input, data, outfile, args.emit_line_directives)
+        if args.switch_output is None:
+            generate_tier1(args.input, data, outfile, args.emit_line_directives)
+        else:
+            with open(args.switch_output, "w") as switch_outfile:
+                generate_tier1(args.input, data, outfile, args.emit_line_directives,
+                               switch_outfile)

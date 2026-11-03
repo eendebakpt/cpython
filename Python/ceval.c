@@ -1112,6 +1112,9 @@ stop_tracing_and_jit(PyThreadState *tstate, _PyInterpreterFrame *frame)
 /* This setting is reversed below following _PyEval_EvalFrameDefault */
 #endif
 
+/* The cases of SWITCH_OP live outside the interpreter loop. */
+#include "generated_switch_op.c.h"
+
 #if _Py_TAIL_CALL_INTERP
 #include "opcode_targets.h"
 #include "generated_cases.c.h"

@@ -105,7 +105,7 @@
           WorkingDirectory="$(PySourcePath)" />
     <Exec Command="$(PythonForBuild) Tools\cases_generator\py_metadata_generator.py Python\bytecodes.c"
           WorkingDirectory="$(PySourcePath)" />
-    <Exec Command="$(PythonForBuild) Tools\cases_generator\tier1_generator.py Python\bytecodes.c"
+    <Exec Command="$(PythonForBuild) Tools\cases_generator\tier1_generator.py -s Python\generated_switch_op.c.h Python\bytecodes.c"
           WorkingDirectory="$(PySourcePath)" />
     <Exec Command="$(PythonForBuild) Tools\cases_generator\tier2_generator.py Python\bytecodes.c"
           WorkingDirectory="$(PySourcePath)" />

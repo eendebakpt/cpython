@@ -688,7 +688,7 @@ gen_try_set_executing(PyGenObject *gen)
 // back to its adaptive form with a triggering counter so that it
 // re-specializes on the operands that missed -- the same life cycle as an
 // ordinary specialized instruction.
-#define SWITCH_OP_DEOPT(BASE)                                               \
+#define SWITCH_OP_COUNT_MISS(BASE)                                          \
     do {                                                                  \
         uint16_t _switch_vb = read_u16(&this_instr[1].cache);               \
         if (((_switch_vb >> BACKOFF_BITS) & SWITCH_OP_MISS_MASK) == 0) {      \
@@ -702,10 +702,38 @@ gen_try_set_executing(PyGenObject *gen)
         }                                                                 \
         /* Otherwise the generic instruction runs once and its             \
            ADVANCE_ADAPTIVE_COUNTER counts the miss down. */              \
+    } while (0)
+
+// Inline form: the cases are in the interpreter loop and re-dispatch.
+#define SWITCH_OP_DEOPT(BASE)                                               \
+    do {                                                                  \
+        SWITCH_OP_COUNT_MISS(BASE);                                       \
         opcode = (BASE);                                                  \
         next_instr = this_instr;                                          \
         PRE_DISPATCH_GOTO();                                              \
         DISPATCH_GOTO();                                                  \
+    } while (0)
+
+// Outlined form: the cases are functions (generated_switch_op.c.h) that
+// return the next instruction, this_instr to re-dispatch to the generic
+// instruction, or NULL on error, together with the new stack pointer.
+typedef struct {
+    _Py_CODEUNIT *next_instr;
+    _PyStackRef *stack_pointer;
+} _PySwitchOpResult;
+
+#define SWITCH_OP_RETURN(value)                                           \
+    do {                                                                  \
+        _PySwitchOpResult _result = { (value), stack_pointer };           \
+        return _result;                                                   \
+    } while (0)
+
+#define SWITCH_OP_DISPATCH() SWITCH_OP_RETURN(next_instr)
+
+#define SWITCH_OP_DEOPT_RETURN(BASE)                                        \
+    do {                                                                  \
+        SWITCH_OP_COUNT_MISS(BASE);                                       \
+        SWITCH_OP_RETURN(this_instr);                                     \
     } while (0)
 
 // Macro for inplace float binary ops (tier 2 only).
