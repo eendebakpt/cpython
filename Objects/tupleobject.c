@@ -245,6 +245,18 @@ _PyStolenTuple_Free(PyObject *obj)
     PyTupleObject *op = _PyTuple_CAST(obj);
     assert(Py_SIZE(op) != 0);
     assert(!_PyObject_GC_IS_TRACKED(obj));
+    assert(Py_REFCNT(obj) == 1);
+    /* The caller holds the only reference and drops it here without going
+       through Py_DECREF(): do the bookkeeping of the normal deallocation
+       path, or debug builds would report the reference as leaked. */
+    _Py_DECREF_STAT_INC();
+#ifdef Py_REF_DEBUG
+    _Py_DecRefTotal(_PyThreadState_GET());
+#endif
+#ifdef Py_TRACE_REFS
+    _Py_ForgetReference(obj);
+#endif
+    _PyReftracerTrack(obj, PyRefTracer_DESTROY);
     // This will abort on the empty singleton (if there is one).
     if (!maybe_freelist_push(op)) {
         PyTuple_Type.tp_free((PyObject *)op);
