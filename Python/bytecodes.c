@@ -6294,7 +6294,8 @@ dummy_func(
                     DISPATCH();
                 }
             }
-            if (_PyOpcode_Caches[original_opcode] && original_opcode != SWITCH_OP) {
+            assert(original_opcode != SWITCH_OP);
+            if (_PyOpcode_Caches[original_opcode]) {
                 _PyBinaryOpCache *cache = (_PyBinaryOpCache *)(next_instr+1);
                 /* Prevent the underlying instruction from specializing
                 * and overwriting the instrumentation. */
@@ -6310,7 +6311,8 @@ dummy_func(
                 tstate, frame, this_instr);
             ERROR_IF(next_opcode < 0);
             next_instr = this_instr;
-            if (_PyOpcode_Caches[next_opcode] && next_opcode != SWITCH_OP) {
+            assert(next_opcode != SWITCH_OP);
+            if (_PyOpcode_Caches[next_opcode]) {
                 PAUSE_ADAPTIVE_COUNTER(next_instr[1].counter);
             }
             assert(next_opcode > 0 && next_opcode < 256);

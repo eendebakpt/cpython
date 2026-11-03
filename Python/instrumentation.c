@@ -803,7 +803,12 @@ instrument_line(PyCodeObject *code, _Py_CODEUNIT *bytecode, _PyCoMonitoringData 
     if (opcode == INSTRUMENTED_LINE) {
         return;
     }
-    set_original_opcode(monitoring->lines, i, _PyOpcode_Deopt[opcode]);
+    /* Like other specialized instructions, SWITCH_OP is instrumented as its
+       generic instruction: INSTRUMENTED_LINE pauses the counter that holds
+       the case, and the instruction must not be able to overwrite the
+       instrumentation when it deoptimizes. */
+    set_original_opcode(monitoring->lines, i,
+                        switch_op_deopt(&bytecode[i], _PyOpcode_Deopt[opcode]));
     CHECK(get_line_delta(monitoring->lines, i) > NO_LINE);
     FT_ATOMIC_STORE_UINT8_RELAXED(*opcode_ptr, INSTRUMENTED_LINE);
 }
