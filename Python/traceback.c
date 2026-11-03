@@ -91,7 +91,7 @@ tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti,
     }
     if (tb != NULL) {
         tb->tb_next = (PyTracebackObject*)Py_XNewRef(next);
-        tb->tb_frame = (PyFrameObject*)Py_XNewRef(frame);
+        tb->tb_frame = (PyFrameObject*)Py_NewRef(frame);
         tb->tb_lasti = lasti;
         tb->tb_lineno = lineno;
         PyObject_GC_Track(tb);
@@ -241,6 +241,7 @@ tb_dealloc(PyObject *op)
     PyObject_GC_UnTrack(tb);
     Py_XDECREF(tb->tb_next);
     Py_XDECREF(tb->tb_frame);
+    assert(PyTraceBack_Check(tb));
     _Py_FREELIST_FREE(tracebacks, tb, PyObject_GC_Del);
 }
 
