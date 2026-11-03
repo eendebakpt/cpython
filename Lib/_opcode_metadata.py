@@ -226,6 +226,11 @@ _specialized_opmap = frozendict(
     UNPACK_SEQUENCE_TWO_TUPLE=218,
 )
 
+_switch_ops = (
+        "BINARY_OP_INPLACE",
+        "TO_BOOL_SIZED",
+)
+
 opmap = frozendict(
     CACHE=0,
     RESERVED=17,
@@ -344,9 +349,10 @@ opmap = frozendict(
     STORE_GLOBAL=111,
     STORE_NAME=112,
     SWAP=113,
-    UNPACK_EX=114,
-    UNPACK_SEQUENCE=115,
-    YIELD_VALUE=116,
+    SWITCH_OP=114,
+    UNPACK_EX=115,
+    UNPACK_SEQUENCE=116,
+    YIELD_VALUE=117,
     INSTRUMENTED_END_FOR=233,
     INSTRUMENTED_POP_ITER=234,
     INSTRUMENTED_END_SEND=235,

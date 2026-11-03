@@ -711,7 +711,20 @@ _PyJit_translate_single_bytecode_to_trace(
         oparg = (oparg & ~255) | executor->vm_data.oparg;
     }
 
-    if (_PyOpcode_Caches[_PyOpcode_Deopt[opcode]] > 0) {
+    /* A specialization folded into SWITCH_OP: translate it with the case's own
+       uop expansion, but reason about flags, caches and deopts through its
+       family's generic instruction. */
+    const struct opcode_macro_expansion *switch_expansion = NULL;
+    bool is_switch_op = false;
+    if (opcode == SWITCH_OP) {
+        uint16_t switch_case = _PySwitchOp_Case(this_instr);
+        assert(switch_case < SWITCH_OP_NCASES);
+        switch_expansion = &_PySwitchOp_macro_expansion[switch_case];
+        opcode = _PySwitchOp_Deopt[switch_case];
+        is_switch_op = true;
+    }
+
+    if (_PyOpcode_Caches[_PyOpcode_Deopt[opcode]] > 0 && !is_switch_op) {
         uint16_t backoff = (this_instr + 1)->counter.value_and_backoff;
         // adaptive_counter_cooldown is a fresh specialization.
         // trigger_backoff_counter is what we set during tracing.
@@ -737,6 +750,7 @@ _PyJit_translate_single_bytecode_to_trace(
     /* Special case the first instruction,
     * so that we can guarantee forward progress */
     if (progress_needed && uop_buffer_length(&tracer->code_buffer) < CODE_SIZE_NO_PROGRESS) {
+        switch_expansion = NULL;
         if (OPCODE_HAS_EXIT(opcode) || OPCODE_HAS_DEOPT(opcode)) {
             opcode = _PyOpcode_Deopt[opcode];
         }
@@ -859,7 +873,8 @@ _PyJit_translate_single_bytecode_to_trace(
     trace->end -= needs_guard_ip;
 
 #if Py_DEBUG
-    const struct opcode_macro_expansion *expansion = &_PyOpcode_macro_expansion[opcode];
+    const struct opcode_macro_expansion *expansion = (switch_expansion != NULL && switch_expansion->nuops > 0)
+        ? switch_expansion : &_PyOpcode_macro_expansion[opcode];
     int space_needed = expansion->nuops + needs_guard_ip + 2 + (!OPCODE_HAS_NO_SAVE_IP(opcode));
     assert(uop_buffer_remaining_space(trace) > space_needed);
 #endif
@@ -910,7 +925,8 @@ _PyJit_translate_single_bytecode_to_trace(
             break;
         default:
         {
-            const struct opcode_macro_expansion *expansion = &_PyOpcode_macro_expansion[opcode];
+            const struct opcode_macro_expansion *expansion = (switch_expansion != NULL && switch_expansion->nuops > 0)
+                ? switch_expansion : &_PyOpcode_macro_expansion[opcode];
             // Reserve space for nuops (+ _SET_IP + _EXIT_TRACE)
             int nuops = expansion->nuops;
             if (nuops == 0) {

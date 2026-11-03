@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 import itertools
 import lexer
 import parser
@@ -271,6 +272,9 @@ class Instruction:
     is_target: bool = False
     family: Optional["Family"] = None
     opcode: int = -1
+    # >= 0 for a switch instruction: a specialization that has no opcode of
+    # its own and is dispatched by SWITCH_OP on this case number.
+    switch_case: int = -1
 
     @property
     def properties(self) -> Properties:
@@ -346,6 +350,61 @@ class Analysis:
     opmap: dict[str, int]
     have_arg: int
     min_instrumented: int
+    # Specializations folded into SWITCH_OP, indexed by case number.
+    switch_cases: list[Instruction] = field(default_factory=list)
+
+
+SWITCH_ANNOTATIONS = ("switch_op", "switch_candidate")
+
+
+def switch_fold_level() -> int:
+    """How aggressively annotated specializations are folded into SWITCH_OP.
+
+    SWITCH_OPS=0 (or none): every annotated specialization gets its own opcode.
+    SWITCH_OPS=1 (default): `switch_op` specializations become cases.
+    SWITCH_OPS=2 (or all): `switch_candidate` specializations become cases too.
+    """
+    value = os.environ.get("SWITCH_OPS", "1").strip().lower()
+    if value in ("0", "none", "off"):
+        return 0
+    if value in ("2", "all"):
+        return 2
+    return 1
+
+
+def fold_switch_instructions(
+    instructions: dict[str, Instruction],
+    annotations: dict[str, list[str]],
+) -> list[Instruction]:
+    """Remove the specializations that are folded into SWITCH_OP from the
+    instruction table (so that they get no opcode, target or metadata entry)
+    and return them in case order. They keep their family, which is the
+    instruction SWITCH_OP re-dispatches to when a guard fails."""
+    level = switch_fold_level()
+    cases: list[Instruction] = []
+    for name in sorted(instructions):
+        annos = annotations.get(name, [])
+        fold = ("switch_op" in annos and level >= 1) or (
+            "switch_candidate" in annos and level >= 2
+        )
+        if not fold:
+            continue
+        inst = instructions[name]
+        if inst.family is None or inst.family.name == name:
+            raise analysis_error(
+                f"switch instruction {name} must be a member of a family", inst.where
+            )
+        cases.append(inst)
+    if cases and "SWITCH_OP" not in instructions:
+        raise analysis_error(
+            "switch instructions need an instruction named SWITCH_OP", cases[0].where
+        )
+    for number, inst in enumerate(cases):
+        del instructions[inst.name]
+        assert inst.family is not None
+        inst.family.members.remove(inst)
+        inst.switch_case = number
+    return cases
 
 
 def analysis_error(message: str, tkn: lexer.Token) -> SyntaxError:
@@ -1370,6 +1429,16 @@ def analyze_forest(forest: list[parser.AstNode]) -> Analysis:
                 pass
     for uop in uops.values():
         uop.instruction_size = get_instruction_size_for_uop(instructions, uop)
+    switch_annotations: dict[str, list[str]] = {}
+    for node in forest:
+        match node:
+            case parser.Macro():
+                switch_annotations[node.name] = node.annotations
+            case parser.InstDef(name):
+                if node.kind == "inst":
+                    switch_annotations[node.name] = node.annotations
+            case _:
+                pass
     # Special case BINARY_OP_INPLACE_ADD_UNICODE
     # BINARY_OP_INPLACE_ADD_UNICODE is not a normal family member,
     # as it is the wrong size, but we need it to maintain an
@@ -1378,9 +1447,10 @@ def analyze_forest(forest: list[parser.AstNode]) -> Analysis:
         inst = instructions["BINARY_OP_INPLACE_ADD_UNICODE"]
         inst.family = families["BINARY_OP"]
         families["BINARY_OP"].members.append(inst)
+    switch_cases = fold_switch_instructions(instructions, switch_annotations)
     opmap, first_arg, min_instrumented = assign_opcodes(instructions, families, pseudos)
     return Analysis(
-        instructions, uops, families, pseudos, labels, opmap, first_arg, min_instrumented
+        instructions, uops, families, pseudos, labels, opmap, first_arg, min_instrumented, switch_cases
     )
 
 

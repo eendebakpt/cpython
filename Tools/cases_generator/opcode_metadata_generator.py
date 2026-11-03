@@ -229,9 +229,11 @@ def generate_metadata_table(analysis: Analysis, out: CWriter) -> None:
     out.emit("#endif\n\n")
 
 
-def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
-    expansions_table: dict[str, list[tuple[str, str, int]]] = {}
-    for inst in sorted(analysis.instructions.values(), key=lambda t: t.name):
+def instruction_expansion(
+    analysis: Analysis, inst: Instruction
+) -> list[tuple[str, str, int]] | None:
+    """The tier 2 expansion of an instruction, or None if it has none."""
+    if True:
         offset: int = 0  # Cache effect offset
         expansions: list[tuple[str, str, int]] = []  # [(name, size, offset), ...]
         if inst.is_super():
@@ -249,7 +251,7 @@ def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
             for part in instr2.parts:
                 expansions.append((part.name, "OPARG_BOTTOM", 0))
         elif not is_viable_expansion(inst):
-            continue
+            return None
         else:
             for part in inst.parts:
                 size = part.size
@@ -273,8 +275,20 @@ def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
                             internal_offset += cache.size
                         expansions.append((part.name, f"OPERAND1_{part.caches[-1].size}", offset+internal_offset))
                 offset += part.size
-        expansions_table[inst.name] = expansions
+        return expansions
+
+
+def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
+    expansions_table: dict[str, list[tuple[str, str, int]]] = {}
+    for inst in sorted(analysis.instructions.values(), key=lambda t: t.name):
+        expansions = instruction_expansion(analysis, inst)
+        if expansions is not None:
+            expansions_table[inst.name] = expansions
     max_uops = max(len(ex) for ex in expansions_table.values())
+    for inst in analysis.switch_cases:
+        expansions = instruction_expansion(analysis, inst)
+        if expansions is not None:
+            max_uops = max(max_uops, len(expansions))
     out.emit(f"#define MAX_UOP_PER_EXPANSION {max_uops}\n")
     out.emit("struct opcode_macro_expansion {\n")
     out.emit("int nuops;\n")
@@ -294,6 +308,49 @@ def generate_expansion_table(analysis: Analysis, out: CWriter) -> None:
         ]
         out.emit(
             f'[{inst_name}] = {{ .nuops = {len(expansions)}, .uops = {{ {", ".join(uops)} }} }},\n'
+        )
+    out.emit("};\n")
+    out.emit("#endif // NEED_OPCODE_METADATA\n\n")
+
+
+def generate_switch_tables(analysis: Analysis, out: CWriter) -> None:
+    """Specializations folded into SWITCH_OP: case numbers, pseudo-opcodes for
+    the specializer, the family to re-dispatch to and the tier 2 expansion."""
+    cases = analysis.switch_cases
+    out.emit("/* Specializations dispatched by SWITCH_OP. The case number replaces the adaptive\n")
+    out.emit("   counter in the first cache entry. The pseudo-opcodes let specialize.c\n")
+    out.emit("   name a case like an opcode: specialize() maps them to SWITCH_OP. */\n")
+    out.emit(f"#define SWITCH_OP_NCASES {len(cases)}\n")
+    out.emit("#define SWITCH_OP_PSEUDO_BASE 512\n")
+    out.emit("#define IS_SWITCH_OP_PSEUDO_OPCODE(OP) ((OP) >= SWITCH_OP_PSEUDO_BASE)\n")
+    for inst in cases:
+        out.emit(f"#define SWITCH_CASE_{inst.name} {inst.switch_case}\n")
+    for inst in cases:
+        out.emit(f"#define {inst.name} (SWITCH_OP_PSEUDO_BASE + SWITCH_CASE_{inst.name})\n")
+    size = max(len(cases), 1)
+    out.emit(f"PyAPI_DATA(const uint8_t) _PySwitchOp_Deopt[{size}];\n")
+    out.emit(f"PyAPI_DATA(const char *) _PySwitchOp_Name[{size}];\n")
+    out.emit(f"extern const struct opcode_macro_expansion _PySwitchOp_macro_expansion[{size}];\n")
+    out.emit("#ifdef NEED_OPCODE_METADATA\n")
+    out.emit(f"const uint8_t _PySwitchOp_Deopt[{size}] = {{\n")
+    for inst in cases:
+        assert inst.family is not None
+        out.emit(f"[SWITCH_CASE_{inst.name}] = {inst.family.name},\n")
+    out.emit("};\n")
+    out.emit(f"const char *_PySwitchOp_Name[{size}] = {{\n")
+    for inst in cases:
+        out.emit(f'[SWITCH_CASE_{inst.name}] = "{inst.name}",\n')
+    out.emit("};\n")
+    out.emit(f"const struct opcode_macro_expansion _PySwitchOp_macro_expansion[{size}] = {{\n")
+    for inst in cases:
+        expansions = instruction_expansion(analysis, inst)
+        if expansions is None:
+            continue
+        uops = [
+            f"{{ {name}, {size}, {offset} }}" for (name, size, offset) in expansions
+        ]
+        out.emit(
+            f'[SWITCH_CASE_{inst.name}] = {{ .nuops = {len(expansions)}, .uops = {{ {", ".join(uops)} }} }},\n'
         )
     out.emit("};\n")
     out.emit("#endif // NEED_OPCODE_METADATA\n\n")
@@ -383,6 +440,7 @@ def generate_opcode_metadata(
         generate_oparg_macros(out)
         generate_metadata_table(analysis, out)
         generate_expansion_table(analysis, out)
+        generate_switch_tables(analysis, out)
         generate_name_table(analysis, out)
         generate_cache_table(analysis, out)
         generate_deopt_table(analysis, out)

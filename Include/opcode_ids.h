@@ -124,9 +124,10 @@ extern "C" {
 #define STORE_GLOBAL                           111
 #define STORE_NAME                             112
 #define SWAP                                   113
-#define UNPACK_EX                              114
-#define UNPACK_SEQUENCE                        115
-#define YIELD_VALUE                            116
+#define SWITCH_OP                              114
+#define UNPACK_EX                              115
+#define UNPACK_SEQUENCE                        116
+#define YIELD_VALUE                            117
 #define RESUME                                 128
 #define BINARY_OP_ADD_FLOAT                    129
 #define BINARY_OP_ADD_INT                      130
