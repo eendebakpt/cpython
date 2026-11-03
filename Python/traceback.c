@@ -80,11 +80,8 @@ tb_create_raw(PyTracebackObject *next, PyFrameObject *frame, int lasti,
               int lineno)
 {
     PyTracebackObject *tb;
-    if ((next != NULL && !PyTraceBack_Check(next)) ||
-                    frame == NULL || !PyFrame_Check(frame)) {
-        PyErr_BadInternalCall();
-        return NULL;
-    }
+    assert(next == NULL || PyTraceBack_Check(next));
+    assert(frame != NULL && PyFrame_Check(frame));
     tb = _Py_FREELIST_POP(PyTracebackObject, tracebacks);
     if (tb == NULL) {
         tb = PyObject_GC_New(PyTracebackObject, &PyTraceBack_Type);
