@@ -379,7 +379,9 @@ unspecialize(_Py_CODEUNIT *instr)
 {
     assert(!PyErr_Occurred());
     uint8_t opcode = FT_ATOMIC_LOAD_UINT8_RELAXED(instr->op.code);
-    uint8_t generic_opcode = _PyOpcode_Deopt[opcode];
+    uint8_t generic_opcode = (opcode == SWITCH_OP)
+        ? _PySwitchOp_Table[_PySwitchOp_Kind(instr)].deopt
+        : _PyOpcode_Deopt[opcode];
     STAT_INC(generic_opcode, failure);
     if (!set_opcode(instr, generic_opcode)) {
         SPECIALIZATION_FAIL(generic_opcode, SPEC_FAIL_OTHER);
@@ -390,6 +392,8 @@ unspecialize(_Py_CODEUNIT *instr)
     set_counter(counter, adaptive_counter_backoff(cur));
 }
 
+static void specialize_switch_op(_Py_CODEUNIT *instr, uint16_t kind);
+static int kind_specialization_enabled(void);
 static int function_kind(PyCodeObject *code);
 static bool function_check_args(PyObject *o, int expected_argcount, int opcode);
 static uint32_t function_get_version(PyObject *o, int opcode);
@@ -1620,6 +1624,12 @@ _Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_COD
         specialize(instr, STORE_SUBSCR_DICT);
         return;
     }
+    if (kind_specialization_enabled() && container_type == &PyByteArray_Type
+        && PyLong_CheckExact(sub) && _PyLong_IsNonNegativeCompact((PyLongObject *)sub))
+    {
+        specialize_switch_op(instr, SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT);
+        return;
+    }
     SPECIALIZATION_FAIL(STORE_SUBSCR, store_subscr_fail_kind(container, sub));
     unspecialize(instr);
 }
@@ -2255,6 +2265,59 @@ kind_specialization_enabled(void)
     return v == NULL || !PyLong_CheckExact(v) || PyLong_AsLong(v) != 0;
 }
 
+const _PySwitchOpDescr _PySwitchOp_Table[SWITCH_OP_NCASES] = {
+    [SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT] = {BINARY_OP, BINARY_OP},
+    [SWITCH_CASE_UNPACK_UNIQUE_TWO_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TWO_TUPLE},
+    [SWITCH_CASE_UNPACK_UNIQUE_THREE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
+    [SWITCH_CASE_UNPACK_UNIQUE_TUPLE] = {UNPACK_SEQUENCE, UNPACK_SEQUENCE_TUPLE},
+    [SWITCH_CASE_FOR_ITER_DICT_KEYS] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_DICT_VALUES] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_DICT_ITEMS] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_ENUMERATE] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_ZIP] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_SEQ_ITER] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_REVERSED] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_SET_ITER] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_MAP] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_FILTER] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_FOR_ITER_LIST_REV] = {FOR_ITER, FOR_ITER},
+    [SWITCH_CASE_CONTAINS_OP_STR] = {CONTAINS_OP, CONTAINS_OP},
+    [SWITCH_CASE_CONTAINS_OP_TUPLE] = {CONTAINS_OP, CONTAINS_OP},
+    [SWITCH_CASE_CONTAINS_OP_LIST] = {CONTAINS_OP, CONTAINS_OP},
+    [SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT] = {BINARY_OP, BINARY_OP},
+    [SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT] = {BINARY_OP, BINARY_OP},
+    [SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT] = {STORE_SUBSCR, STORE_SUBSCR},
+};
+
+_PySwitchOpIterDescr _PySwitchOpIter_Table[SWITCH_CASE_FOR_ITER_NTYPES] = {
+    [SWITCH_CASE_FOR_ITER_DICT_KEYS - SWITCH_CASE_FOR_ITER_FIRST] = {&PyDictIterKey_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_DICT_VALUES - SWITCH_CASE_FOR_ITER_FIRST] = {&PyDictIterValue_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_DICT_ITEMS - SWITCH_CASE_FOR_ITER_FIRST] = {&PyDictIterItem_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_ENUMERATE - SWITCH_CASE_FOR_ITER_FIRST] = {&PyEnum_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_ZIP - SWITCH_CASE_FOR_ITER_FIRST] = {&PyZip_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_SEQ_ITER - SWITCH_CASE_FOR_ITER_FIRST] = {&PySeqIter_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_REVERSED - SWITCH_CASE_FOR_ITER_FIRST] = {&PyReversed_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_SET_ITER - SWITCH_CASE_FOR_ITER_FIRST] = {&PySetIter_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_MAP - SWITCH_CASE_FOR_ITER_FIRST] = {&PyMap_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_FILTER - SWITCH_CASE_FOR_ITER_FIRST] = {&PyFilter_Type, NULL},
+    [SWITCH_CASE_FOR_ITER_LIST_REV - SWITCH_CASE_FOR_ITER_FIRST] = {&PyListRevIter_Type, NULL},
+};
+
+/* Specialize `instr` to SWITCH_OP with the given kind. The instruction must
+   belong to the family of _PySwitchOp_Table[kind].deopt, so that the kind
+   cache entry exists. */
+static void
+specialize_switch_op(_Py_CODEUNIT *instr, uint16_t kind)
+{
+    assert(kind < SWITCH_OP_NCASES);
+    assert(_PyOpcode_Deopt[instr->op.code] == _PySwitchOp_Table[kind].deopt
+           || (instr->op.code == SWITCH_OP
+               && _PySwitchOp_Table[_PySwitchOp_Kind(instr)].deopt == _PySwitchOp_Table[kind].deopt));
+    assert(_PyOpcode_Caches[_PySwitchOp_Table[kind].deopt] >= 2);
+    _PySwitchOp_Kind(instr) = kind;
+    specialize(instr, SWITCH_OP);
+}
+
 static int
 binary_op_inplace_target(_PyStackRef lhs_st, _PyStackRef rhs_st)
 {
@@ -2469,6 +2532,10 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 if (specialize_binary_op_inplace(instr, lhs_st, rhs_st, INPLACE_FLOAT_TRUEDIV_L)) {
                     return;
                 }
+                if (kind_specialization_enabled()) {
+                    specialize_switch_op(instr, SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT);
+                    return;
+                }
             }
             break;
         case NB_SUBSCR:
@@ -2479,6 +2546,14 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 }
                 if (PyTuple_CheckExact(lhs)) {
                     specialize(instr, BINARY_OP_SUBSCR_TUPLE_INT);
+                    return;
+                }
+                if (kind_specialization_enabled() && PyBytes_CheckExact(lhs)) {
+                    specialize_switch_op(instr, SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT);
+                    return;
+                }
+                if (kind_specialization_enabled() && PyByteArray_CheckExact(lhs)) {
+                    specialize_switch_op(instr, SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT);
                     return;
                 }
                 if (PyUnicode_CheckExact(lhs) && _PyLong_IsNonNegativeCompact((PyLongObject*)rhs)) {
@@ -2650,6 +2725,19 @@ _Py_Specialize_UnpackSequence(_PyStackRef seq_st, _Py_CODEUNIT *instr, int oparg
             unspecialize(instr);
             return;
         }
+        /* A tuple that is only referenced from the stack (a fresh return
+           value, typically) can give up its items without refcount traffic.
+           The handler falls back to increfing when a later tuple is shared. */
+        if (kind_specialization_enabled() &&
+            PyStackRef_RefcountOnObject(seq_st) &&
+            _PyObject_IsUniquelyReferenced(seq))
+        {
+            uint16_t kind = oparg == 2 ? SWITCH_CASE_UNPACK_UNIQUE_TWO_TUPLE
+                          : oparg == 3 ? SWITCH_CASE_UNPACK_UNIQUE_THREE_TUPLE
+                          : SWITCH_CASE_UNPACK_UNIQUE_TUPLE;
+            specialize_switch_op(instr, kind);
+            return;
+        }
         if (PyTuple_GET_SIZE(seq) == 2) {
             specialize(instr, UNPACK_SEQUENCE_TWO_TUPLE);
             return;
@@ -2776,6 +2864,19 @@ _Py_Specialize_ForIter(_PyStackRef iter, _PyStackRef null_or_index, _Py_CODEUNIT
             }
             specialize(instr, FOR_ITER_GEN);
             return;
+        }
+        else if (kind_specialization_enabled()) {
+            for (int i = 0; i < SWITCH_CASE_FOR_ITER_NTYPES; i++) {
+                _PySwitchOpIterDescr *d = &_PySwitchOpIter_Table[i];
+                if (tp == d->type) {
+                    if (d->iternext == NULL) {
+                        d->iternext = tp->tp_iternext;
+                    }
+                    assert(d->iternext == tp->tp_iternext);
+                    specialize_switch_op(instr, (uint16_t)(SWITCH_CASE_FOR_ITER_FIRST + i));
+                    return;
+                }
+            }
         }
     }
     else {
@@ -3023,7 +3124,7 @@ _Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)
     PyObject *value = PyStackRef_AsPyObjectBorrow(value_st);
 
     assert(ENABLE_SPECIALIZATION);
-    assert(_PyOpcode_Caches[CONTAINS_OP] == INLINE_CACHE_ENTRIES_COMPARE_OP);
+    assert(_PyOpcode_Caches[CONTAINS_OP] == INLINE_CACHE_ENTRIES_CONTAINS_OP);
     if (PyAnyDict_CheckExact(value)) {
         specialize(instr, CONTAINS_OP_DICT);
         return;
@@ -3031,6 +3132,20 @@ _Py_Specialize_ContainsOp(_PyStackRef value_st, _Py_CODEUNIT *instr)
     if (PySet_CheckExact(value) || PyFrozenSet_CheckExact(value)) {
         specialize(instr, CONTAINS_OP_SET);
         return;
+    }
+    if (kind_specialization_enabled()) {
+        if (PyUnicode_CheckExact(value)) {
+            specialize_switch_op(instr, SWITCH_CASE_CONTAINS_OP_STR);
+            return;
+        }
+        if (PyTuple_CheckExact(value)) {
+            specialize_switch_op(instr, SWITCH_CASE_CONTAINS_OP_TUPLE);
+            return;
+        }
+        if (PyList_CheckExact(value)) {
+            specialize_switch_op(instr, SWITCH_CASE_CONTAINS_OP_LIST);
+            return;
+        }
     }
 
     SPECIALIZATION_FAIL(CONTAINS_OP, containsop_fail_kind(value));

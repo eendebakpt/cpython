@@ -9475,8 +9475,8 @@
             _PyFrame_StackPush(pushed_frame, PyStackRef_MakeHeapSafe(v));
             gen->gi_exc_state.previous_item = tstate->exc_info;
             tstate->exc_info = &gen->gi_exc_state;
-            assert( 2u + oparg <= UINT16_MAX);
-            frame->return_offset = (uint16_t)( 2u + oparg);
+            assert( 3u + oparg <= UINT16_MAX);
+            frame->return_offset = (uint16_t)( 3u + oparg);
             pushed_frame->previous = frame;
             gen_frame = PyStackRef_Wrap(pushed_frame);
             _tos_cache2 = gen_frame;
@@ -16707,7 +16707,7 @@
             gen->gi_exc_state.previous_item = tstate->exc_info;
             tstate->exc_info = &gen->gi_exc_state;
             pushed_frame->previous = frame;
-            frame->return_offset = (uint16_t)( 2u + oparg);
+            frame->return_offset = (uint16_t)( 3u + oparg);
             gen_frame = PyStackRef_Wrap(pushed_frame);
             _tos_cache2 = gen_frame;
             _tos_cache1 = stack_pointer[-1];
@@ -16746,7 +16746,7 @@
             gen->gi_exc_state.previous_item = tstate->exc_info;
             tstate->exc_info = &gen->gi_exc_state;
             pushed_frame->previous = frame;
-            frame->return_offset = (uint16_t)( 2u + oparg);
+            frame->return_offset = (uint16_t)( 3u + oparg);
             gen_frame = PyStackRef_Wrap(pushed_frame);
             _tos_cache2 = gen_frame;
             _tos_cache1 = _stack_item_0;
@@ -16788,7 +16788,7 @@
             gen->gi_exc_state.previous_item = tstate->exc_info;
             tstate->exc_info = &gen->gi_exc_state;
             pushed_frame->previous = frame;
-            frame->return_offset = (uint16_t)( 2u + oparg);
+            frame->return_offset = (uint16_t)( 3u + oparg);
             gen_frame = PyStackRef_Wrap(pushed_frame);
             _tos_cache2 = gen_frame;
             _tos_cache1 = _stack_item_1;

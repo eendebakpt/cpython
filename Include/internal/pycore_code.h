@@ -82,6 +82,7 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyUnpackSequenceCache;
 
 #define INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE \
@@ -131,12 +132,14 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyStoreSubscrCache;
 
 #define INLINE_CACHE_ENTRIES_STORE_SUBSCR CACHE_ENTRIES(_PyStoreSubscrCache)
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyForIterCache;
 
 #define INLINE_CACHE_ENTRIES_FOR_ITER CACHE_ENTRIES(_PyForIterCache)
@@ -149,6 +152,7 @@ typedef struct {
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t unused;   /* keeps INLINE_CACHE_ENTRIES_SEND == INLINE_CACHE_ENTRIES_FOR_ITER */
 } _PySendCache;
 
 #define INLINE_CACHE_ENTRIES_SEND CACHE_ENTRIES(_PySendCache)
@@ -188,10 +192,11 @@ enum _PyToBoolSizedKind {
     TO_BOOL_SIZED_NKINDS,
 };
 
-extern const _PyToBoolSizedDescr _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS];
+PyAPI_DATA(const _PyToBoolSizedDescr) _PyToBoolSized_Table[TO_BOOL_SIZED_NKINDS];
 
 typedef struct {
     _Py_BackoffCounter counter;
+    uint16_t kind;
 } _PyContainsOpCache;
 
 #define INLINE_CACHE_ENTRIES_CONTAINS_OP CACHE_ENTRIES(_PyContainsOpCache)
@@ -568,6 +573,63 @@ enum _PyBinaryOpInplaceKind {
     INPLACE_NKINDS,
 };
 #define INPLACE_FIRST_INT_KIND INPLACE_INT_ADD_L
+
+/* SWITCH_OP: one generic specialized instruction shared by several
+   instruction families. The instruction keeps the cache layout of its base
+   opcode; the second cache entry (after the counter) holds the kind, which
+   selects the behaviour and, through _PySwitchOp_Table, the base opcode to
+   fall back to when a guard fails and the tier 1 opcode whose tier 2
+   expansion is used when the instruction is traced. */
+enum _PySwitchOpCase {
+    SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT = 0,
+    SWITCH_CASE_UNPACK_UNIQUE_TWO_TUPLE,
+    SWITCH_CASE_UNPACK_UNIQUE_THREE_TUPLE,
+    SWITCH_CASE_UNPACK_UNIQUE_TUPLE,
+    /* FOR_ITER on a known iterator type: consecutive, index into
+       _PySwitchOpIter_Table */
+    SWITCH_CASE_FOR_ITER_DICT_KEYS,
+    SWITCH_CASE_FOR_ITER_DICT_VALUES,
+    SWITCH_CASE_FOR_ITER_DICT_ITEMS,
+    SWITCH_CASE_FOR_ITER_ENUMERATE,
+    SWITCH_CASE_FOR_ITER_ZIP,
+    SWITCH_CASE_FOR_ITER_SEQ_ITER,
+    SWITCH_CASE_FOR_ITER_REVERSED,
+    SWITCH_CASE_FOR_ITER_SET_ITER,
+    SWITCH_CASE_FOR_ITER_MAP,
+    SWITCH_CASE_FOR_ITER_FILTER,
+    SWITCH_CASE_FOR_ITER_LIST_REV,
+    /* CONTAINS_OP on exact str / tuple / list */
+    SWITCH_CASE_CONTAINS_OP_STR,
+    SWITCH_CASE_CONTAINS_OP_TUPLE,
+    SWITCH_CASE_CONTAINS_OP_LIST,
+    /* bytes[int], bytearray[int], bytearray[int] = int */
+    SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT,
+    SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT,
+    SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT,
+    SWITCH_OP_NCASES,
+};
+#define SWITCH_CASE_FOR_ITER_FIRST SWITCH_CASE_FOR_ITER_DICT_KEYS
+#define SWITCH_CASE_FOR_ITER_NTYPES (SWITCH_CASE_FOR_ITER_LIST_REV - SWITCH_CASE_FOR_ITER_DICT_KEYS + 1)
+
+/* Iterator types handled by the FOR_ITER kinds. `iternext` is copied from
+   the type's tp_iternext when the kind is first specialized, so the handler
+   loads it from a fixed address instead of through the type. */
+typedef struct {
+    PyTypeObject *type;
+    iternextfunc iternext;
+} _PySwitchOpIterDescr;
+
+PyAPI_DATA(_PySwitchOpIterDescr) _PySwitchOpIter_Table[SWITCH_CASE_FOR_ITER_NTYPES];
+
+typedef struct {
+    uint8_t deopt;   /* base opcode to re-dispatch to on a guard failure */
+    uint8_t trace;   /* tier 1 opcode whose uop expansion describes the kind */
+} _PySwitchOpDescr;
+
+PyAPI_DATA(const _PySwitchOpDescr) _PySwitchOp_Table[SWITCH_OP_NCASES];
+
+/* The kind of a SWITCH_OP instruction: the cache entry after the counter. */
+#define _PySwitchOp_Kind(instr) ((instr)[2].cache)
 
 /* Comparison bit masks. */
 

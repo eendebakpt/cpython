@@ -1041,7 +1041,8 @@ static const _Py_CODEUNIT _Py_INTERPRETER_TRAMPOLINE_INSTRUCTIONS[] = {
     { .op.code = NOP, .op.arg = 0 },
     { .op.code = INTERPRETER_EXIT, .op.arg = 0 },  /* reached on return */
     { .op.code = NOP, .op.arg = 0 },
-    { .op.code = INTERPRETER_EXIT, .op.arg = 0 },  /* reached on yield */
+    { .op.code = NOP, .op.arg = 0 },               /* SEND cache is 2 entries */
+    { .op.code = INTERPRETER_EXIT, .op.arg = 0 },  /* reached on yield: 1 + INLINE_CACHE_ENTRIES_SEND past the entry IP */
     { .op.code = RESUME, .op.arg = RESUME_OPARG_DEPTH1_MASK | RESUME_AT_FUNC_START },
     { .op.code = CACHE, .op.arg = 0 } /* RESUME's CACHE */
 };

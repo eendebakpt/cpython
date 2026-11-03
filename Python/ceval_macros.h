@@ -681,6 +681,286 @@ gen_try_set_executing(PyGenObject *gen)
         }                                                                 \
     } while (0)
 
+// SWITCH_OP helpers (tier 1). See _PySwitchOpCase in pycore_code.h.
+// The cases manipulate the stack directly: SWITCH_OP has no DSL stack effect
+// because its stack shape depends on the kind.
+
+// Re-execute this instruction as its base opcode. The base handler reads
+// the adaptive counter and may re-specialize, exactly as after a DEOPT_IF.
+#define SWITCH_OP_DEOPT(BASE)                                               \
+    do {                                                                  \
+        opcode = (BASE);                                                  \
+        next_instr = this_instr;                                          \
+        PRE_DISPATCH_GOTO();                                              \
+        DISPATCH_GOTO();                                                  \
+    } while (0)
+
+// Write the oparg items of a tuple to values[] in reverse order, unrolled
+// for the two- and three-tuple kinds.
+#define SWITCH_OP_UNPACK_ITEMS(kind, MAKE)                                  \
+    do {                                                                  \
+        if ((kind) == SWITCH_CASE_UNPACK_UNIQUE_TWO_TUPLE) {                  \
+            values[0] = MAKE(items[1]);                                   \
+            values[1] = MAKE(items[0]);                                   \
+        }                                                                 \
+        else if ((kind) == SWITCH_CASE_UNPACK_UNIQUE_THREE_TUPLE) {           \
+            values[0] = MAKE(items[2]);                                   \
+            values[1] = MAKE(items[1]);                                   \
+            values[2] = MAKE(items[0]);                                   \
+        }                                                                 \
+        else {                                                            \
+            for (int _i = oparg; --_i >= 0; ) {                           \
+                *values++ = MAKE(items[_i]);                              \
+            }                                                             \
+        }                                                                 \
+    } while (0)
+
+
+// CONTAINS_OP kinds: the loops of tuplecontains()/list_contains() inlined.
+static inline int
+_PySwitchOp_TupleContains(PyObject *tuple, PyObject *el)
+{
+    int cmp = 0;
+    for (Py_ssize_t i = 0; cmp == 0 && i < PyTuple_GET_SIZE(tuple); i++) {
+        cmp = PyObject_RichCompareBool(PyTuple_GET_ITEM(tuple, i), el, Py_EQ);
+    }
+    return cmp;
+}
+
+static inline int
+_PySwitchOp_ListContains(PyObject *list, PyObject *el)
+{
+#ifdef Py_GIL_DISABLED
+    return PySequence_Contains(list, el);
+#else
+    int cmp = 0;
+    for (Py_ssize_t i = 0; cmp == 0 && i < PyList_GET_SIZE(list); i++) {
+        PyObject *item = PyList_GET_ITEM(list, i);
+        Py_INCREF(item);
+        cmp = PyObject_RichCompareBool(item, el, Py_EQ);
+        Py_DECREF(item);
+    }
+    return cmp;
+#endif
+}
+
+#define SWITCH_OP_CASES(kind)                                              \
+    switch (kind) {                                                       \
+    /* Tier 1 counterpart of _BINARY_OP_TRUEDIV_FLOAT: float / float */   \
+    case SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT: {                               \
+        _PyStackRef left = stack_pointer[-2];                             \
+        _PyStackRef right = stack_pointer[-1];                            \
+        PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);             \
+        PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);           \
+        if (!PyFloat_CheckExact(left_o) || !PyFloat_CheckExact(right_o)) { \
+            SWITCH_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        STAT_INC(BINARY_OP, hit);                                         \
+        double divisor = ((PyFloatObject *)right_o)->ob_fval;             \
+        if (divisor == 0.0) {                                             \
+            PyErr_SetString(PyExc_ZeroDivisionError, "division by zero"); \
+            JUMP_TO_LABEL(error);                                         \
+        }                                                                 \
+        PyObject *d = PyFloat_FromDouble(                                 \
+            ((PyFloatObject *)left_o)->ob_fval / divisor);                \
+        if (d == NULL) {                                                  \
+            JUMP_TO_LABEL(error);                                         \
+        }                                                                 \
+        stack_pointer[-2] = PyStackRef_FromPyObjectSteal(d);              \
+        stack_pointer += -1;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(right, _PyFloat_ExactDealloc);       \
+        PyStackRef_CLOSE_SPECIALIZED(left, _PyFloat_ExactDealloc);        \
+        break;                                                            \
+    }                                                                     \
+    /* Tier 1 counterparts of _UNPACK_SEQUENCE_UNIQUE_{TWO_,THREE_,}TUPLE: \
+       a tuple whose only reference is the stack slot gives up its items  \
+       without incref/decref traffic and its shell goes straight back to   \
+       the freelist. A shared tuple takes the increfing path (a hit, not   \
+       a deopt), so only a type or length mismatch re-dispatches. */      \
+    case SWITCH_CASE_UNPACK_UNIQUE_TWO_TUPLE:                                 \
+    case SWITCH_CASE_UNPACK_UNIQUE_THREE_TUPLE:                               \
+    case SWITCH_CASE_UNPACK_UNIQUE_TUPLE: {                                   \
+        _PyStackRef seq = stack_pointer[-1];                              \
+        PyObject *seq_o = PyStackRef_AsPyObjectBorrow(seq);               \
+        if (!PyTuple_CheckExact(seq_o) || PyTuple_GET_SIZE(seq_o) != oparg) { \
+            SWITCH_OP_DEOPT(UNPACK_SEQUENCE);                               \
+        }                                                                 \
+        STAT_INC(UNPACK_SEQUENCE, hit);                                   \
+        PyObject **items = _PyTuple_ITEMS(seq_o);                         \
+        _PyStackRef *values = stack_pointer - 1;                          \
+        if (PyStackRef_RefcountOnObject(seq) &&                           \
+            BINARY_OP_INPLACE_IS_UNIQUE(seq_o)) {                         \
+            SWITCH_OP_UNPACK_ITEMS(kind, PyStackRef_FromPyObjectSteal);     \
+            stack_pointer += oparg - 1;                                   \
+            PyObject_GC_UnTrack(seq_o);                                   \
+            _PyStolenTuple_Free(seq_o);                                   \
+        }                                                                 \
+        else {                                                            \
+            SWITCH_OP_UNPACK_ITEMS(kind, PyStackRef_FromPyObjectNew);       \
+            stack_pointer += oparg - 1;                                   \
+            _PyFrame_SetStackPointer(frame, stack_pointer);               \
+            _PyFrame_StackPointerValidate(frame);                         \
+            PyStackRef_CLOSE(seq);                                        \
+            _PyFrame_StackPointerInvalidate(frame);                       \
+        }                                                                 \
+        break;                                                            \
+    }                                                                     \
+    /* FOR_ITER on a known iterator type (tier 1 counterpart of           \
+       _GUARD_NOS_TYPE + _ITER_NEXT_INLINE): call the type's tp_iternext  \
+       through a fixed table slot instead of the generic helper. */       \
+    case SWITCH_CASE_FOR_ITER_DICT_KEYS:                                      \
+    case SWITCH_CASE_FOR_ITER_DICT_VALUES:                                    \
+    case SWITCH_CASE_FOR_ITER_DICT_ITEMS:                                     \
+    case SWITCH_CASE_FOR_ITER_ENUMERATE:                                      \
+    case SWITCH_CASE_FOR_ITER_ZIP:                                            \
+    case SWITCH_CASE_FOR_ITER_SEQ_ITER:                                       \
+    case SWITCH_CASE_FOR_ITER_REVERSED:                                       \
+    case SWITCH_CASE_FOR_ITER_SET_ITER:                                       \
+    case SWITCH_CASE_FOR_ITER_MAP:                                            \
+    case SWITCH_CASE_FOR_ITER_FILTER:                                         \
+    case SWITCH_CASE_FOR_ITER_LIST_REV: {                                     \
+        _PyStackRef iter = stack_pointer[-2];                             \
+        PyObject *iter_o = PyStackRef_AsPyObjectBorrow(iter);             \
+        const _PySwitchOpIterDescr *d = &_PySwitchOpIter_Table[kind - SWITCH_CASE_FOR_ITER_FIRST];\
+        if (Py_TYPE(iter_o) != d->type) {                                 \
+            SWITCH_OP_DEOPT(FOR_ITER);                                      \
+        }                                                                 \
+        STAT_INC(FOR_ITER, hit);                                          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyObject *next_o = d->iternext(iter_o);                           \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        if (next_o == NULL) {                                             \
+            if (_PyErr_Occurred(tstate)) {                                \
+                if (!_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)) {\
+                    JUMP_TO_LABEL(error);                                 \
+                }                                                         \
+                _PyFrame_SetStackPointer(frame, stack_pointer);           \
+                _PyFrame_StackPointerValidate(frame);                     \
+                _PyEval_MonitorRaise(tstate, frame, frame->instr_ptr);    \
+                _PyErr_Clear(tstate);                                     \
+                _PyFrame_StackPointerInvalidate(frame);                   \
+            }                                                             \
+            /* Jump forward by oparg and skip the following END_FOR */    \
+            next_instr += oparg + 1;                                      \
+            break;                                                        \
+        }                                                                 \
+        stack_pointer[0] = PyStackRef_FromPyObjectSteal(next_o);          \
+        stack_pointer += 1;                                               \
+        break;                                                            \
+    }                                                                     \
+    /* CONTAINS_OP on exact str / tuple / list */                         \
+    case SWITCH_CASE_CONTAINS_OP_STR:                                         \
+    case SWITCH_CASE_CONTAINS_OP_TUPLE:                                       \
+    case SWITCH_CASE_CONTAINS_OP_LIST: {                                      \
+        _PyStackRef left = stack_pointer[-2];                             \
+        _PyStackRef right = stack_pointer[-1];                            \
+        PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);             \
+        PyObject *right_o = PyStackRef_AsPyObjectBorrow(right);           \
+        int res;                                                          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        if (kind == SWITCH_CASE_CONTAINS_OP_STR) {                            \
+            if (!PyUnicode_CheckExact(right_o) || !PyUnicode_CheckExact(left_o)) {\
+                _PyFrame_StackPointerInvalidate(frame);                   \
+                SWITCH_OP_DEOPT(CONTAINS_OP);                               \
+            }                                                             \
+            res = PyUnicode_Contains(right_o, left_o);                    \
+        }                                                                 \
+        else if (kind == SWITCH_CASE_CONTAINS_OP_TUPLE) {                     \
+            if (!PyTuple_CheckExact(right_o)) {                           \
+                _PyFrame_StackPointerInvalidate(frame);                   \
+                SWITCH_OP_DEOPT(CONTAINS_OP);                               \
+            }                                                             \
+            res = _PySwitchOp_TupleContains(right_o, left_o);               \
+        }                                                                 \
+        else {                                                            \
+            if (!PyList_CheckExact(right_o)) {                            \
+                _PyFrame_StackPointerInvalidate(frame);                   \
+                SWITCH_OP_DEOPT(CONTAINS_OP);                               \
+            }                                                             \
+            res = _PySwitchOp_ListContains(right_o, left_o);                \
+        }                                                                 \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        if (res < 0) {                                                    \
+            JUMP_TO_LABEL(error);                                         \
+        }                                                                 \
+        STAT_INC(CONTAINS_OP, hit);                                       \
+        stack_pointer[-2] = (res ^ oparg) ? PyStackRef_True : PyStackRef_False;\
+        stack_pointer += -1;                                              \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(right);                                          \
+        PyStackRef_CLOSE(left);                                           \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
+    /* bytes[int] and bytearray[int] with a non-negative compact int index */\
+    case SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT:                              \
+    case SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT: {                        \
+        _PyStackRef container = stack_pointer[-2];                        \
+        _PyStackRef sub = stack_pointer[-1];                              \
+        PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);   \
+        PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub);               \
+        int is_bytes = (kind == SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT);      \
+        if (is_bytes ? !PyBytes_CheckExact(container_o) : !PyByteArray_CheckExact(container_o)) {\
+            SWITCH_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        if (!PyLong_CheckExact(sub_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)sub_o)) {\
+            SWITCH_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        Py_ssize_t index = ((PyLongObject *)sub_o)->long_value.ob_digit[0];\
+        Py_ssize_t size = is_bytes ? PyBytes_GET_SIZE(container_o) : PyByteArray_GET_SIZE(container_o);\
+        if (index >= size) {                                              \
+            SWITCH_OP_DEOPT(BINARY_OP);                                     \
+        }                                                                 \
+        STAT_INC(BINARY_OP, hit);                                         \
+        const char *data = is_bytes ? PyBytes_AS_STRING(container_o) : PyByteArray_AS_STRING(container_o);\
+        PyObject *res_o = _PyLong_FromUnsignedChar((unsigned char)data[index]);\
+        stack_pointer[-2] = PyStackRef_FromPyObjectBorrow(res_o);         \
+        stack_pointer += -1;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(sub, _PyLong_ExactDealloc);          \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(container);                                      \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
+    /* bytearray[int] = int, in range */                                  \
+    case SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT: {                            \
+        _PyStackRef v = stack_pointer[-3];                                \
+        _PyStackRef container = stack_pointer[-2];                        \
+        _PyStackRef sub = stack_pointer[-1];                              \
+        PyObject *v_o = PyStackRef_AsPyObjectBorrow(v);                   \
+        PyObject *container_o = PyStackRef_AsPyObjectBorrow(container);   \
+        PyObject *sub_o = PyStackRef_AsPyObjectBorrow(sub);               \
+        if (!PyByteArray_CheckExact(container_o)) {                       \
+            SWITCH_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        if (!PyLong_CheckExact(sub_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)sub_o)\
+            || !PyLong_CheckExact(v_o) || !_PyLong_IsNonNegativeCompact((PyLongObject *)v_o)) {\
+            SWITCH_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        Py_ssize_t index = ((PyLongObject *)sub_o)->long_value.ob_digit[0];\
+        Py_ssize_t value = ((PyLongObject *)v_o)->long_value.ob_digit[0]; \
+        if (index >= PyByteArray_GET_SIZE(container_o) || value > 255) {  \
+            SWITCH_OP_DEOPT(STORE_SUBSCR);                                  \
+        }                                                                 \
+        STAT_INC(STORE_SUBSCR, hit);                                      \
+        PyByteArray_AS_STRING(container_o)[index] = (char)value;          \
+        stack_pointer += -3;                                              \
+        PyStackRef_CLOSE_SPECIALIZED(sub, _PyLong_ExactDealloc);          \
+        PyStackRef_CLOSE_SPECIALIZED(v, _PyLong_ExactDealloc);            \
+        _PyFrame_SetStackPointer(frame, stack_pointer);                   \
+        _PyFrame_StackPointerValidate(frame);                             \
+        PyStackRef_CLOSE(container);                                      \
+        _PyFrame_StackPointerInvalidate(frame);                           \
+        break;                                                            \
+    }                                                                     \
+    default:                                                              \
+        Py_UNREACHABLE();                                                 \
+    }
+
 // Macro for inplace float binary ops (tier 2 only).
 // Mutates the uniquely-referenced TARGET operand in place.
 // TARGET must be either left or right.

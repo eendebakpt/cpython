@@ -66,15 +66,18 @@ _cache_format = frozendict(
     ),
     UNPACK_SEQUENCE=frozendict(
         counter=1,
+        kind=1,
     ),
     COMPARE_OP=frozendict(
         counter=1,
     ),
     CONTAINS_OP=frozendict(
         counter=1,
+        kind=1,
     ),
     FOR_ITER=frozendict(
         counter=1,
+        kind=1,
     ),
     GET_ITER=frozendict(
         counter=1,
@@ -106,9 +109,11 @@ _cache_format = frozendict(
     ),
     STORE_SUBSCR=frozendict(
         counter=1,
+        kind=1,
     ),
     SEND=frozendict(
         counter=1,
+        unused=1,
     ),
     JUMP_BACKWARD=frozendict(
         counter=1,
