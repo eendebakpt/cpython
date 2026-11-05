@@ -14,6 +14,7 @@ extern "C" {
 
 PyAPI_FUNC(PyObject*) _PyList_Extend(PyListObject *, PyObject *);
 PyAPI_FUNC(PyObject) *_PyList_SliceSubscript(PyObject*, PyObject*);
+PyAPI_FUNC(PyObject) *_PyList_SliceSubscript_LockHeld(PyObject*, PyObject*);
 PyAPI_FUNC(PyObject *) _PyList_BinarySlice(PyObject *, PyObject *, PyObject *);
 PyAPI_FUNC(PyObject *) _PyList_Concat(PyObject *, PyObject *);
 extern void _PyList_DebugMallocStats(FILE *out);

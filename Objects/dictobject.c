@@ -2810,6 +2810,14 @@ setitem_take2_lock_held(PyDictObject *mp, PyObject *key, PyObject *value)
     return setitem_take2_lock_held_known_hash(mp, key, value, hash);
 }
 
+/* Like _PyDict_SetItem_Take2(), for a caller that holds the dict's lock or
+   that holds the only reference to the dict. */
+int
+_PyDict_SetItem_Take2_LockHeld(PyDictObject *mp, PyObject *key, PyObject *value)
+{
+    return setitem_take2_lock_held(mp, key, value);
+}
+
 int
 _PyDict_SetItem_Take2(PyDictObject *mp, PyObject *key, PyObject *value)
 {

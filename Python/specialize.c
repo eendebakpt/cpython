@@ -323,6 +323,27 @@ _PyCode_Quicken(_Py_CODEUNIT *instructions, Py_ssize_t size, int enable_counters
 #define SPEC_FAIL_CONTAINS_OP_LIST       11
 #define SPEC_FAIL_CONTAINS_OP_USER_CLASS 12
 
+/* In the free-threaded build, a container that nothing else references
+   cannot be reached by another thread, so its specialized instructions can
+   skip the lock: the _UNIQUE cases of SWITCH_OP guard on the reference
+   count instead. The other builds never take the lock. */
+#ifndef SWITCH_OP_UNIQUE_CASES
+#  ifdef Py_GIL_DISABLED
+#    define SWITCH_OP_UNIQUE_CASES 1
+#  else
+#    define SWITCH_OP_UNIQUE_CASES 0
+#  endif
+#endif
+
+static inline int
+unique_case(PyObject *container, int unique_opcode, int locked_opcode)
+{
+    if (SWITCH_OP_UNIQUE_CASES && _PyObject_IsUniquelyReferenced(container)) {
+        return unique_opcode;
+    }
+    return locked_opcode;
+}
+
 static inline int
 set_opcode(_Py_CODEUNIT *instr, uint8_t opcode)
 {
@@ -1624,7 +1645,8 @@ _Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_COD
             if (_PyLong_IsNonNegativeCompact((PyLongObject *)sub)
                 && ((PyLongObject *)sub)->long_value.ob_digit[0] < (size_t)PyList_GET_SIZE(container))
             {
-                specialize(instr, STORE_SUBSCR_LIST_INT);
+                specialize(instr, unique_case(container, STORE_SUBSCR_LIST_INT_UNIQUE,
+                                              STORE_SUBSCR_LIST_INT));
                 return;
             }
             else {
@@ -1647,7 +1669,8 @@ _Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_COD
     if (container_type->tp_as_mapping != NULL &&
         container_type->tp_as_mapping->mp_ass_subscript == _PyDict_StoreSubscript)
     {
-        specialize(instr, STORE_SUBSCR_DICT);
+        specialize(instr, unique_case(container, STORE_SUBSCR_DICT_UNIQUE,
+                                      STORE_SUBSCR_DICT));
         return;
     }
     if (container_type == &PyByteArray_Type
@@ -1767,7 +1790,8 @@ specialize_method_descriptor(PyMethodDescrObject *descr, PyObject *self_or_null,
             if ((PyObject *)descr == list_append && oparg == 1) {
                 assert(self_or_null != NULL);
                 if (PyList_CheckExact(self_or_null)) {
-                    specialize(instr, CALL_LIST_APPEND);
+                    specialize(instr, unique_case(self_or_null, CALL_LIST_APPEND_UNIQUE,
+                                                  CALL_LIST_APPEND));
                     return 0;
                 }
             }
@@ -2574,7 +2598,8 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 return;
             }
             if (PyList_CheckExact(lhs) && PySlice_Check(rhs)) {
-                specialize(instr, BINARY_OP_SUBSCR_LIST_SLICE);
+                specialize(instr, unique_case(lhs, BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE,
+                                              BINARY_OP_SUBSCR_LIST_SLICE));
                 return;
             }
             unsigned int tp_version;

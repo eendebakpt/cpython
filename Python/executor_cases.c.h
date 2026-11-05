@@ -8047,6 +8047,55 @@
             break;
         }
 
+        case _BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE_r23: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef sub_st;
+            _PyStackRef list_st;
+            _PyStackRef res;
+            _PyStackRef ls;
+            _PyStackRef ss;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            sub_st = _stack_item_1;
+            list_st = _stack_item_0;
+            PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
+            PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
+            assert(PySlice_Check(sub));
+            assert(PyList_CheckExact(list));
+            if (!_PyObject_IsUniquelyReferenced(list)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache1 = sub_st;
+                _tos_cache0 = list_st;
+                SET_CURRENT_CACHED_VALUES(2);
+                JUMP_TO_JUMP_TARGET();
+            }
+            stack_pointer[0] = list_st;
+            stack_pointer[1] = sub_st;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            PyObject *res_o = _PyList_SliceSubscript_LockHeld(list, sub);
+            _PyFrame_StackPointerInvalidate(frame);
+            STAT_INC(BINARY_OP, hit);
+            if (res_o == NULL) {
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            res = PyStackRef_FromPyObjectSteal(res_o);
+            ls = list_st;
+            ss = sub_st;
+            _tos_cache2 = ss;
+            _tos_cache1 = ls;
+            _tos_cache0 = res;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
         case _BINARY_OP_SUBSCR_LIST_SLICE_r23: {
             CHECK_CURRENT_CACHED_VALUES(2);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
@@ -9428,6 +9477,70 @@
             break;
         }
 
+        case _STORE_SUBSCR_LIST_INT_UNIQUE_r32: {
+            CHECK_CURRENT_CACHED_VALUES(3);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef sub_st;
+            _PyStackRef list_st;
+            _PyStackRef value;
+            _PyStackRef ls;
+            _PyStackRef ss;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            _PyStackRef _stack_item_2 = _tos_cache2;
+            sub_st = _stack_item_2;
+            list_st = _stack_item_1;
+            value = _stack_item_0;
+            PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
+            PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
+            assert(PyLong_CheckExact(sub));
+            assert(PyList_CheckExact(list));
+            if (!_PyObject_IsUniquelyReferenced(list)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache2 = sub_st;
+                _tos_cache1 = list_st;
+                _tos_cache0 = value;
+                SET_CURRENT_CACHED_VALUES(3);
+                JUMP_TO_JUMP_TARGET();
+            }
+            Py_ssize_t index = _PyLong_CompactValue((PyLongObject *)sub);
+            Py_ssize_t len = PyList_GET_SIZE(list);
+            if (index < 0) {
+                index += len;
+            }
+            if (index < 0 || index >= len) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache2 = sub_st;
+                _tos_cache1 = list_st;
+                _tos_cache0 = value;
+                SET_CURRENT_CACHED_VALUES(3);
+                JUMP_TO_JUMP_TARGET();
+            }
+            STAT_INC(STORE_SUBSCR, hit);
+            PyObject *old_value = PyList_GET_ITEM(list, index);
+            FT_ATOMIC_STORE_PTR_RELEASE(_PyList_ITEMS(list)[index],
+                                        PyStackRef_AsPyObjectSteal(value));
+            assert(old_value != NULL);
+            ls = list_st;
+            ss = sub_st;
+            stack_pointer[0] = ls;
+            stack_pointer[1] = ss;
+            stack_pointer += 2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            Py_DECREF(old_value);
+            _PyFrame_StackPointerInvalidate(frame);
+            _tos_cache1 = ss;
+            _tos_cache0 = ls;
+            _tos_cache2 = PyStackRef_ZERO_BITS;
+            SET_CURRENT_CACHED_VALUES(2);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
         case _STORE_SUBSCR_BYTEARRAY_INT_r30: {
             CHECK_CURRENT_CACHED_VALUES(3);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
@@ -9567,6 +9680,62 @@
             _tos_cache2 = PyStackRef_ZERO_BITS;
             SET_CURRENT_CACHED_VALUES(2);
             stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _STORE_SUBSCR_DICT_UNIQUE_r31: {
+            CHECK_CURRENT_CACHED_VALUES(3);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef sub;
+            _PyStackRef dict_st;
+            _PyStackRef value;
+            _PyStackRef st;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            _PyStackRef _stack_item_2 = _tos_cache2;
+            sub = _stack_item_2;
+            dict_st = _stack_item_1;
+            value = _stack_item_0;
+            PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);
+            assert(Py_TYPE(dict)->tp_as_mapping->mp_ass_subscript == _PyDict_StoreSubscript);
+            if (!_PyObject_IsUniquelyReferenced(dict)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache2 = sub;
+                _tos_cache1 = dict_st;
+                _tos_cache0 = value;
+                SET_CURRENT_CACHED_VALUES(3);
+                JUMP_TO_JUMP_TARGET();
+            }
+            STAT_INC(STORE_SUBSCR, hit);
+            stack_pointer[0] = value;
+            stack_pointer[1] = dict_st;
+            stack_pointer[2] = sub;
+            stack_pointer += 3;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            int err = _PyDict_SetItem_Take2_LockHeld((PyDictObject *)dict,
+                PyStackRef_AsPyObjectSteal(sub),
+                PyStackRef_AsPyObjectSteal(value));
+            _PyFrame_StackPointerInvalidate(frame);
+            if (err) {
+                stack_pointer += -3;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                _PyFrame_SetStackPointer(frame, stack_pointer);
+                _PyFrame_StackPointerValidate(frame);
+                PyStackRef_CLOSE(dict_st);
+                _PyFrame_StackPointerInvalidate(frame);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            st = dict_st;
+            _tos_cache0 = st;
+            _tos_cache1 = PyStackRef_ZERO_BITS;
+            _tos_cache2 = PyStackRef_ZERO_BITS;
+            SET_CURRENT_CACHED_VALUES(1);
+            stack_pointer += -3;
             ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
             break;
@@ -20134,6 +20303,181 @@
             _tos_cache1 = PyStackRef_ZERO_BITS;
             _tos_cache2 = PyStackRef_ZERO_BITS;
             SET_CURRENT_CACHED_VALUES(1);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _CALL_LIST_APPEND_UNIQUE_r03: {
+            CHECK_CURRENT_CACHED_VALUES(0);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef arg;
+            _PyStackRef self;
+            _PyStackRef callable;
+            _PyStackRef none;
+            _PyStackRef c;
+            _PyStackRef s;
+            oparg = CURRENT_OPARG();
+            arg = stack_pointer[-1];
+            self = stack_pointer[-2];
+            callable = stack_pointer[-3];
+            assert(oparg == 1);
+            PyObject *self_o = PyStackRef_AsPyObjectBorrow(self);
+            if (!_PyObject_IsUniquelyReferenced(self_o)) {
+                UOP_STAT_INC(uopcode, miss);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_JUMP_TARGET();
+            }
+            STAT_INC(CALL, hit);
+            int err = _PyList_AppendTakeRef((PyListObject *)self_o, PyStackRef_AsPyObjectSteal(arg));
+            if (err) {
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            c = callable;
+            s = self;
+            none = PyStackRef_None;
+            _tos_cache2 = s;
+            _tos_cache1 = c;
+            _tos_cache0 = none;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -3;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _CALL_LIST_APPEND_UNIQUE_r13: {
+            CHECK_CURRENT_CACHED_VALUES(1);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef arg;
+            _PyStackRef self;
+            _PyStackRef callable;
+            _PyStackRef none;
+            _PyStackRef c;
+            _PyStackRef s;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            oparg = CURRENT_OPARG();
+            arg = _stack_item_0;
+            self = stack_pointer[-1];
+            callable = stack_pointer[-2];
+            assert(oparg == 1);
+            PyObject *self_o = PyStackRef_AsPyObjectBorrow(self);
+            if (!_PyObject_IsUniquelyReferenced(self_o)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache0 = arg;
+                SET_CURRENT_CACHED_VALUES(1);
+                JUMP_TO_JUMP_TARGET();
+            }
+            STAT_INC(CALL, hit);
+            int err = _PyList_AppendTakeRef((PyListObject *)self_o, PyStackRef_AsPyObjectSteal(arg));
+            if (err) {
+                stack_pointer += 1;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            c = callable;
+            s = self;
+            none = PyStackRef_None;
+            _tos_cache2 = s;
+            _tos_cache1 = c;
+            _tos_cache0 = none;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -2;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _CALL_LIST_APPEND_UNIQUE_r23: {
+            CHECK_CURRENT_CACHED_VALUES(2);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef arg;
+            _PyStackRef self;
+            _PyStackRef callable;
+            _PyStackRef none;
+            _PyStackRef c;
+            _PyStackRef s;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            oparg = CURRENT_OPARG();
+            arg = _stack_item_1;
+            self = _stack_item_0;
+            callable = stack_pointer[-1];
+            assert(oparg == 1);
+            PyObject *self_o = PyStackRef_AsPyObjectBorrow(self);
+            if (!_PyObject_IsUniquelyReferenced(self_o)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache1 = arg;
+                _tos_cache0 = self;
+                SET_CURRENT_CACHED_VALUES(2);
+                JUMP_TO_JUMP_TARGET();
+            }
+            STAT_INC(CALL, hit);
+            int err = _PyList_AppendTakeRef((PyListObject *)self_o, PyStackRef_AsPyObjectSteal(arg));
+            if (err) {
+                stack_pointer[0] = self;
+                stack_pointer += 2;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            c = callable;
+            s = self;
+            none = PyStackRef_None;
+            _tos_cache2 = s;
+            _tos_cache1 = c;
+            _tos_cache0 = none;
+            SET_CURRENT_CACHED_VALUES(3);
+            stack_pointer += -1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            break;
+        }
+
+        case _CALL_LIST_APPEND_UNIQUE_r33: {
+            CHECK_CURRENT_CACHED_VALUES(3);
+            ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
+            _PyStackRef arg;
+            _PyStackRef self;
+            _PyStackRef callable;
+            _PyStackRef none;
+            _PyStackRef c;
+            _PyStackRef s;
+            _PyStackRef _stack_item_0 = _tos_cache0;
+            _PyStackRef _stack_item_1 = _tos_cache1;
+            _PyStackRef _stack_item_2 = _tos_cache2;
+            oparg = CURRENT_OPARG();
+            arg = _stack_item_2;
+            self = _stack_item_1;
+            callable = _stack_item_0;
+            assert(oparg == 1);
+            PyObject *self_o = PyStackRef_AsPyObjectBorrow(self);
+            if (!_PyObject_IsUniquelyReferenced(self_o)) {
+                UOP_STAT_INC(uopcode, miss);
+                _tos_cache2 = arg;
+                _tos_cache1 = self;
+                _tos_cache0 = callable;
+                SET_CURRENT_CACHED_VALUES(3);
+                JUMP_TO_JUMP_TARGET();
+            }
+            STAT_INC(CALL, hit);
+            int err = _PyList_AppendTakeRef((PyListObject *)self_o, PyStackRef_AsPyObjectSteal(arg));
+            if (err) {
+                stack_pointer[0] = callable;
+                stack_pointer[1] = self;
+                stack_pointer += 3;
+                ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                SET_CURRENT_CACHED_VALUES(0);
+                JUMP_TO_ERROR();
+            }
+            c = callable;
+            s = self;
+            none = PyStackRef_None;
+            _tos_cache2 = s;
+            _tos_cache1 = c;
+            _tos_cache0 = none;
+            SET_CURRENT_CACHED_VALUES(3);
             ASSERT_WITHIN_STACK_BOUNDS_IGNORING_CACHE(__FILE__, __LINE__);
             break;
         }

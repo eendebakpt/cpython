@@ -160,6 +160,7 @@ extern PyObject *_PyDict_LoadBuiltinsFromGlobals(PyObject *globals);
 
 /* Consumes references to key and value */
 PyAPI_FUNC(int) _PyDict_SetItem_Take2(PyDictObject *op, PyObject *key, PyObject *value);
+PyAPI_FUNC(int) _PyDict_SetItem_Take2_LockHeld(PyDictObject *op, PyObject *key, PyObject *value);
 PyAPI_FUNC(int) _PyDict_SetItem_Take2_KnownHash(PyDictObject *op, PyObject *key, PyObject *value, Py_hash_t hash);
 // Exported for external JIT support
 PyAPI_FUNC(int) _PyDict_SetItem_LockHeld(PyDictObject *dict, PyObject *name, PyObject *value);

@@ -3707,20 +3707,24 @@ list_slice_step_lock_held(PyListObject *a, Py_ssize_t start, Py_ssize_t step, Py
 }
 
 static PyObject *
+list_slice_wrap_lock_held(PyListObject *aa, Py_ssize_t start, Py_ssize_t stop, Py_ssize_t step)
+{
+    Py_ssize_t len = PySlice_AdjustIndices(Py_SIZE(aa), &start, &stop, step);
+    if (len <= 0) {
+        return PyList_New(0);
+    }
+    if (step == 1) {
+        return list_slice_lock_held(aa, start, stop);
+    }
+    return list_slice_step_lock_held(aa, start, step, len);
+}
+
+static PyObject *
 list_slice_wrap(PyListObject *aa, Py_ssize_t start, Py_ssize_t stop, Py_ssize_t step)
 {
     PyObject *res = NULL;
     Py_BEGIN_CRITICAL_SECTION(aa);
-    Py_ssize_t len = PySlice_AdjustIndices(Py_SIZE(aa), &start, &stop, step);
-    if (len <= 0) {
-        res = PyList_New(0);
-    }
-    else if (step == 1) {
-        res = list_slice_lock_held(aa, start, stop);
-    }
-    else {
-        res = list_slice_step_lock_held(aa, start, step, len);
-    }
+    res = list_slice_wrap_lock_held(aa, start, stop, step);
     Py_END_CRITICAL_SECTION();
     return res;
 }
@@ -3741,6 +3745,20 @@ PyObject *
 _PyList_SliceSubscript(PyObject* _self, PyObject* item)
 {
     return list_slice_subscript(_self, item);
+}
+
+/* Like _PyList_SliceSubscript(), for a caller that holds the list's lock or
+   that holds the only reference to the list. */
+PyObject *
+_PyList_SliceSubscript_LockHeld(PyObject *_self, PyObject *item)
+{
+    assert(PyList_Check(_self));
+    assert(PySlice_Check(item));
+    Py_ssize_t start, stop, step;
+    if (PySlice_Unpack(item, &start, &stop, &step) < 0) {
+        return NULL;
+    }
+    return list_slice_wrap_lock_held((PyListObject *)_self, start, stop, step);
 }
 
 static PyObject *

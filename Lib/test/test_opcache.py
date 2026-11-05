@@ -40,7 +40,11 @@ class TestBase(unittest.TestCase):
         return names
 
     def assert_specialized(self, f, opname):
-        self.assertIn(opname, self._specialized_names(f))
+        names = self._specialized_names(f)
+        # The free-threaded build specializes some operations on a container
+        # that nothing else references to a variant that takes no lock.
+        self.assertTrue(opname in names or opname + "_UNIQUE" in names,
+                        f"{opname!r} not found in {names}")
 
     def assert_no_opcode(self, f, opname):
         self.assertNotIn(opname, self._specialized_names(f))

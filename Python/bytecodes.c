@@ -692,7 +692,9 @@ dummy_func(
             BINARY_OP_RSHIFT_INT,
             BINARY_OP_SUBSCR_BYTES_INT,
             BINARY_OP_SUBSCR_BYTEARRAY_INT,
-        };
+
+            BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE,
+};
 
         op(_GUARD_NOS_INT, (left, unused -- left, unused)) {
             PyObject *left_o = PyStackRef_AsPyObjectBorrow(left);
@@ -1443,6 +1445,29 @@ dummy_func(
         switch_candidate macro(BINARY_OP_SUBSCR_LIST_SLICE) =
             _GUARD_TOS_SLICE + _GUARD_NOS_LIST + unused/5 + _BINARY_OP_SUBSCR_LIST_SLICE + POP_TOP + POP_TOP;
 
+        // The free-threaded build takes the list's lock to slice it. A list
+        // that nothing else references cannot be reached by another thread,
+        // so it is sliced without the lock (see _Py_Specialize_BinaryOp).
+        op(_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE, (list_st, sub_st -- res, ls, ss)) {
+            PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
+            PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
+            assert(PySlice_Check(sub));
+            assert(PyList_CheckExact(list));
+            DEOPT_IF(!_PyObject_IsUniquelyReferenced(list));
+            PyObject *res_o = _PyList_SliceSubscript_LockHeld(list, sub);
+            STAT_INC(BINARY_OP, hit);
+            if (res_o == NULL) {
+                ERROR_NO_POP();
+            }
+            res = PyStackRef_FromPyObjectSteal(res_o);
+            ls = list_st;
+            ss = sub_st;
+            INPUTS_DEAD();
+        }
+
+        switch_op macro(BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE) =
+            _GUARD_TOS_SLICE + _GUARD_NOS_LIST + unused/5 + _BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE + POP_TOP + POP_TOP;
+
         op(_BINARY_OP_SUBSCR_LIST_SLICE, (list_st, sub_st -- res, ls, ss)) {
             PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
             PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
@@ -1666,7 +1691,10 @@ dummy_func(
             STORE_SUBSCR_DICT,
             STORE_SUBSCR_LIST_INT,
             STORE_SUBSCR_BYTEARRAY_INT,
-        };
+
+            STORE_SUBSCR_LIST_INT_UNIQUE,
+            STORE_SUBSCR_DICT_UNIQUE,
+};
 
         specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {
             #if ENABLE_SPECIALIZATION
@@ -1691,6 +1719,38 @@ dummy_func(
 
         switch_candidate macro(STORE_SUBSCR_LIST_INT) =
             _GUARD_TOS_INT + _GUARD_NOS_LIST + unused/1 + _STORE_SUBSCR_LIST_INT + _POP_TOP_INT + POP_TOP;
+
+        // list[int] = value on a list that nothing else references: the
+        // free-threaded build needs no lock (see _Py_Specialize_StoreSubscr).
+        op(_STORE_SUBSCR_LIST_INT_UNIQUE, (value, list_st, sub_st -- ls, ss)) {
+            PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
+            PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
+
+            assert(PyLong_CheckExact(sub));
+            assert(PyList_CheckExact(list));
+            DEOPT_IF(!_PyObject_IsUniquelyReferenced(list));
+
+            Py_ssize_t index = _PyLong_CompactValue((PyLongObject *)sub);
+            Py_ssize_t len = PyList_GET_SIZE(list);
+            // Ensure index < len(list)
+            if (index < 0) {
+                index += len;
+            }
+            DEOPT_IF(index < 0 || index >= len);
+            STAT_INC(STORE_SUBSCR, hit);
+
+            PyObject *old_value = PyList_GET_ITEM(list, index);
+            FT_ATOMIC_STORE_PTR_RELEASE(_PyList_ITEMS(list)[index],
+                                        PyStackRef_AsPyObjectSteal(value));
+            assert(old_value != NULL);
+            INPUTS_DEAD();
+            ls = list_st;
+            ss = sub_st;
+            Py_DECREF(old_value);
+        }
+
+        switch_op macro(STORE_SUBSCR_LIST_INT_UNIQUE) =
+            _GUARD_TOS_INT + _GUARD_NOS_LIST + unused/1 + _STORE_SUBSCR_LIST_INT_UNIQUE + _POP_TOP_INT + POP_TOP;
 
         // bytearray[int] = int, both index and value in range.
         op(_STORE_SUBSCR_BYTEARRAY_INT, (value, ba_st, sub_st -- )) {
@@ -1746,6 +1806,28 @@ dummy_func(
         switch_candidate macro(STORE_SUBSCR_DICT) =
             _RECORD_NOS_TYPE +
             _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/1 + _STORE_SUBSCR_DICT + POP_TOP;
+
+        // dict[key] = value on a dict that nothing else references: the
+        // free-threaded build needs no critical section.
+        op(_STORE_SUBSCR_DICT_UNIQUE, (value, dict_st, sub -- st)) {
+            PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);
+            assert(Py_TYPE(dict)->tp_as_mapping->mp_ass_subscript == _PyDict_StoreSubscript);
+            DEOPT_IF(!_PyObject_IsUniquelyReferenced(dict));
+            STAT_INC(STORE_SUBSCR, hit);
+            int err = _PyDict_SetItem_Take2_LockHeld((PyDictObject *)dict,
+                                                     PyStackRef_AsPyObjectSteal(sub),
+                                                     PyStackRef_AsPyObjectSteal(value));
+            if (err) {
+                PyStackRef_CLOSE(dict_st);
+                ERROR_IF(1);
+            }
+            DEAD(dict_st);
+            st = dict_st;
+        }
+
+        switch_op macro(STORE_SUBSCR_DICT_UNIQUE) =
+            _RECORD_NOS_TYPE +
+            _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/1 + _STORE_SUBSCR_DICT_UNIQUE + POP_TOP;
 
         op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {
             PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);
@@ -4678,7 +4760,9 @@ dummy_func(
             CALL_PY_GENERAL,
             CALL_BOUND_METHOD_GENERAL,
             CALL_NON_PY_GENERAL,
-        };
+
+            CALL_LIST_APPEND_UNIQUE,
+};
 
         specializing op(_SPECIALIZE_CALL, (counter/1, callable, self_or_null, unused[oparg] -- callable, self_or_null, unused[oparg])) {
             #if ENABLE_SPECIALIZATION
@@ -5384,6 +5468,34 @@ dummy_func(
             _GUARD_NOS_NOT_NULL +
             _GUARD_NOS_LIST +
             _CALL_LIST_APPEND +
+            POP_TOP +
+            POP_TOP;
+
+        // list.append(x) on a list that nothing else references: the
+        // free-threaded build needs no lock (see _Py_Specialize_Call).
+        op(_CALL_LIST_APPEND_UNIQUE, (callable, self, arg -- none, c, s)) {
+            assert(oparg == 1);
+            PyObject *self_o = PyStackRef_AsPyObjectBorrow(self);
+            DEOPT_IF(!_PyObject_IsUniquelyReferenced(self_o));
+            STAT_INC(CALL, hit);
+            int err = _PyList_AppendTakeRef((PyListObject *)self_o, PyStackRef_AsPyObjectSteal(arg));
+            if (err) {
+                ERROR_NO_POP();
+            }
+            c = callable;
+            s = self;
+            DEAD(callable);
+            DEAD(self);
+            none = PyStackRef_None;
+        }
+
+        switch_op macro(CALL_LIST_APPEND_UNIQUE) =
+            unused/1 +
+            unused/2 +
+            _GUARD_CALLABLE_LIST_APPEND +
+            _GUARD_NOS_NOT_NULL +
+            _GUARD_NOS_LIST +
+            _CALL_LIST_APPEND_UNIQUE +
             POP_TOP +
             POP_TOP;
 

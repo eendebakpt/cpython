@@ -13308,6 +13308,80 @@
                     }
                     DISPATCH();
                 }
+                case SWITCH_CASE_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE: {
+                    // The instruction is as long as its family's generic instruction.
+                    next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
+                    _PyStackRef tos;
+                    _PyStackRef nos;
+                    _PyStackRef list_st;
+                    _PyStackRef sub_st;
+                    _PyStackRef res;
+                    _PyStackRef ls;
+                    _PyStackRef ss;
+                    _PyStackRef value;
+                    // _GUARD_TOS_SLICE
+                    {
+                        tos = stack_pointer[-1];
+                        PyObject *o = PyStackRef_AsPyObjectBorrow(tos);
+                        if (!PySlice_Check(o)) {
+                            SWITCH_OP_DEOPT(BINARY_OP);
+                        }
+                    }
+                    // _GUARD_NOS_LIST
+                    {
+                        nos = stack_pointer[-2];
+                        PyObject *o = PyStackRef_AsPyObjectBorrow(nos);
+                        if (!PyList_CheckExact(o)) {
+                            SWITCH_OP_DEOPT(BINARY_OP);
+                        }
+                    }
+                    /* Skip 5 cache entries */
+                    // _BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE
+                    {
+                        sub_st = tos;
+                        list_st = nos;
+                        PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
+                        PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
+                        assert(PySlice_Check(sub));
+                        assert(PyList_CheckExact(list));
+                        if (!_PyObject_IsUniquelyReferenced(list)) {
+                            SWITCH_OP_DEOPT(BINARY_OP);
+                        }
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        PyObject *res_o = _PyList_SliceSubscript_LockHeld(list, sub);
+                        _PyFrame_StackPointerInvalidate(frame);
+                        STAT_INC(BINARY_OP, hit);
+                        if (res_o == NULL) {
+                            JUMP_TO_LABEL(error);
+                        }
+                        res = PyStackRef_FromPyObjectSteal(res_o);
+                        ls = list_st;
+                        ss = sub_st;
+                    }
+                    // _POP_TOP
+                    {
+                        value = ss;
+                        stack_pointer[-2] = res;
+                        stack_pointer[-1] = ls;
+                        assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                        _PyFrame_StackPointerValidate(frame);
+                        PyStackRef_XCLOSE(value);
+                        _PyFrame_StackPointerInvalidate(frame);
+                    }
+                    // _POP_TOP
+                    {
+                        value = ls;
+                        stack_pointer += -1;
+                        ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        PyStackRef_XCLOSE(value);
+                        _PyFrame_StackPointerInvalidate(frame);
+                    }
+                    DISPATCH();
+                }
                 case SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
@@ -13376,6 +13450,85 @@
                     stack_pointer[-2] = res;
                     stack_pointer += -1;
                     ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                    DISPATCH();
+                }
+                case SWITCH_CASE_CALL_LIST_APPEND_UNIQUE: {
+                    // The instruction is as long as its family's generic instruction.
+                    next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_CALL;
+                    static_assert(INLINE_CACHE_ENTRIES_CALL == 3, "incorrect cache size");
+                    _PyStackRef callable;
+                    _PyStackRef nos;
+                    _PyStackRef self;
+                    _PyStackRef arg;
+                    _PyStackRef none;
+                    _PyStackRef c;
+                    _PyStackRef s;
+                    _PyStackRef value;
+                    /* Skip 1 cache entry */
+                    /* Skip 2 cache entries */
+                    // _GUARD_CALLABLE_LIST_APPEND
+                    {
+                        callable = stack_pointer[-3];
+                        PyObject *callable_o = PyStackRef_AsPyObjectBorrow(callable);
+                        PyInterpreterState *interp = tstate->interp;
+                        if (callable_o != interp->callable_cache.list_append) {
+                            SWITCH_OP_DEOPT(CALL);
+                        }
+                    }
+                    // _GUARD_NOS_NOT_NULL
+                    {
+                        nos = stack_pointer[-2];
+                        if (PyStackRef_IsNull(nos)) {
+                            SWITCH_OP_DEOPT(CALL);
+                        }
+                    }
+                    // _GUARD_NOS_LIST
+                    {
+                        PyObject *o = PyStackRef_AsPyObjectBorrow(nos);
+                        if (!PyList_CheckExact(o)) {
+                            SWITCH_OP_DEOPT(CALL);
+                        }
+                    }
+                    // _CALL_LIST_APPEND_UNIQUE
+                    {
+                        arg = stack_pointer[-1];
+                        self = nos;
+                        assert(oparg == 1);
+                        PyObject *self_o = PyStackRef_AsPyObjectBorrow(self);
+                        if (!_PyObject_IsUniquelyReferenced(self_o)) {
+                            SWITCH_OP_DEOPT(CALL);
+                        }
+                        STAT_INC(CALL, hit);
+                        int err = _PyList_AppendTakeRef((PyListObject *)self_o, PyStackRef_AsPyObjectSteal(arg));
+                        if (err) {
+                            JUMP_TO_LABEL(error);
+                        }
+                        c = callable;
+                        s = self;
+                        none = PyStackRef_None;
+                    }
+                    // _POP_TOP
+                    {
+                        value = s;
+                        stack_pointer[-3] = none;
+                        stack_pointer[-2] = c;
+                        stack_pointer += -1;
+                        ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        PyStackRef_XCLOSE(value);
+                        _PyFrame_StackPointerInvalidate(frame);
+                    }
+                    // _POP_TOP
+                    {
+                        value = c;
+                        stack_pointer += -1;
+                        ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        PyStackRef_XCLOSE(value);
+                        _PyFrame_StackPointerInvalidate(frame);
+                    }
                     DISPATCH();
                 }
                 case SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT: {
@@ -13449,6 +13602,148 @@
                         _PyFrame_StackPointerInvalidate(frame);
                         stack_pointer += -3;
                         ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                    }
+                    DISPATCH();
+                }
+                case SWITCH_CASE_STORE_SUBSCR_DICT_UNIQUE: {
+                    // The instruction is as long as its family's generic instruction.
+                    next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+                    static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
+                    _PyStackRef nos;
+                    _PyStackRef value;
+                    _PyStackRef dict_st;
+                    _PyStackRef sub;
+                    _PyStackRef st;
+                    // _GUARD_NOS_DICT_STORE_SUBSCRIPT
+                    {
+                        nos = stack_pointer[-2];
+                        PyObject *o = PyStackRef_AsPyObjectBorrow(nos);
+                        if (!Py_TYPE(o)->tp_as_mapping) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                        if (Py_TYPE(o)->tp_as_mapping->mp_ass_subscript != _PyDict_StoreSubscript) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                    }
+                    /* Skip 1 cache entry */
+                    // _STORE_SUBSCR_DICT_UNIQUE
+                    {
+                        sub = stack_pointer[-1];
+                        dict_st = nos;
+                        value = stack_pointer[-3];
+                        PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);
+                        assert(Py_TYPE(dict)->tp_as_mapping->mp_ass_subscript == _PyDict_StoreSubscript);
+                        if (!_PyObject_IsUniquelyReferenced(dict)) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                        STAT_INC(STORE_SUBSCR, hit);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        int err = _PyDict_SetItem_Take2_LockHeld((PyDictObject *)dict,
+                            PyStackRef_AsPyObjectSteal(sub),
+                            PyStackRef_AsPyObjectSteal(value));
+                        _PyFrame_StackPointerInvalidate(frame);
+                        if (err) {
+                            stack_pointer += -3;
+                            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                            _PyFrame_SetStackPointer(frame, stack_pointer);
+                            _PyFrame_StackPointerValidate(frame);
+                            PyStackRef_CLOSE(dict_st);
+                            _PyFrame_StackPointerInvalidate(frame);
+                            JUMP_TO_LABEL(error);
+                        }
+                        st = dict_st;
+                    }
+                    // _POP_TOP
+                    {
+                        value = st;
+                        stack_pointer += -3;
+                        ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        PyStackRef_XCLOSE(value);
+                        _PyFrame_StackPointerInvalidate(frame);
+                    }
+                    DISPATCH();
+                }
+                case SWITCH_CASE_STORE_SUBSCR_LIST_INT_UNIQUE: {
+                    // The instruction is as long as its family's generic instruction.
+                    next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+                    static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
+                    _PyStackRef value;
+                    _PyStackRef nos;
+                    _PyStackRef list_st;
+                    _PyStackRef sub_st;
+                    _PyStackRef ls;
+                    _PyStackRef ss;
+                    // _GUARD_TOS_INT
+                    {
+                        value = stack_pointer[-1];
+                        PyObject *value_o = PyStackRef_AsPyObjectBorrow(value);
+                        if (!_PyLong_CheckExactAndCompact(value_o)) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                    }
+                    // _GUARD_NOS_LIST
+                    {
+                        nos = stack_pointer[-2];
+                        PyObject *o = PyStackRef_AsPyObjectBorrow(nos);
+                        if (!PyList_CheckExact(o)) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                    }
+                    /* Skip 1 cache entry */
+                    // _STORE_SUBSCR_LIST_INT_UNIQUE
+                    {
+                        sub_st = value;
+                        list_st = nos;
+                        value = stack_pointer[-3];
+                        PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
+                        PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
+                        assert(PyLong_CheckExact(sub));
+                        assert(PyList_CheckExact(list));
+                        if (!_PyObject_IsUniquelyReferenced(list)) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                        Py_ssize_t index = _PyLong_CompactValue((PyLongObject *)sub);
+                        Py_ssize_t len = PyList_GET_SIZE(list);
+                        if (index < 0) {
+                            index += len;
+                        }
+                        if (index < 0 || index >= len) {
+                            SWITCH_OP_DEOPT(STORE_SUBSCR);
+                        }
+                        STAT_INC(STORE_SUBSCR, hit);
+                        PyObject *old_value = PyList_GET_ITEM(list, index);
+                        FT_ATOMIC_STORE_PTR_RELEASE(_PyList_ITEMS(list)[index],
+                                        PyStackRef_AsPyObjectSteal(value));
+                        assert(old_value != NULL);
+                        ls = list_st;
+                        ss = sub_st;
+                        stack_pointer[-3] = ls;
+                        stack_pointer[-2] = ss;
+                        stack_pointer += -1;
+                        ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        Py_DECREF(old_value);
+                        _PyFrame_StackPointerInvalidate(frame);
+                    }
+                    // _POP_TOP_INT
+                    {
+                        value = ss;
+                        assert(PyLong_CheckExact(PyStackRef_AsPyObjectBorrow(value)));
+                        PyStackRef_CLOSE_SPECIALIZED(value, _PyLong_ExactDealloc);
+                    }
+                    // _POP_TOP
+                    {
+                        value = ls;
+                        stack_pointer += -2;
+                        ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+                        _PyFrame_SetStackPointer(frame, stack_pointer);
+                        _PyFrame_StackPointerValidate(frame);
+                        PyStackRef_XCLOSE(value);
+                        _PyFrame_StackPointerInvalidate(frame);
                     }
                     DISPATCH();
                 }
