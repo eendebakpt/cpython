@@ -189,6 +189,8 @@ typedef struct _rare_event_stats {
 
 typedef struct _stats {
     OpcodeStats opcode_stats[256];
+    /* Executions of each case of SWITCH_OP (see SWITCH_OP_MAX_CASES). */
+    uint64_t switch_op_counts[128];
     CallStats call_stats;
     ObjectStats object_stats;
     OptimizationStats optimization_stats;

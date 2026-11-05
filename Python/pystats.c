@@ -359,9 +359,21 @@ print_rare_event_stats(FILE *out, RareEventStats *stats)
 }
 
 static void
+print_switch_op_stats(FILE *out, PyStats *stats)
+{
+    for (int i = 0; i < SWITCH_OP_NCASES; i++) {
+        if (stats->switch_op_counts[i]) {
+            fprintf(out, "switch_op[%s].execution_count : %" PRIu64 "\n",
+                    _PySwitchOp_Name[i], stats->switch_op_counts[i]);
+        }
+    }
+}
+
+static void
 print_stats(FILE *out, PyStats *stats)
 {
     print_spec_stats(out, stats->opcode_stats);
+    print_switch_op_stats(out, stats);
     print_call_stats(out, &stats->call_stats);
     print_object_stats(out, &stats->object_stats);
     print_gc_stats(out, stats->gc_stats);
@@ -557,6 +569,9 @@ stats_merge_thread(_PyThreadStateImpl *tstate)
 
     // Merge each category of stats using the helper functions.
     merge_opcode_stats_array(dest->opcode_stats, src->opcode_stats);
+    for (int i = 0; i < SWITCH_OP_NCASES; i++) {
+        dest->switch_op_counts[i] += src->switch_op_counts[i];
+    }
     merge_call_stats(&dest->call_stats, &src->call_stats);
     merge_object_stats(&dest->object_stats, &src->object_stats);
     merge_optimization_stats(&dest->optimization_stats, &src->optimization_stats);
@@ -704,6 +719,7 @@ _Py_PrintSpecializationStats(int to_file)
     int is_zero = (
         MEM_IS_ZERO(stats->gc_stats)  // is a pointer
         && MEM_IS_ZERO(&stats->opcode_stats)
+        && MEM_IS_ZERO(&stats->switch_op_counts)
         && MEM_IS_ZERO(&stats->call_stats)
         && MEM_IS_ZERO(&stats->object_stats)
     );

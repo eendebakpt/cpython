@@ -18,6 +18,7 @@ _PyEval_SwitchOp_BINARY_OP_FLOOR_DIVIDE_INT(PyThreadState *tstate, _PyInterprete
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_FLOOR_DIVIDE_INT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef left;
@@ -96,6 +97,7 @@ _PyEval_SwitchOp_BINARY_OP_INPLACE(PyThreadState *tstate, _PyInterpreterFrame *f
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_INPLACE);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef left;
     _PyStackRef right;
@@ -168,6 +170,7 @@ _PyEval_SwitchOp_BINARY_OP_LSHIFT_INT(PyThreadState *tstate, _PyInterpreterFrame
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_LSHIFT_INT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef left;
@@ -242,6 +245,7 @@ _PyEval_SwitchOp_BINARY_OP_REMAINDER_INT(PyThreadState *tstate, _PyInterpreterFr
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_REMAINDER_INT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef left;
@@ -320,6 +324,7 @@ _PyEval_SwitchOp_BINARY_OP_RSHIFT_INT(PyThreadState *tstate, _PyInterpreterFrame
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_RSHIFT_INT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef left;
@@ -404,6 +409,7 @@ _PyEval_SwitchOp_BINARY_OP_SUBSCR_BYTEARRAY_INT(PyThreadState *tstate, _PyInterp
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef nos;
@@ -478,6 +484,7 @@ _PyEval_SwitchOp_BINARY_OP_SUBSCR_BYTES_INT(PyThreadState *tstate, _PyInterprete
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef nos;
@@ -552,6 +559,7 @@ _PyEval_SwitchOp_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE(PyThreadState *tstate, _PyIn
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef tos;
     _PyStackRef nos;
@@ -632,6 +640,7 @@ _PyEval_SwitchOp_BINARY_OP_TRUEDIV_FLOAT(PyThreadState *tstate, _PyInterpreterFr
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT);
     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef left;
@@ -708,6 +717,7 @@ _PyEval_SwitchOp_CALL_LIST_APPEND_UNIQUE(PyThreadState *tstate, _PyInterpreterFr
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_CALL;
+    SWITCH_CASE_STATS(SWITCH_CASE_CALL_LIST_APPEND_UNIQUE);
     static_assert(INLINE_CACHE_ENTRIES_CALL == 3, "incorrect cache size");
     _PyStackRef callable;
     _PyStackRef nos;
@@ -793,6 +803,7 @@ _PyEval_SwitchOp_STORE_SUBSCR_BYTEARRAY_INT(PyThreadState *tstate, _PyInterprete
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+    SWITCH_CASE_STATS(SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT);
     static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef nos;
@@ -873,6 +884,7 @@ _PyEval_SwitchOp_STORE_SUBSCR_DICT_UNIQUE(PyThreadState *tstate, _PyInterpreterF
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+    SWITCH_CASE_STATS(SWITCH_CASE_STORE_SUBSCR_DICT_UNIQUE);
     static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
     _PyStackRef nos;
     _PyStackRef value;
@@ -940,6 +952,7 @@ _PyEval_SwitchOp_STORE_SUBSCR_LIST_INT_UNIQUE(PyThreadState *tstate, _PyInterpre
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+    SWITCH_CASE_STATS(SWITCH_CASE_STORE_SUBSCR_LIST_INT_UNIQUE);
     static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef nos;
@@ -1027,6 +1040,7 @@ _PyEval_SwitchOp_TO_BOOL_SIZED(PyThreadState *tstate, _PyInterpreterFrame *frame
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_TO_BOOL;
+    SWITCH_CASE_STATS(SWITCH_CASE_TO_BOOL_SIZED);
     static_assert(INLINE_CACHE_ENTRIES_TO_BOOL == 3, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef res;
@@ -1059,6 +1073,7 @@ _PyEval_SwitchOp_UNARY_NEGATIVE_INPLACE(PyThreadState *tstate, _PyInterpreterFra
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_UNARY_NEGATIVE;
+    SWITCH_CASE_STATS(SWITCH_CASE_UNARY_NEGATIVE_INPLACE);
     static_assert(INLINE_CACHE_ENTRIES_UNARY_NEGATIVE == 2, "incorrect cache size");
     _PyStackRef value;
     _PyStackRef res;
@@ -1092,6 +1107,7 @@ _PyEval_SwitchOp_UNPACK_SEQUENCE_STEAL_TUPLE(PyThreadState *tstate, _PyInterpret
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE;
+    SWITCH_CASE_STATS(SWITCH_CASE_UNPACK_SEQUENCE_STEAL_TUPLE);
     static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
     _PyStackRef tos;
     _PyStackRef seq;
@@ -1153,6 +1169,7 @@ _PyEval_SwitchOp_UNPACK_SEQUENCE_STEAL_TWO_TUPLE(PyThreadState *tstate, _PyInter
     (void)oparg;
     // The instruction is as long as its family's generic instruction.
     _Py_CODEUNIT *next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE;
+    SWITCH_CASE_STATS(SWITCH_CASE_UNPACK_SEQUENCE_STEAL_TWO_TUPLE);
     static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
     _PyStackRef tos;
     _PyStackRef seq;

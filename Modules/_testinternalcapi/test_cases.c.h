@@ -12819,6 +12819,7 @@
                 case SWITCH_CASE_BINARY_OP_FLOOR_DIVIDE_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_FLOOR_DIVIDE_INT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef left;
@@ -12891,6 +12892,7 @@
                 case SWITCH_CASE_BINARY_OP_INPLACE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_INPLACE);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef left;
                     _PyStackRef right;
@@ -12957,6 +12959,7 @@
                 case SWITCH_CASE_BINARY_OP_LSHIFT_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_LSHIFT_INT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef left;
@@ -13025,6 +13028,7 @@
                 case SWITCH_CASE_BINARY_OP_REMAINDER_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_REMAINDER_INT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef left;
@@ -13097,6 +13101,7 @@
                 case SWITCH_CASE_BINARY_OP_RSHIFT_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_RSHIFT_INT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef left;
@@ -13175,6 +13180,7 @@
                 case SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_SUBSCR_BYTEARRAY_INT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef nos;
@@ -13243,6 +13249,7 @@
                 case SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_SUBSCR_BYTES_INT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef nos;
@@ -13311,6 +13318,7 @@
                 case SWITCH_CASE_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef tos;
                     _PyStackRef nos;
@@ -13385,6 +13393,7 @@
                 case SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_BINARY_OP;
+                    SWITCH_CASE_STATS(SWITCH_CASE_BINARY_OP_TRUEDIV_FLOAT);
                     static_assert(INLINE_CACHE_ENTRIES_BINARY_OP == 5, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef left;
@@ -13455,6 +13464,7 @@
                 case SWITCH_CASE_CALL_LIST_APPEND_UNIQUE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_CALL;
+                    SWITCH_CASE_STATS(SWITCH_CASE_CALL_LIST_APPEND_UNIQUE);
                     static_assert(INLINE_CACHE_ENTRIES_CALL == 3, "incorrect cache size");
                     _PyStackRef callable;
                     _PyStackRef nos;
@@ -13534,6 +13544,7 @@
                 case SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+                    SWITCH_CASE_STATS(SWITCH_CASE_STORE_SUBSCR_BYTEARRAY_INT);
                     static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef nos;
@@ -13608,6 +13619,7 @@
                 case SWITCH_CASE_STORE_SUBSCR_DICT_UNIQUE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+                    SWITCH_CASE_STATS(SWITCH_CASE_STORE_SUBSCR_DICT_UNIQUE);
                     static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
                     _PyStackRef nos;
                     _PyStackRef value;
@@ -13669,6 +13681,7 @@
                 case SWITCH_CASE_STORE_SUBSCR_LIST_INT_UNIQUE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_STORE_SUBSCR;
+                    SWITCH_CASE_STATS(SWITCH_CASE_STORE_SUBSCR_LIST_INT_UNIQUE);
                     static_assert(INLINE_CACHE_ENTRIES_STORE_SUBSCR == 1, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef nos;
@@ -13750,6 +13763,7 @@
                 case SWITCH_CASE_TO_BOOL_SIZED: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_TO_BOOL;
+                    SWITCH_CASE_STATS(SWITCH_CASE_TO_BOOL_SIZED);
                     static_assert(INLINE_CACHE_ENTRIES_TO_BOOL == 3, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef res;
@@ -13776,6 +13790,7 @@
                 case SWITCH_CASE_UNARY_NEGATIVE_INPLACE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_UNARY_NEGATIVE;
+                    SWITCH_CASE_STATS(SWITCH_CASE_UNARY_NEGATIVE_INPLACE);
                     static_assert(INLINE_CACHE_ENTRIES_UNARY_NEGATIVE == 2, "incorrect cache size");
                     _PyStackRef value;
                     _PyStackRef res;
@@ -13803,6 +13818,7 @@
                 case SWITCH_CASE_UNPACK_SEQUENCE_STEAL_TUPLE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE;
+                    SWITCH_CASE_STATS(SWITCH_CASE_UNPACK_SEQUENCE_STEAL_TUPLE);
                     static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
                     _PyStackRef tos;
                     _PyStackRef seq;
@@ -13858,6 +13874,7 @@
                 case SWITCH_CASE_UNPACK_SEQUENCE_STEAL_TWO_TUPLE: {
                     // The instruction is as long as its family's generic instruction.
                     next_instr = this_instr + 1 + INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE;
+                    SWITCH_CASE_STATS(SWITCH_CASE_UNPACK_SEQUENCE_STEAL_TWO_TUPLE);
                     static_assert(INLINE_CACHE_ENTRIES_UNPACK_SEQUENCE == 1, "incorrect cache size");
                     _PyStackRef tos;
                     _PyStackRef seq;
