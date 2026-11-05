@@ -1479,22 +1479,6 @@
             break;
         }
 
-        case _BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE: {
-            JitOptRef res;
-            JitOptRef ls;
-            JitOptRef ss;
-            res = sym_new_not_null(ctx);
-            ls = sym_new_not_null(ctx);
-            ss = sym_new_not_null(ctx);
-            CHECK_STACK_BOUNDS(1);
-            stack_pointer[-2] = res;
-            stack_pointer[-1] = ls;
-            stack_pointer[0] = ss;
-            stack_pointer += 1;
-            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-            break;
-        }
-
         case _BINARY_OP_SUBSCR_LIST_SLICE: {
             JitOptRef sub_st;
             JitOptRef list_st;
@@ -1913,16 +1897,6 @@
             stack_pointer[-3] = ls;
             stack_pointer[-2] = ss;
             stack_pointer += -1;
-            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
-            break;
-        }
-
-        case _STORE_SUBSCR_DICT_UNIQUE: {
-            JitOptRef st;
-            st = sym_new_not_null(ctx);
-            CHECK_STACK_BOUNDS(-2);
-            stack_pointer[-3] = st;
-            stack_pointer += -2;
             ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
             break;
         }

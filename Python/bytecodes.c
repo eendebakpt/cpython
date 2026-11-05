@@ -693,7 +693,6 @@ dummy_func(
             BINARY_OP_SUBSCR_BYTES_INT,
             BINARY_OP_SUBSCR_BYTEARRAY_INT,
 
-            BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE,
 };
 
         op(_GUARD_NOS_INT, (left, unused -- left, unused)) {
@@ -1445,29 +1444,6 @@ dummy_func(
         switch_candidate macro(BINARY_OP_SUBSCR_LIST_SLICE) =
             _GUARD_TOS_SLICE + _GUARD_NOS_LIST + unused/5 + _BINARY_OP_SUBSCR_LIST_SLICE + POP_TOP + POP_TOP;
 
-        // The free-threaded build takes the list's lock to slice it. A list
-        // that nothing else references cannot be reached by another thread,
-        // so it is sliced without the lock (see _Py_Specialize_BinaryOp).
-        op(_BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE, (list_st, sub_st -- res, ls, ss)) {
-            PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
-            PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
-            assert(PySlice_Check(sub));
-            assert(PyList_CheckExact(list));
-            DEOPT_IF(!_PyObject_IsUniquelyReferenced(list));
-            PyObject *res_o = _PyList_SliceSubscript_LockHeld(list, sub);
-            STAT_INC(BINARY_OP, hit);
-            if (res_o == NULL) {
-                ERROR_NO_POP();
-            }
-            res = PyStackRef_FromPyObjectSteal(res_o);
-            ls = list_st;
-            ss = sub_st;
-            INPUTS_DEAD();
-        }
-
-        switch_op macro(BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE) =
-            _GUARD_TOS_SLICE + _GUARD_NOS_LIST + unused/5 + _BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE + POP_TOP + POP_TOP;
-
         op(_BINARY_OP_SUBSCR_LIST_SLICE, (list_st, sub_st -- res, ls, ss)) {
             PyObject *sub = PyStackRef_AsPyObjectBorrow(sub_st);
             PyObject *list = PyStackRef_AsPyObjectBorrow(list_st);
@@ -1693,7 +1669,6 @@ dummy_func(
             STORE_SUBSCR_BYTEARRAY_INT,
 
             STORE_SUBSCR_LIST_INT_UNIQUE,
-            STORE_SUBSCR_DICT_UNIQUE,
 };
 
         specializing op(_SPECIALIZE_STORE_SUBSCR, (counter/1, container, sub -- container, sub)) {
@@ -1806,28 +1781,6 @@ dummy_func(
         switch_candidate macro(STORE_SUBSCR_DICT) =
             _RECORD_NOS_TYPE +
             _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/1 + _STORE_SUBSCR_DICT + POP_TOP;
-
-        // dict[key] = value on a dict that nothing else references: the
-        // free-threaded build needs no critical section.
-        op(_STORE_SUBSCR_DICT_UNIQUE, (value, dict_st, sub -- st)) {
-            PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);
-            assert(Py_TYPE(dict)->tp_as_mapping->mp_ass_subscript == _PyDict_StoreSubscript);
-            DEOPT_IF(!_PyObject_IsUniquelyReferenced(dict));
-            STAT_INC(STORE_SUBSCR, hit);
-            int err = _PyDict_SetItem_Take2_LockHeld((PyDictObject *)dict,
-                                                     PyStackRef_AsPyObjectSteal(sub),
-                                                     PyStackRef_AsPyObjectSteal(value));
-            if (err) {
-                PyStackRef_CLOSE(dict_st);
-                ERROR_IF(1);
-            }
-            DEAD(dict_st);
-            st = dict_st;
-        }
-
-        switch_op macro(STORE_SUBSCR_DICT_UNIQUE) =
-            _RECORD_NOS_TYPE +
-            _GUARD_NOS_DICT_STORE_SUBSCRIPT + unused/1 + _STORE_SUBSCR_DICT_UNIQUE + POP_TOP;
 
         op(_STORE_SUBSCR_DICT, (value, dict_st, sub -- st)) {
             PyObject *dict = PyStackRef_AsPyObjectBorrow(dict_st);

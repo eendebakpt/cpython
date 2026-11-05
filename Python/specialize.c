@@ -1669,8 +1669,7 @@ _Py_Specialize_StoreSubscr(_PyStackRef container_st, _PyStackRef sub_st, _Py_COD
     if (container_type->tp_as_mapping != NULL &&
         container_type->tp_as_mapping->mp_ass_subscript == _PyDict_StoreSubscript)
     {
-        specialize(instr, unique_case(container, STORE_SUBSCR_DICT_UNIQUE,
-                                      STORE_SUBSCR_DICT));
+        specialize(instr, STORE_SUBSCR_DICT);
         return;
     }
     if (container_type == &PyByteArray_Type
@@ -2598,8 +2597,7 @@ _Py_Specialize_BinaryOp(_PyStackRef lhs_st, _PyStackRef rhs_st, _Py_CODEUNIT *in
                 return;
             }
             if (PyList_CheckExact(lhs) && PySlice_Check(rhs)) {
-                specialize(instr, unique_case(lhs, BINARY_OP_SUBSCR_LIST_SLICE_UNIQUE,
-                                              BINARY_OP_SUBSCR_LIST_SLICE));
+                specialize(instr, BINARY_OP_SUBSCR_LIST_SLICE);
                 return;
             }
             unsigned int tp_version;
