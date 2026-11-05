@@ -11,6 +11,8 @@ extern "C" {
 #include "pycore_backoff.h"     // _Py_BackoffCounter
 #include "pycore_structs.h"     // _Py_CODEUNIT
 #include "pycore_tstate.h"      // _PyThreadStateImpl
+#include "pycore_pyatomic_ft_wrappers.h" // FT_ATOMIC_LOAD_UINT16_RELAXED
+#include "opcode_ids.h"           // SWITCH_OP
 
 
 #define _PyCode_CODE(CO) _Py_RVALUE((_Py_CODEUNIT *)(CO)->co_code_adaptive)
@@ -589,6 +591,24 @@ enum _PyBinaryOpInplaceKind {
 #define SWITCH_OP_CASE_SHIFT (BACKOFF_BITS + SWITCH_OP_MISS_BITS)
 #define SWITCH_OP_MAX_CASES (1 << (16 - SWITCH_OP_CASE_SHIFT))
 #define _PySwitchOp_Case(instr) ((instr)[1].cache >> SWITCH_OP_CASE_SHIFT)
+
+// Declared with their sizes in pycore_opcode_metadata.h.
+PyAPI_DATA(const uint8_t) _PyOpcode_Deopt[];
+PyAPI_DATA(const uint8_t) _PySwitchOp_Deopt[];
+
+/* The generic instruction of an instruction unit, like _PyOpcode_Deopt but
+   aware of SWITCH_OP, whose generic instruction depends on the case in its
+   cache. Instrumented opcodes and ENTER_EXECUTOR are returned unchanged. */
+static inline int
+_PyCode_BaseOpcode(const _Py_CODEUNIT *instr)
+{
+    int opcode = _PyOpcode_Deopt[instr->op.code];
+    if (opcode == SWITCH_OP) {
+        uint16_t cache = FT_ATOMIC_LOAD_UINT16_RELAXED(instr[1].cache);
+        opcode = _PySwitchOp_Deopt[cache >> SWITCH_OP_CASE_SHIFT];
+    }
+    return opcode;
+}
 #define _PySwitchOp_Counter(switch_case, backoff) \
     MAKE_VALUE_AND_BACKOFF(((switch_case) << SWITCH_OP_MISS_BITS) | SWITCH_OP_MISS_COOLDOWN, (backoff))
 

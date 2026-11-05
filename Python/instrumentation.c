@@ -639,8 +639,8 @@ static inline int
 switch_op_deopt(_Py_CODEUNIT *src_instr, int opcode)
 {
     if (opcode == SWITCH_OP) {
-        uint16_t switch_case = FT_ATOMIC_LOAD_UINT16_RELAXED(_PySwitchOp_Case(src_instr));
-        return _PySwitchOp_Deopt[switch_case];
+        uint16_t cache = FT_ATOMIC_LOAD_UINT16_RELAXED(src_instr[1].cache);
+        return _PySwitchOp_Deopt[cache >> SWITCH_OP_CASE_SHIFT];
     }
     return opcode;
 }

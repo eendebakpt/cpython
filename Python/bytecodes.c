@@ -6971,6 +6971,14 @@ dummy_func(
             tracer->prev_state.instr_frame = frame;
             tracer->prev_state.instr_oparg = oparg;
             tracer->prev_state.instr_stacklevel = PyStackRef_IsNone(frame->f_executable) ? 2 : STACK_LEVEL();
+            if (opcode == SWITCH_OP) {
+                // The counter holds the case number: back to the generic
+                // instruction first, so that the counter can be reset.
+                FT_ATOMIC_STORE_UINT8_RELAXED(next_instr->op.code,
+                                              _PySwitchOp_Deopt[_PySwitchOp_Case(next_instr)]);
+                SWITCH_OP_FENCE_RELEASE();
+                opcode = next_instr->op.code;
+            }
             if (_PyOpcode_Caches[_PyOpcode_Deopt[opcode]]
                 // Branch opcodes use the cache for branch history, not
                 // specialization counters.  Don't reset it.

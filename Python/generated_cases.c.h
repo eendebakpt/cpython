@@ -12798,7 +12798,19 @@
             frame->instr_ptr = next_instr;
             next_instr += 3;
             INSTRUCTION_STATS(SWITCH_OP);
+            #ifdef Py_GIL_DISABLED
+            uint16_t switch_case = _Py_atomic_load_uint16_relaxed(&this_instr[1].cache) >> SWITCH_OP_CASE_SHIFT;
+            _Py_atomic_fence_acquire();
+            if (_Py_atomic_load_uint8_relaxed(&this_instr->op.code) != SWITCH_OP) {
+                // Another thread deoptimized this instruction between the dispatch
+                // and the read of the case: the counter no longer holds a case.
+                opcode = _Py_atomic_load_uint8_relaxed(&this_instr->op.code);
+                next_instr = this_instr;
+                DISPATCH_GOTO();
+            }
+            #else
             uint16_t switch_case = read_u16(&this_instr[1].cache) >> SWITCH_OP_CASE_SHIFT;
+            #endif
             assert(switch_case < SWITCH_OP_NCASES);
             _PySwitchOpResult result = _PySwitchOp_Func[switch_case](tstate, frame, stack_pointer, this_instr, oparg);
             stack_pointer = result.stack_pointer;
@@ -13165,6 +13177,15 @@
             tracer->prev_state.instr_frame = frame;
             tracer->prev_state.instr_oparg = oparg;
             tracer->prev_state.instr_stacklevel = PyStackRef_IsNone(frame->f_executable) ? 2 : STACK_LEVEL();
+            if (opcode == SWITCH_OP) {
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                FT_ATOMIC_STORE_UINT8_RELAXED(next_instr->op.code,
+                    _PySwitchOp_Deopt[_PySwitchOp_Case(next_instr)]);
+                _PyFrame_StackPointerInvalidate(frame);
+                SWITCH_OP_FENCE_RELEASE();
+                opcode = next_instr->op.code;
+            }
             if (_PyOpcode_Caches[_PyOpcode_Deopt[opcode]]
                 // Branch opcodes use the cache for branch history, not
                 // specialization counters.  Don't reset it.

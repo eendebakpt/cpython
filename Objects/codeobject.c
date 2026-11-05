@@ -3346,7 +3346,7 @@ deopt_code_unit(PyCodeObject *code, int i)
         .cache = FT_ATOMIC_LOAD_UINT16_RELAXED(*(uint16_t *)src_instr)};
     int opcode = inst.op.code;
     if (opcode < MIN_INSTRUMENTED_OPCODE) {
-        inst.op.code = _PyOpcode_Deopt[opcode];
+        inst.op.code = _PyCode_BaseOpcode(src_instr);
         assert(inst.op.code < MIN_SPECIALIZED_OPCODE);
     }
     // JIT should not be enabled with free-threading

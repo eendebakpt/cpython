@@ -688,17 +688,26 @@ gen_try_set_executing(PyGenObject *gen)
 // back to its adaptive form with a triggering counter so that it
 // re-specializes on the operands that missed -- the same life cycle as an
 // ordinary specialized instruction.
+#ifdef Py_GIL_DISABLED
+#  define SWITCH_OP_FENCE_RELEASE() _Py_atomic_fence_release()
+#else
+#  define SWITCH_OP_FENCE_RELEASE() ((void)0)
+#endif
+
 #define SWITCH_OP_COUNT_MISS(BASE)                                          \
     do {                                                                  \
         uint16_t _switch_vb = read_u16(&this_instr[1].cache);               \
         if (((_switch_vb >> BACKOFF_BITS) & SWITCH_OP_MISS_MASK) == 0) {      \
             /* Out of misses: back to the adaptive instruction, with its  \
                counter triggering so that it re-specializes right away   \
-               on the operands that just missed. */                       \
+               on the operands that just missed. The opcode goes first:  \
+               another thread that still reads SWITCH_OP must find the   \
+               case number in the counter (see the check in SWITCH_OP). */ \
+            FT_ATOMIC_STORE_UINT8_RELAXED(this_instr->op.code, (BASE));   \
+            SWITCH_OP_FENCE_RELEASE();                                    \
             FT_ATOMIC_STORE_UINT16_RELAXED(                               \
                 this_instr[1].counter.value_and_backoff,                  \
                 MAKE_VALUE_AND_BACKOFF(0, _switch_vb & BACKOFF_MASK));      \
-            FT_ATOMIC_STORE_UINT8_RELAXED(this_instr->op.code, (BASE));   \
         }                                                                 \
         /* Otherwise the generic instruction runs once and its             \
            ADVANCE_ADAPTIVE_COUNTER counts the miss down. */              \
