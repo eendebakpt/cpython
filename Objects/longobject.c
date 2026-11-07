@@ -5317,8 +5317,7 @@ static PyObject *
 long_rshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
 {
     PyLongObject *z = NULL;
-    Py_ssize_t newsize, hishift, size_a;
-    twodigits accum;
+    Py_ssize_t newsize, size_a, m;
     int a_negative;
 
     /* Total number of bits shifted must be nonnegative. */
@@ -5338,65 +5337,47 @@ long_rshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
     a_negative = _PyLong_IsNegative(a);
     size_a = _PyLong_DigitCount(a);
 
-    if (a_negative) {
-        /* For negative 'a', adjust so that 0 < remshift <= PyLong_SHIFT,
-           while keeping PyLong_SHIFT*wordshift + remshift the same. This
-           ensures that 'newsize' is computed correctly below. */
-        if (remshift == 0) {
-            if (wordshift == 0) {
-                /* Can only happen if the original shift was 0. */
-                return long_long((PyObject *)a);
-            }
-            remshift = PyLong_SHIFT;
-            --wordshift;
-        }
+    if (a_negative && remshift == 0 && wordshift == 0) {
+        /* Can only happen if the original shift was 0. */
+        return long_long((PyObject *)a);
     }
 
-    assert(wordshift >= 0);
-    newsize = size_a - wordshift;
-    if (newsize <= 0) {
+    /* Digits of |a| that survive the shift. */
+    m = size_a - wordshift;
+    if (m <= 0) {
         /* Shifting all the bits of 'a' out gives either -1 or 0. */
         return PyLong_FromLong(-a_negative);
     }
+    /* For negative 'a', the result is -((|a| + 2**shift - 1) >> shift), i.e.
+       |a| >> shift incremented when any bit was shifted out.  If remshift is
+       zero the top digit can be PyLong_MASK, so the increment may need one
+       more digit. */
+    newsize = m + (a_negative && remshift == 0);
     z = long_alloc(newsize);
     if (z == NULL) {
         return NULL;
     }
-    hishift = PyLong_SHIFT - remshift;
-
-    accum = a->long_value.ob_digit[wordshift];
+    digit lost = v_rshift(z->long_value.ob_digit,
+                          a->long_value.ob_digit + wordshift, m, remshift);
+    if (newsize > m) {
+        z->long_value.ob_digit[m] = 0;
+    }
     if (a_negative) {
-        /*
-            For a positive integer a and nonnegative shift, we have:
-
-                (-a) >> shift == -((a + 2**shift - 1) >> shift).
-
-            In the addition `a + (2**shift - 1)`, the low `wordshift` digits of
-            `2**shift - 1` all have value `PyLong_MASK`, so we get a carry out
-            from the bottom `wordshift` digits when at least one of the least
-            significant `wordshift` digits of `a` is nonzero. Digit `wordshift`
-            of `2**shift - 1` has value `PyLong_MASK >> hishift`.
-        */
         _PyLong_SetSignAndDigitCount(z, -1, newsize);
-
-        digit sticky = 0;
-        for (Py_ssize_t j = 0; j < wordshift; j++) {
-            sticky |= a->long_value.ob_digit[j];
+        for (Py_ssize_t j = 0; lost == 0 && j < wordshift; j++) {
+            lost |= a->long_value.ob_digit[j];
         }
-        accum += (PyLong_MASK >> hishift) + (digit)(sticky != 0);
+        if (lost) {
+            /* Round toward negative infinity: add one to |z|. */
+            Py_ssize_t i = 0;
+            while (z->long_value.ob_digit[i] == PyLong_MASK) {
+                z->long_value.ob_digit[i++] = 0;
+                assert(i < newsize);
+            }
+            z->long_value.ob_digit[i]++;
+        }
     }
-
-    accum >>= remshift;
-    for (Py_ssize_t i = 0, j = wordshift + 1; j < size_a; i++, j++) {
-        accum += (twodigits)a->long_value.ob_digit[j] << hishift;
-        z->long_value.ob_digit[i] = (digit)(accum & PyLong_MASK);
-        accum >>= PyLong_SHIFT;
-    }
-    assert(accum <= PyLong_MASK);
-    z->long_value.ob_digit[newsize - 1] = (digit)accum;
-
-    z = maybe_small_long(long_normalize(z));
-    return (PyObject *)z;
+    return (PyObject *)maybe_small_long(long_normalize(z));
 }
 
 static PyObject *
@@ -5459,8 +5440,8 @@ static PyObject *
 long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
 {
     PyLongObject *z = NULL;
-    Py_ssize_t oldsize, newsize, i, j;
-    twodigits accum;
+    Py_ssize_t oldsize, newsize, i;
+    digit carry;
 
     if (wordshift == 0 && _PyLong_IsCompact(a)) {
         stwodigits m = medium_value(a);
@@ -5482,16 +5463,12 @@ long_lshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
     }
     for (i = 0; i < wordshift; i++)
         z->long_value.ob_digit[i] = 0;
-    accum = 0;
-    for (j = 0; j < oldsize; i++, j++) {
-        accum |= (twodigits)a->long_value.ob_digit[j] << remshift;
-        z->long_value.ob_digit[i] = (digit)(accum & PyLong_MASK);
-        accum >>= PyLong_SHIFT;
-    }
+    carry = v_lshift(z->long_value.ob_digit + wordshift,
+                     a->long_value.ob_digit, oldsize, remshift);
     if (remshift)
-        z->long_value.ob_digit[newsize-1] = (digit)accum;
+        z->long_value.ob_digit[newsize-1] = carry;
     else
-        assert(!accum);
+        assert(!carry);
     z = long_normalize(z);
     return (PyObject *) maybe_small_long(z);
 }
