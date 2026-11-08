@@ -5317,7 +5317,7 @@ static PyObject *
 long_rshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
 {
     PyLongObject *z = NULL;
-    Py_ssize_t newsize, size_a, m;
+    Py_ssize_t newsize, size_a;
     int a_negative;
 
     /* Total number of bits shifted must be nonnegative. */
@@ -5342,42 +5342,57 @@ long_rshift1(PyLongObject *a, Py_ssize_t wordshift, digit remshift)
         return long_long((PyObject *)a);
     }
 
-    /* Digits of |a| that survive the shift. */
-    m = size_a - wordshift;
-    if (m <= 0) {
+    assert(wordshift >= 0);
+    newsize = size_a - wordshift;
+    if (newsize <= 0) {
         /* Shifting all the bits of 'a' out gives either -1 or 0. */
         return PyLong_FromLong(-a_negative);
     }
-    /* For negative 'a', the result is -((|a| + 2**shift - 1) >> shift), i.e.
-       |a| >> shift incremented when any bit was shifted out.  If remshift is
-       zero the top digit can be PyLong_MASK, so the increment may need one
-       more digit. */
-    newsize = m + (a_negative && remshift == 0);
-    z = long_alloc(newsize);
+    /* For negative 'a' the magnitude is rounded up below. If remshift is
+       zero its top digit can be PyLong_MASK, so reserve a digit for the
+       carry. */
+    int extra = a_negative && remshift == 0;
+    z = long_alloc(newsize + extra);
     if (z == NULL) {
         return NULL;
     }
     digit lost = v_rshift(z->long_value.ob_digit,
-                          a->long_value.ob_digit + wordshift, m, remshift);
-    if (newsize > m) {
-        z->long_value.ob_digit[m] = 0;
-    }
+                          a->long_value.ob_digit + wordshift, newsize, remshift);
     if (a_negative) {
-        _PyLong_SetSignAndDigitCount(z, -1, newsize);
-        for (Py_ssize_t j = 0; lost == 0 && j < wordshift; j++) {
-            lost |= a->long_value.ob_digit[j];
+        /*
+            For a positive integer a and nonnegative shift, we have:
+
+                (-a) >> shift == -((a + 2**shift - 1) >> shift).
+
+            In the addition `a + (2**shift - 1)`, the low `wordshift` digits of
+            `2**shift - 1` all have value `PyLong_MASK`, so we get a carry out
+            from the bottom `wordshift` digits when at least one of the least
+            significant `wordshift` digits of `a` is nonzero. The other bits
+            shifted out are the low `remshift` bits of digit `wordshift`,
+            returned by v_rshift(). So the result is `a >> shift` plus one
+            when any shifted-out bit is set.
+        */
+        _PyLong_SetSignAndDigitCount(z, -1, newsize + extra);
+
+        digit sticky = 0;
+        for (Py_ssize_t j = 0; j < wordshift; j++) {
+            sticky |= a->long_value.ob_digit[j];
         }
-        if (lost) {
-            /* Round toward negative infinity: add one to |z|. */
+        if (extra) {
+            z->long_value.ob_digit[newsize] = 0;
+        }
+        if (sticky | lost) {
             Py_ssize_t i = 0;
             while (z->long_value.ob_digit[i] == PyLong_MASK) {
                 z->long_value.ob_digit[i++] = 0;
-                assert(i < newsize);
             }
+            assert(i < newsize + extra);
             z->long_value.ob_digit[i]++;
         }
     }
-    return (PyObject *)maybe_small_long(long_normalize(z));
+
+    z = maybe_small_long(long_normalize(z));
+    return (PyObject *)z;
 }
 
 static PyObject *
