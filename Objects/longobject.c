@@ -1905,15 +1905,18 @@ static digit
 v_lshift(digit *z, digit *a, Py_ssize_t m, int d)
 {
     Py_ssize_t i;
-    twodigits carry = 0;
+    twodigits accum = 0;
 
     assert(0 <= d && d < PyLong_SHIFT);
+    /* accum holds the bits of a not yet written to z, in position; the
+       only work carried from one digit to the next is an or and a shift
+       by a constant. */
     for (i=0; i < m; i++) {
-        twodigits acc = (twodigits)a[i] << d | carry;
-        z[i] = (digit)acc & PyLong_MASK;
-        carry = acc >> PyLong_SHIFT;
+        accum |= (twodigits)a[i] << d;
+        z[i] = (digit)(accum & PyLong_MASK);
+        accum >>= PyLong_SHIFT;
     }
-    return (digit)carry;
+    return (digit)accum;
 }
 
 /* Shift digit vector a[0:m] d bits right, with 0 <= d < PyLong_SHIFT.  Put
@@ -1923,16 +1926,21 @@ static digit
 v_rshift(digit *z, digit *a, Py_ssize_t m, int d)
 {
     Py_ssize_t i;
-    twodigits carry = 0;
-    twodigits mask = ((twodigits)1 << d) - 1U;
+    int hishift = PyLong_SHIFT - d;
+    digit lost = a[0] & (((digit)1 << d) - 1U);
+    twodigits accum = a[0] >> d;
 
     assert(0 <= d && d < PyLong_SHIFT);
-    for (i=m; i-- > 0;) {
-        twodigits acc = carry << PyLong_SHIFT | a[i];
-        carry = acc & mask;
-        z[i] = (digit)(acc >> d);
+    assert(m > 0);
+    /* As in v_lshift(): accum holds the not yet written bits of a, so the
+       carried work per digit is an add and a shift by a constant. */
+    for (i=0; i < m-1; i++) {
+        accum += (twodigits)a[i+1] << hishift;
+        z[i] = (digit)(accum & PyLong_MASK);
+        accum >>= PyLong_SHIFT;
     }
-    return (digit)carry;
+    z[m-1] = (digit)accum;
+    return lost;
 }
 
 /* Divide long pin, w/ size digits, by non-zero digit n, storing quotient
