@@ -119,7 +119,7 @@ extern "C" {
 #define STORE_ATTR                             106
 #define STORE_DEREF                            107
 #define STORE_FAST                             108
-#define STORE_FAST_LOAD_FAST                   109
+#define STORE_FAST_LOAD_FAST_BORROW            109
 #define STORE_FAST_STORE_FAST                  110
 #define STORE_GLOBAL                           111
 #define STORE_NAME                             112

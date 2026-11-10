@@ -335,13 +335,13 @@ dummy_func(
             STORE_FAST,
         };
 
-        inst(STORE_FAST_LOAD_FAST, (value1 -- value2)) {
+        inst(STORE_FAST_LOAD_FAST_BORROW, (value1 -- value2)) {
             uint32_t oparg1 = oparg >> 4;
             uint32_t oparg2 = oparg & 15;
             _PyStackRef tmp = GETLOCAL(oparg1);
             GETLOCAL(oparg1) = value1;
             DEAD(value1);
-            value2 = PyStackRef_DUP(GETLOCAL(oparg2));
+            value2 = PyStackRef_Borrow(GETLOCAL(oparg2));
             PyStackRef_XCLOSE(tmp);
         }
 

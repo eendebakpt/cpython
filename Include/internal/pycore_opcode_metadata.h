@@ -464,7 +464,7 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 1;
         case STORE_FAST:
             return 1;
-        case STORE_FAST_LOAD_FAST:
+        case STORE_FAST_LOAD_FAST_BORROW:
             return 1;
         case STORE_FAST_MAYBE_NULL:
             return 1;
@@ -959,7 +959,7 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 0;
         case STORE_FAST:
             return 0;
-        case STORE_FAST_LOAD_FAST:
+        case STORE_FAST_LOAD_FAST_BORROW:
             return 1;
         case STORE_FAST_MAYBE_NULL:
             return 0;
@@ -1304,7 +1304,7 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [STORE_ATTR_WITH_HINT] = { true, INSTR_FMT_IBC000, HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_DEOPT_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG | HAS_RECORDS_VALUE_FLAG },
     [STORE_DEREF] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_FREE_FLAG | HAS_ESCAPES_FLAG },
     [STORE_FAST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_ESCAPES_FLAG },
-    [STORE_FAST_LOAD_FAST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_ESCAPES_FLAG },
+    [STORE_FAST_LOAD_FAST_BORROW] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_ESCAPES_FLAG },
     [STORE_FAST_STORE_FAST] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_LOCAL_FLAG | HAS_ESCAPES_FLAG },
     [STORE_GLOBAL] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [STORE_NAME] = { true, INSTR_FMT_IB, HAS_ARG_FLAG | HAS_NAME_FLAG | HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
@@ -1520,7 +1520,7 @@ _PyOpcode_macro_expansion[256] = {
     [STORE_ATTR_WITH_HINT] = { .nuops = 4, .uops = { { _RECORD_TOS_TYPE, OPARG_SIMPLE, 1 }, { _GUARD_TYPE_VERSION, 2, 1 }, { _STORE_ATTR_WITH_HINT, 1, 3 }, { _POP_TOP, OPARG_SIMPLE, 4 } } },
     [STORE_DEREF] = { .nuops = 1, .uops = { { _STORE_DEREF, OPARG_SIMPLE, 0 } } },
     [STORE_FAST] = { .nuops = 2, .uops = { { _SWAP_FAST, OPARG_SIMPLE, 0 }, { _POP_TOP, OPARG_SIMPLE, 0 } } },
-    [STORE_FAST_LOAD_FAST] = { .nuops = 3, .uops = { { _SWAP_FAST, OPARG_TOP, 0 }, { _POP_TOP, OPARG_TOP, 0 }, { _LOAD_FAST, OPARG_BOTTOM, 0 } } },
+    [STORE_FAST_LOAD_FAST_BORROW] = { .nuops = 3, .uops = { { _SWAP_FAST, OPARG_TOP, 0 }, { _POP_TOP, OPARG_TOP, 0 }, { _LOAD_FAST_BORROW, OPARG_BOTTOM, 0 } } },
     [STORE_FAST_STORE_FAST] = { .nuops = 4, .uops = { { _SWAP_FAST, OPARG_TOP, 0 }, { _POP_TOP, OPARG_TOP, 0 }, { _SWAP_FAST, OPARG_BOTTOM, 0 }, { _POP_TOP, OPARG_BOTTOM, 0 } } },
     [STORE_GLOBAL] = { .nuops = 1, .uops = { { _STORE_GLOBAL, OPARG_SIMPLE, 0 } } },
     [STORE_NAME] = { .nuops = 1, .uops = { { _STORE_NAME, OPARG_SIMPLE, 0 } } },
@@ -1766,7 +1766,7 @@ const char *_PyOpcode_OpName[267] = {
     [STORE_ATTR_WITH_HINT] = "STORE_ATTR_WITH_HINT",
     [STORE_DEREF] = "STORE_DEREF",
     [STORE_FAST] = "STORE_FAST",
-    [STORE_FAST_LOAD_FAST] = "STORE_FAST_LOAD_FAST",
+    [STORE_FAST_LOAD_FAST_BORROW] = "STORE_FAST_LOAD_FAST_BORROW",
     [STORE_FAST_MAYBE_NULL] = "STORE_FAST_MAYBE_NULL",
     [STORE_FAST_STORE_FAST] = "STORE_FAST_STORE_FAST",
     [STORE_GLOBAL] = "STORE_GLOBAL",
@@ -2057,7 +2057,7 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [STORE_ATTR_WITH_HINT] = STORE_ATTR,
     [STORE_DEREF] = STORE_DEREF,
     [STORE_FAST] = STORE_FAST,
-    [STORE_FAST_LOAD_FAST] = STORE_FAST_LOAD_FAST,
+    [STORE_FAST_LOAD_FAST_BORROW] = STORE_FAST_LOAD_FAST_BORROW,
     [STORE_FAST_STORE_FAST] = STORE_FAST_STORE_FAST,
     [STORE_GLOBAL] = STORE_GLOBAL,
     [STORE_NAME] = STORE_NAME,

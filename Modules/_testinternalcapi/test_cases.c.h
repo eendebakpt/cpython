@@ -12336,14 +12336,14 @@
             DISPATCH();
         }
 
-        TARGET(STORE_FAST_LOAD_FAST) {
+        TARGET(STORE_FAST_LOAD_FAST_BORROW) {
             #if _Py_TAIL_CALL_INTERP
-            int opcode = STORE_FAST_LOAD_FAST;
+            int opcode = STORE_FAST_LOAD_FAST_BORROW;
             (void)(opcode);
             #endif
             frame->instr_ptr = next_instr;
             next_instr += 1;
-            INSTRUCTION_STATS(STORE_FAST_LOAD_FAST);
+            INSTRUCTION_STATS(STORE_FAST_LOAD_FAST_BORROW);
             _PyStackRef value1;
             _PyStackRef value2;
             value1 = stack_pointer[-1];
@@ -12351,7 +12351,7 @@
             uint32_t oparg2 = oparg & 15;
             _PyStackRef tmp = GETLOCAL(oparg1);
             GETLOCAL(oparg1) = value1;
-            value2 = PyStackRef_DUP(GETLOCAL(oparg2));
+            value2 = PyStackRef_Borrow(GETLOCAL(oparg2));
             stack_pointer[-1] = value2;
             _PyFrame_SetStackPointer(frame, stack_pointer);
             _PyFrame_StackPointerValidate(frame);
