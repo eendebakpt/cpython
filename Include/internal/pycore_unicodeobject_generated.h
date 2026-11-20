@@ -603,6 +603,7 @@ _PyUnicode_InitStaticStrings(PyInterpreterState *interp) {
         offsetof(struct _Py_global_strings, identifiers._py_maxvalue._ascii.ob_base),
         offsetof(struct _Py_global_strings, identifiers._py_memLevel._ascii.ob_base),
         offsetof(struct _Py_global_strings, identifiers._py_memlimit._ascii.ob_base),
+        offsetof(struct _Py_global_strings, identifiers._py_memo._ascii.ob_base),
         offsetof(struct _Py_global_strings, identifiers._py_message._ascii.ob_base),
         offsetof(struct _Py_global_strings, identifiers._py_metaclass._ascii.ob_base),
         offsetof(struct _Py_global_strings, identifiers._py_metadata._ascii.ob_base),

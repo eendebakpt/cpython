@@ -1926,6 +1926,7 @@ extern "C" {
     INIT_ID(maxvalue), \
     INIT_ID(memLevel), \
     INIT_ID(memlimit), \
+    INIT_ID(memo), \
     INIT_ID(message), \
     INIT_ID(metaclass), \
     INIT_ID(metadata), \
