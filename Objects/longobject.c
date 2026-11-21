@@ -155,32 +155,41 @@ long_normalize(PyLongObject *v)
 # define MAX_LONG_DIGITS ((INT64_MAX-1) / PyLong_SHIFT)
 #endif
 
+/* Exact ints are kept on freelists bucketed by allocation size, not by
+   digit count.  ints[0] holds blocks of sizeof(PyLongObject) bytes: the
+   padding after ob_digit[0] can have room for more than one digit.  Each
+   next freelist holds blocks that are FREELIST_STEP digits larger, which is
+   the spacing of the size classes of the object allocators.  A block on
+   ints[i] has room for at least FREELIST_CAPACITY(i) digits, so long_alloc()
+   must allocate that many digits for any int that can end up there. */
+#define FREELIST_DIGITS0 \
+    ((Py_ssize_t)((sizeof(PyLongObject) \
+                   - offsetof(PyLongObject, long_value.ob_digit)) \
+                  / sizeof(digit)))
+#define FREELIST_STEP ((Py_ssize_t)(2 * sizeof(void *) / sizeof(digit)))
+#define FREELIST_CAPACITY(i) (FREELIST_DIGITS0 + (i) * FREELIST_STEP)
+#define FREELIST_MAX_DIGITS FREELIST_CAPACITY(PyLong_NUMFREELISTS - 1)
+#define FREELIST_INDEX(ndigits) \
+    (((ndigits) + FREELIST_STEP - 1 - FREELIST_DIGITS0) / FREELIST_STEP)
+
 static inline int
 maybe_freelist_push(PyObject *self)
 {
     assert(PyLong_CheckExact(self));
-
-    PyLongObject *op = (PyLongObject *)self;
-    Py_ssize_t ndigits = _PyLong_DigitCount(op);
-
-    /* A value that normalized to zero still owns a buffer of at least one
-     * digit (long_alloc always allocates max(size, 1) digits), so it can be
-     * reused as a 1-digit int.  Bucketing it at index 0 would strand it:
-     * long_alloc never requests bucket 0 (it clamps ndigits to >= 1). */
-    if (ndigits == 0) {
-        ndigits = 1;
-    }
-
-    if (ndigits < PyLong_MAXSAVESIZE) {
-        return _Py_FREELIST_PUSH(ints[ndigits], self, Py_ints_MAXFREELIST);
+    Py_ssize_t ndigits = _PyLong_DigitCount((PyLongObject *)self);
+    if (ndigits <= FREELIST_MAX_DIGITS) {
+        return _Py_FREELIST_PUSH(ints[FREELIST_INDEX(ndigits)], self,
+                                 Py_ints_MAXFREELIST);
     }
     return 0;
 }
 
-
 static PyLongObject *
 long_alloc(Py_ssize_t size)
 {
+    // FREELIST_INDEX() maps 0..FREELIST_DIGITS0 digits to ints[0].
+    static_assert(FREELIST_DIGITS0 >= 1 && FREELIST_DIGITS0 < FREELIST_STEP,
+                  "unexpected PyLongObject layout");
     assert(size >= 0);
     PyLongObject *result = NULL;
     if (size > (Py_ssize_t)MAX_LONG_DIGITS) {
@@ -192,8 +201,11 @@ long_alloc(Py_ssize_t size)
      * assume that there is always at least one digit present. */
     Py_ssize_t ndigits = size ? size : 1;
 
-    if (ndigits < PyLong_MAXSAVESIZE ) {
-        result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[ndigits]);
+    Py_ssize_t alloc_digits = ndigits;
+    if (ndigits <= FREELIST_MAX_DIGITS) {
+        Py_ssize_t i = FREELIST_INDEX(ndigits);
+        result = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[i]);
+        alloc_digits = FREELIST_CAPACITY(i);
     }
     if (result == NULL) {
         /* Number of bytes needed is: offsetof(PyLongObject, ob_digit) +
@@ -202,7 +214,7 @@ long_alloc(Py_ssize_t size)
         incorrect in the presence of padding between the header
         and the digits. */
         result = PyObject_Malloc(offsetof(PyLongObject, long_value.ob_digit) +
-                                ndigits*sizeof(digit));
+                                alloc_digits*sizeof(digit));
         if (!result) {
             PyErr_NoMemory();
             return NULL;
@@ -214,7 +226,7 @@ long_alloc(Py_ssize_t size)
 #ifdef Py_DEBUG
     // gh-147988: Fill digits with an invalid pattern to catch usage
     // of uninitialized digits.
-    memset(result->long_value.ob_digit, 0xFF, ndigits * sizeof(digit));
+    memset(result->long_value.ob_digit, 0xFF, alloc_digits * sizeof(digit));
 #endif
     return result;
 }
@@ -276,7 +288,7 @@ _PyLong_FromMedium(sdigit x)
     assert(!IS_SMALL_INT(x));
     assert(is_medium_int(x));
 
-    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[1]);
+    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[0]);
     if (v == NULL) {
         v = PyObject_Malloc(sizeof(PyLongObject));
         if (v == NULL) {
@@ -357,7 +369,7 @@ medium_from_stwodigits(stwodigits x)
     if(!is_medium_int(x)) {
         return PyStackRef_NULL;
     }
-    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[1]);
+    PyLongObject *v = (PyLongObject *)_Py_FREELIST_POP(PyLongObject, ints[0]);
     if (v == NULL) {
         v = PyObject_Malloc(sizeof(PyLongObject));
         if (v == NULL) {

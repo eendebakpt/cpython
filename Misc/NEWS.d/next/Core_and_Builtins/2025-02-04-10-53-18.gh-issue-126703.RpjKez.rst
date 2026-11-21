@@ -1,1 +1,3 @@
-Increase usage of freelist for :class:`int` allocation.
+Use freelists for multi-digit :class:`int` objects: one freelist for each of
+the two smallest allocation sizes, which covers ints of up to 180 bits on
+64-bit builds.

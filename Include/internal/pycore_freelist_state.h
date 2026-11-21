@@ -18,7 +18,7 @@ extern "C" {
 #  define Py_floats_MAXFREELIST 100
 #  define Py_complexes_MAXFREELIST 100
 #  define Py_ints_MAXFREELIST 100
-#  define PyLong_MAXSAVESIZE 6     // Keep freelists for all ints with less than this number of digits
+#  define PyLong_NUMFREELISTS 2  // One freelist per allocation size class
 #  define Py_slices_MAXFREELIST 1
 #  define Py_ranges_MAXFREELIST 6
 #  define Py_range_iters_MAXFREELIST 6
@@ -49,7 +49,7 @@ struct _Py_freelists {
     struct _Py_freelist floats;
     struct _Py_freelist complexes;
     struct _Py_freelist tuples[PyTuple_MAXSAVESIZE];
-    struct _Py_freelist ints[PyLong_MAXSAVESIZE];
+    struct _Py_freelist ints[PyLong_NUMFREELISTS];
     struct _Py_freelist lists;
     struct _Py_freelist list_iters;
     struct _Py_freelist tuple_iters;

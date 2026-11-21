@@ -938,7 +938,7 @@ _PyObject_ClearFreeLists(struct _Py_freelists *freelists, int is_finalization)
     for (Py_ssize_t i = 0; i < PyTuple_MAXSAVESIZE; i++) {
         clear_freelist(&freelists->tuples[i], is_finalization, free_object);
     }
-    for (Py_ssize_t i = 0; i < PyLong_MAXSAVESIZE; i++) {
+    for (Py_ssize_t i = 0; i < PyLong_NUMFREELISTS; i++) {
         clear_freelist(&freelists->ints[i], is_finalization, free_object);
     }
     clear_freelist(&freelists->lists, is_finalization, free_object);
