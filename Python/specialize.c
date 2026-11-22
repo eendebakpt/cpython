@@ -4,6 +4,7 @@
 
 #include "pycore_bytesobject.h"   // _PyBytes_Concat
 #include "pycore_call.h"          // _Py_METH_CALL_FLAGS
+#include "pycore_ceval.h"        // _PyMapObject
 #include "pycore_code.h"
 #include "pycore_critical_section.h"
 #include "pycore_descrobject.h"   // _PyMethodWrapper_Type
@@ -2707,6 +2708,19 @@ _Py_Specialize_ForIter(_PyStackRef iter, _PyStackRef null_or_index, _Py_CODEUNIT
             }
             specialize(instr, FOR_ITER_GEN);
             return;
+        }
+        else if (tp == &PyMap_Type) {
+            _PyMapObject *lz = (_PyMapObject *)iter_o;
+            // oparg <= 255: the unwinding code reads the jump offset
+            // of FOR_ITER_MAP without EXTENDED_ARG.
+            if (PyTuple_GET_SIZE(lz->iters) == 1
+                && oparg <= 255
+                && Py_TYPE(lz->func) == &PyFunction_Type
+                && _PyInterpreterState_IsSpecializationEnabled(_PyInterpreterState_GET()))
+            {
+                specialize(instr, FOR_ITER_MAP);
+                return;
+            }
         }
     }
     else {

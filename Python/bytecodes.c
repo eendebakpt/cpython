@@ -3767,6 +3767,7 @@ dummy_func(
             FOR_ITER_TUPLE,
             FOR_ITER_RANGE,
             FOR_ITER_GEN,
+            FOR_ITER_MAP,
             FOR_ITER_VIRTUAL,
         };
 
@@ -4096,6 +4097,42 @@ dummy_func(
             _CHECK_PEP_523 +
             _FOR_ITER_GEN_FRAME +
             _PUSH_FRAME;
+
+        // Iteration over map(func, iterable) where func is a Python
+        // function: push the frame of func instead of calling map.__next__.
+        tier1 inst(FOR_ITER_MAP, (unused/1, iter, null -- iter, null, unused)) {
+            PyObject *map_o = PyStackRef_AsPyObjectBorrow(iter);
+            DEOPT_IF(Py_TYPE(map_o) != &PyMap_Type);
+            DEOPT_IF(IS_PEP523_HOOKED(tstate));
+            _PyMapObject *lz = (_PyMapObject *)map_o;
+            DEOPT_IF(PyTuple_GET_SIZE(lz->iters) != 1);
+            PyObject *func = lz->func;
+            DEOPT_IF(Py_TYPE(func) != &PyFunction_Type);
+            DEOPT_IF(((PyFunctionObject *)func)->vectorcall != _PyFunction_Vectorcall);
+            STAT_INC(FOR_ITER, hit);
+            _PyStackRef inner = PyStackRef_FromPyObjectBorrow(PyTuple_GET_ITEM(lz->iters, 0));
+            _PyStackRef index = PyStackRef_NULL;
+            _PyStackRef item = _PyForIter_VirtualIteratorNext(tstate, frame, inner, &index);
+            if (!PyStackRef_IsValid(item)) {
+                if (PyStackRef_IsError(item)) {
+                    ERROR_NO_POP();
+                }
+                // Jump forward by oparg and skip the following END_FOR
+                JUMPBY(oparg + 1);
+                DISPATCH();
+            }
+            int code_flags = ((PyCodeObject*)PyFunction_GET_CODE(func))->co_flags;
+            PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+            _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+                tstate, PyStackRef_FromPyObjectNew(func), locals,
+                &item, 1, NULL, frame
+            );
+            if (new_frame == NULL) {
+                ERROR_NO_POP();
+            }
+            frame->return_offset = INSTRUCTION_SIZE;
+            DISPATCH_INLINED(new_frame);
+        }
 
         op(_INSERT_NULL, (self -- method_and_self[2])) {
             method_and_self[1] = self;
@@ -6544,6 +6581,15 @@ dummy_func(
             }
             next_instr = frame->instr_ptr;
             RELOAD_STACK();
+            if (next_instr->op.code == FOR_ITER_MAP &&
+                _PyErr_ExceptionMatches(tstate, PyExc_StopIteration))
+            {
+                // StopIteration raised by the function of map(function, it)
+                // ends the loop, as it does when raised from map.__next__.
+                _PyErr_Clear(tstate);
+                next_instr += 2 + INLINE_CACHE_ENTRIES_FOR_ITER + next_instr->op.arg;
+                DISPATCH();
+            }
             goto error;
         }
 

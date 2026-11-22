@@ -1417,12 +1417,7 @@ builtin_id_impl(PyModuleDef *self, PyObject *v)
 
 /* map object ************************************************************/
 
-typedef struct {
-    PyObject_HEAD
-    PyObject *iters;
-    PyObject *func;
-    int strict;
-} mapobject;
+typedef _PyMapObject mapobject;
 
 #define _mapobject_CAST(op)     ((mapobject *)(op))
 
