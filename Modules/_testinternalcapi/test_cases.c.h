@@ -6545,6 +6545,78 @@
             DISPATCH();
         }
 
+        TARGET(FOR_ITER_MAP) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = FOR_ITER_MAP;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 2;
+            INSTRUCTION_STATS(FOR_ITER_MAP);
+            static_assert(INLINE_CACHE_ENTRIES_FOR_ITER == 1, "incorrect cache size");
+            _PyStackRef iter;
+            /* Skip 1 cache entry */
+            iter = stack_pointer[-2];
+            PyObject *map_o = PyStackRef_AsPyObjectBorrow(iter);
+            if (Py_TYPE(map_o) != &PyMap_Type) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            if (IS_PEP523_HOOKED(tstate)) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            _PyMapObject *lz = (_PyMapObject *)map_o;
+            if (PyTuple_GET_SIZE(lz->iters) != 1) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            PyObject *func = lz->func;
+            if (Py_TYPE(func) != &PyFunction_Type) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            if (((PyFunctionObject *)func)->vectorcall != _PyFunction_Vectorcall) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            STAT_INC(FOR_ITER, hit);
+            _PyStackRef inner = PyStackRef_FromPyObjectBorrow(PyTuple_GET_ITEM(lz->iters, 0));
+            _PyStackRef index = PyStackRef_NULL;
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            _PyStackRef item = _PyForIter_VirtualIteratorNext(tstate, frame, inner, &index);
+            _PyFrame_StackPointerInvalidate(frame);
+            if (!PyStackRef_IsValid(item)) {
+                if (PyStackRef_IsError(item)) {
+                    JUMP_TO_LABEL(error);
+                }
+                JUMPBY(oparg + 1);
+                DISPATCH();
+            }
+            int code_flags = ((PyCodeObject*)PyFunction_GET_CODE(func))->co_flags;
+            PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+            assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+            _PyFrame_StackPointerValidate(frame);
+            _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+                tstate, PyStackRef_FromPyObjectNew(func), locals,
+                &item, 1, NULL, frame
+            );
+            _PyFrame_StackPointerInvalidate(frame);
+            if (new_frame == NULL) {
+                JUMP_TO_LABEL(error);
+            }
+            frame->return_offset = 2u ;
+            DISPATCH_INLINED(new_frame);
+        }
+
         TARGET(FOR_ITER_RANGE) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = FOR_ITER_RANGE;
@@ -13798,6 +13870,16 @@ JUMP_TO_LABEL(error);
             next_instr = frame->instr_ptr;
             stack_pointer = _PyFrame_GetStackPointer(frame);
             _PyFrame_StackPointerInvalidate(frame);
+            if (next_instr->op.code == FOR_ITER_MAP &&
+                _PyErr_ExceptionMatches(tstate, PyExc_StopIteration))
+            {
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                _PyErr_Clear(tstate);
+                _PyFrame_StackPointerInvalidate(frame);
+                next_instr += 2 + INLINE_CACHE_ENTRIES_FOR_ITER + next_instr->op.arg;
+                DISPATCH();
+            }
             JUMP_TO_LABEL(error);
         }
 
