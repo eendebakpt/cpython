@@ -4,6 +4,7 @@
 
 #include "pycore_bytesobject.h"   // _PyBytes_Concat
 #include "pycore_call.h"          // _Py_METH_CALL_FLAGS
+#include "pycore_ceval.h"         // _PyFilterObject
 #include "pycore_code.h"
 #include "pycore_critical_section.h"
 #include "pycore_descrobject.h"   // _PyMethodWrapper_Type
@@ -2708,6 +2709,18 @@ _Py_Specialize_ForIter(_PyStackRef iter, _PyStackRef null_or_index, _Py_CODEUNIT
             specialize(instr, FOR_ITER_GEN);
             return;
         }
+        else if (tp == &PyFilter_Type) {
+            _PyFilterObject *lz = (_PyFilterObject *)iter_o;
+            // oparg <= 255: FILTER_CHECK reads the jump offset
+            // of FOR_ITER_FILTER without EXTENDED_ARG.
+            if (oparg <= 255
+                && Py_TYPE(lz->func) == &PyFunction_Type
+                && _PyInterpreterState_IsSpecializationEnabled(_PyInterpreterState_GET()))
+            {
+                specialize(instr, FOR_ITER_FILTER);
+                return;
+            }
+        }
     }
     else {
         if (tp->_tp_iteritem != NULL) {
@@ -3070,6 +3083,43 @@ const struct _PyCode8 _Py_InitCleanup = {
 #endif
     .co_code_adaptive = {
         EXIT_INIT_CHECK, 0,
+        RETURN_VALUE, 0,
+        RESUME, RESUME_AT_FUNC_START,
+        CACHE, 0, /* RESUME's cache */
+    }
+};
+
+/* Code of the shim frame pushed by FOR_ITER_FILTER. The frame holds the
+ * item while the function of the filter object runs; FILTER_CHECK then
+ * tests the result.
+ */
+#ifdef Py_GIL_DISABLED
+static _PyCodeArray filter_shim_tlbc = {
+    .size = 1,
+    .entries = {(char*) &_Py_FilterShim.co_code_adaptive},
+};
+#endif
+
+const struct _PyCode8 _Py_FilterShim = {
+    _PyVarObject_HEAD_INIT(&PyCode_Type, 3),
+    .co_consts = (PyObject *)&_Py_SINGLETON(tuple_empty),
+    .co_names = (PyObject *)&_Py_SINGLETON(tuple_empty),
+    .co_exceptiontable = (PyObject *)&_Py_SINGLETON(bytes_empty),
+    .co_flags = CO_OPTIMIZED | CO_NO_MONITORING_EVENTS,
+    .co_localsplusnames = (PyObject *)&_Py_SINGLETON(tuple_empty),
+    .co_localspluskinds = (PyObject *)&_Py_SINGLETON(bytes_empty),
+    .co_filename = &_Py_ID(filter),
+    .co_name = &_Py_ID(filter),
+    .co_qualname = &_Py_ID(filter),
+    .co_linetable = (PyObject *)&no_location,
+    ._co_firsttraceable = 4,
+    .co_stacksize = 2,
+    .co_framesize = 2 + FRAME_SPECIALS_SIZE,
+#ifdef Py_GIL_DISABLED
+    .co_tlbc = &filter_shim_tlbc,
+#endif
+    .co_code_adaptive = {
+        FILTER_CHECK, 0,
         RETURN_VALUE, 0,
         RESUME, RESUME_AT_FUNC_START,
         CACHE, 0, /* RESUME's cache */

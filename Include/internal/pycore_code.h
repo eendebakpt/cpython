@@ -550,6 +550,9 @@ struct _PyCode8 _PyCode_DEF(8);
 
 PyAPI_DATA(const struct _PyCode8) _Py_InitCleanup;
 
+/* Code of the shim frame pushed by FOR_ITER_FILTER */
+PyAPI_DATA(const struct _PyCode8) _Py_FilterShim;
+
 #ifdef Py_GIL_DISABLED
 
 static inline _PyCodeArray *

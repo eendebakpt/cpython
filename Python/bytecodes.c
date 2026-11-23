@@ -3767,6 +3767,7 @@ dummy_func(
             FOR_ITER_TUPLE,
             FOR_ITER_RANGE,
             FOR_ITER_GEN,
+            FOR_ITER_FILTER,
             FOR_ITER_VIRTUAL,
         };
 
@@ -4096,6 +4097,121 @@ dummy_func(
             _CHECK_PEP_523 +
             _FOR_ITER_GEN_FRAME +
             _PUSH_FRAME;
+
+        // Iteration over filter(func, iterable) where func is a Python
+        // function: push the frame of func instead of calling
+        // filter.__next__. A shim frame holds the item and tests the
+        // result of func with FILTER_CHECK.
+        tier1 inst(FOR_ITER_FILTER, (unused/1, iter, null -- iter, null, unused)) {
+            PyObject *filter_o = PyStackRef_AsPyObjectBorrow(iter);
+            DEOPT_IF(Py_TYPE(filter_o) != &PyFilter_Type);
+            DEOPT_IF(IS_PEP523_HOOKED(tstate));
+            _PyFilterObject *lz = (_PyFilterObject *)filter_o;
+            PyObject *func = lz->func;
+            DEOPT_IF(Py_TYPE(func) != &PyFunction_Type);
+            DEOPT_IF(((PyFunctionObject *)func)->vectorcall != _PyFunction_Vectorcall);
+            PyCodeObject *code = (PyCodeObject *)PyFunction_GET_CODE(func);
+            DEOPT_IF(!_PyThreadState_HasStackSpace(tstate, code->co_framesize + _Py_FilterShim.co_framesize));
+            STAT_INC(FOR_ITER, hit);
+            _PyStackRef inner = PyStackRef_FromPyObjectBorrow(lz->it);
+            _PyStackRef index = PyStackRef_NULL;
+            _PyStackRef item = _PyForIter_VirtualIteratorNext(tstate, frame, inner, &index);
+            if (!PyStackRef_IsValid(item)) {
+                if (PyStackRef_IsError(item)) {
+                    ERROR_NO_POP();
+                }
+                // Jump forward by oparg and skip the following END_FOR
+                JUMPBY(oparg + 1);
+                DISPATCH();
+            }
+            _PyInterpreterFrame *shim = _PyFrame_PushTrampolineUnchecked(
+                tstate, (PyCodeObject *)&_Py_FilterShim, 1, frame);
+            assert(_PyFrame_GetBytecode(shim)[0].op.code == FILTER_CHECK);
+            assert(_PyFrame_GetBytecode(shim)[1].op.code == RETURN_VALUE);
+            /* The shim owns the item, the function gets a new reference */
+            shim->localsplus[0] = item;
+            _PyStackRef arg = PyStackRef_DUP(item);
+            int code_flags = code->co_flags;
+            PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+            _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+                tstate, PyStackRef_FromPyObjectNew(func), locals,
+                &arg, 1, NULL, shim
+            );
+            if (new_frame == NULL) {
+                _PyEval_FrameClearAndPop(tstate, shim);
+                ERROR_NO_POP();
+            }
+            frame->return_offset = INSTRUCTION_SIZE;
+            /* Account for pushing the shim frame. The recursion depth
+             * is checked after start_frame */
+            tstate->py_recursion_remaining--;
+            DISPATCH_INLINED(new_frame);
+        }
+
+        // Only used in the shim frame pushed by FOR_ITER_FILTER.
+        // If the result of the function is true, continue with the
+        // RETURN_VALUE that returns the item to the loop. Otherwise call
+        // the function with the next item and return here again.
+        tier1 inst(FILTER_CHECK, (item, res -- value)) {
+            _PyInterpreterFrame *caller = frame->previous;
+            int ok = PyObject_IsTrue(PyStackRef_AsPyObjectBorrow(res));
+            PyStackRef_CLOSE(res);
+            // The next item to test, NULL if the loop is exhausted
+            _PyStackRef next = PyStackRef_NULL;
+            // The filter object is kept alive by the stack of the caller.
+            _PyFilterObject *lz = (_PyFilterObject *)PyStackRef_AsPyObjectBorrow(caller->stackpointer[-2]);
+            assert(Py_TYPE(lz) == &PyFilter_Type);
+            if (ok < 0) {
+                // StopIteration ends the loop, as it does when raised
+                // in filter.__next__.
+                if (!_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)) {
+                    ERROR_NO_POP();
+                }
+                _PyErr_Clear(tstate);
+            }
+            else if (ok == 0) {
+                _PyStackRef inner = PyStackRef_FromPyObjectBorrow(lz->it);
+                _PyStackRef index = PyStackRef_NULL;
+                next = _PyForIter_VirtualIteratorNext(tstate, caller, inner, &index);
+                if (PyStackRef_IsError(next)) {
+                    ERROR_NO_POP();
+                }
+            }
+            _PyStackRef old = item;
+            DEAD(item);
+            int call = 0;
+            if (ok > 0) {
+                value = old;
+                old = PyStackRef_NULL;
+            }
+            else if (PyStackRef_IsNull(next)) {
+                // Return None to the END_FOR of the loop
+                caller->return_offset = (uint16_t)(
+                    1 + INLINE_CACHE_ENTRIES_FOR_ITER + caller->instr_ptr->op.arg);
+                value = PyStackRef_None;
+            }
+            else {
+                value = next;
+                call = 1;
+            }
+            PyStackRef_XCLOSE(old);
+            if (call) {
+                PyObject *func = lz->func;
+                _PyStackRef arg = PyStackRef_DUP(value);
+                int code_flags = ((PyCodeObject *)PyFunction_GET_CODE(func))->co_flags;
+                PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+                _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+                    tstate, PyStackRef_FromPyObjectNew(func), locals,
+                    &arg, 1, NULL, frame
+                );
+                if (new_frame == NULL) {
+                    ERROR_NO_POP();
+                }
+                // Return to this instruction
+                frame->return_offset = 0;
+                DISPATCH_INLINED(new_frame);
+            }
+        }
 
         op(_INSERT_NULL, (self -- method_and_self[2])) {
             method_and_self[1] = self;
@@ -6544,6 +6660,22 @@ dummy_func(
             }
             next_instr = frame->instr_ptr;
             RELOAD_STACK();
+            if (next_instr->op.code == FILTER_CHECK &&
+                _PyErr_ExceptionMatches(tstate, PyExc_StopIteration))
+            {
+                // StopIteration raised by the function of filter(function, it)
+                // ends the loop, as it does when raised in filter.__next__.
+                // Return None from the shim frame to the END_FOR of the loop.
+                _PyErr_Clear(tstate);
+                _PyInterpreterFrame *caller = frame->previous;
+                caller->return_offset = (uint16_t)(
+                    1 + INLINE_CACHE_ENTRIES_FOR_ITER + caller->instr_ptr->op.arg);
+                _PyStackRef tmp = stack_pointer[-1];
+                stack_pointer[-1] = PyStackRef_None;
+                PyStackRef_CLOSE(tmp);
+                next_instr += 1;
+                DISPATCH();
+            }
             goto error;
         }
 

@@ -558,11 +558,7 @@ whatever arguments are passed.\n\
 \n\
 By default, this drops you into the pdb debugger.");
 
-typedef struct {
-    PyObject_HEAD
-    PyObject *func;
-    PyObject *it;
-} filterobject;
+typedef _PyFilterObject filterobject;
 
 #define _filterobject_CAST(op)      ((filterobject *)(op))
 

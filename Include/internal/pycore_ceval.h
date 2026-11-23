@@ -488,6 +488,13 @@ _Py_LoadAttr_StackRefSteal(
 // tail calling.
 PyAPI_FUNC(PyObject*) _PyMapping_GetOptionalItem2(PyObject* obj, PyObject* key, int* err);
 
+/* Layout of the builtin filter object, used by FOR_ITER_FILTER */
+typedef struct {
+    PyObject_HEAD
+    PyObject *func;
+    PyObject *it;
+} _PyFilterObject;
+
 #ifdef __cplusplus
 }
 #endif

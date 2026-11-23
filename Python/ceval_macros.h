@@ -224,7 +224,8 @@ do { \
         assert(!IS_PEP523_HOOKED(tstate));                       \
         _PyFrame_SetStackPointer(frame, stack_pointer);          \
         _PyFrame_StackPointerValidate(frame);                    \
-        assert((NEW_FRAME)->previous == frame);                  \
+        assert((NEW_FRAME)->previous == frame ||                 \
+               (NEW_FRAME)->previous->previous == frame);        \
         frame = tstate->current_frame = (NEW_FRAME);             \
         CALL_STAT_INC(inlined_py_calls);                         \
         JUMP_TO_LABEL(start_frame);                              \
