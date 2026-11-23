@@ -3434,6 +3434,22 @@ unpack_cmp(const char *p, const char *q, const char *fmt,
     return MV_COMPARE_EX;
 }
 
+/* Compare two one-dimensional arrays of a single native type without
+   suboffsets. The comparison is by value, as in unpack_cmp(). */
+#define CMP_LOOP(type) \
+    do {                                                \
+        for (i = 0; i < n; p += ps, q += qs, i++) {     \
+            type x;                                     \
+            type y;                                     \
+            memcpy((char *)&x, p, sizeof x);            \
+            memcpy((char *)&y, q, sizeof y);            \
+            if (x != y) {                               \
+                return 0;                               \
+            }                                           \
+        }                                               \
+        return 1;                                       \
+    } while (0)
+
 /* Base case for recursive array comparisons. Assumption: ndim == 1. */
 static int
 cmp_base(const char *p, const char *q, const Py_ssize_t *shape,
@@ -3443,6 +3459,22 @@ cmp_base(const char *p, const char *q, const Py_ssize_t *shape,
 {
     Py_ssize_t i;
     int equal;
+
+    if (psuboffsets == NULL && qsuboffsets == NULL) {
+        /* Fast path: select the item type once, outside the loop. */
+        Py_ssize_t n = shape[0], ps = pstrides[0], qs = qstrides[0];
+        switch (fmt[0]) {
+        case 'B': case 'b': case 'c': CMP_LOOP(char);
+        case 'h': case 'H': CMP_LOOP(short);
+        case 'i': case 'I': CMP_LOOP(int);
+        case 'l': case 'L': CMP_LOOP(long);
+        case 'q': case 'Q': CMP_LOOP(long long);
+        case 'n': case 'N': CMP_LOOP(Py_ssize_t);
+        case 'P': CMP_LOOP(void *);
+        case 'f': CMP_LOOP(float);
+        case 'd': CMP_LOOP(double);
+        }
+    }
 
     for (i = 0; i < shape[0]; p+=pstrides[0], q+=qstrides[0], i++) {
         const char *xp = ADJUST_PTR(p, psuboffsets, 0);
