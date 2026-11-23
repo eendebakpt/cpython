@@ -200,11 +200,15 @@ int _PyOpcode_num_popped(int opcode, int oparg)  {
             return 1;
         case EXTENDED_ARG:
             return 0;
+        case FILTER_CHECK:
+            return 2;
         case FORMAT_SIMPLE:
             return 1;
         case FORMAT_WITH_SPEC:
             return 2;
         case FOR_ITER:
+            return 2;
+        case FOR_ITER_FILTER:
             return 2;
         case FOR_ITER_GEN:
             return 2;
@@ -695,11 +699,15 @@ int _PyOpcode_num_pushed(int opcode, int oparg)  {
             return 0;
         case EXTENDED_ARG:
             return 0;
+        case FILTER_CHECK:
+            return 1;
         case FORMAT_SIMPLE:
             return 1;
         case FORMAT_WITH_SPEC:
             return 1;
         case FOR_ITER:
+            return 3;
+        case FOR_ITER_FILTER:
             return 3;
         case FOR_ITER_GEN:
             return 2;
@@ -1181,9 +1189,11 @@ const struct opcode_metadata _PyOpcode_opcode_metadata[267] = {
     [ENTER_EXECUTOR] = { true, INSTR_FMT_IB, HAS_ARG_FLAG },
     [EXIT_INIT_CHECK] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG },
     [EXTENDED_ARG] = { true, INSTR_FMT_IB, HAS_ARG_FLAG },
+    [FILTER_CHECK] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG | HAS_NEEDS_GUARD_IP_FLAG },
     [FORMAT_SIMPLE] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [FORMAT_WITH_SPEC] = { true, INSTR_FMT_IX, HAS_ERROR_FLAG | HAS_ESCAPES_FLAG },
     [FOR_ITER] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_JUMP_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG | HAS_UNPREDICTABLE_JUMP_FLAG | HAS_RECORDS_VALUE_FLAG },
+    [FOR_ITER_FILTER] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_JUMP_FLAG | HAS_DEOPT_FLAG | HAS_ERROR_FLAG | HAS_ERROR_NO_POP_FLAG | HAS_ESCAPES_FLAG | HAS_UNPREDICTABLE_JUMP_FLAG | HAS_NEEDS_GUARD_IP_FLAG },
     [FOR_ITER_GEN] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_DEOPT_FLAG | HAS_EXIT_FLAG | HAS_SYNC_SP_FLAG | HAS_NEEDS_GUARD_IP_FLAG | HAS_RECORDS_VALUE_FLAG },
     [FOR_ITER_LIST] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_JUMP_FLAG | HAS_DEOPT_FLAG | HAS_EXIT_FLAG | HAS_ESCAPES_FLAG | HAS_UNPREDICTABLE_JUMP_FLAG },
     [FOR_ITER_RANGE] = { true, INSTR_FMT_IBC, HAS_ARG_FLAG | HAS_JUMP_FLAG | HAS_EXIT_FLAG | HAS_ERROR_FLAG | HAS_UNPREDICTABLE_JUMP_FLAG },
@@ -1634,9 +1644,11 @@ const char *_PyOpcode_OpName[267] = {
     [ENTER_EXECUTOR] = "ENTER_EXECUTOR",
     [EXIT_INIT_CHECK] = "EXIT_INIT_CHECK",
     [EXTENDED_ARG] = "EXTENDED_ARG",
+    [FILTER_CHECK] = "FILTER_CHECK",
     [FORMAT_SIMPLE] = "FORMAT_SIMPLE",
     [FORMAT_WITH_SPEC] = "FORMAT_WITH_SPEC",
     [FOR_ITER] = "FOR_ITER",
+    [FOR_ITER_FILTER] = "FOR_ITER_FILTER",
     [FOR_ITER_GEN] = "FOR_ITER_GEN",
     [FOR_ITER_LIST] = "FOR_ITER_LIST",
     [FOR_ITER_RANGE] = "FOR_ITER_RANGE",
@@ -1828,7 +1840,6 @@ const uint8_t _PyOpcode_Caches[256] = {
 PyAPI_DATA(const uint8_t) _PyOpcode_Deopt[256];
 #ifdef NEED_OPCODE_METADATA
 const uint8_t _PyOpcode_Deopt[256] = {
-    [117] = 117,
     [118] = 118,
     [119] = 119,
     [120] = 120,
@@ -1839,7 +1850,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [125] = 125,
     [126] = 126,
     [127] = 127,
-    [219] = 219,
     [220] = 220,
     [221] = 221,
     [222] = 222,
@@ -1934,9 +1944,11 @@ const uint8_t _PyOpcode_Deopt[256] = {
     [ENTER_EXECUTOR] = ENTER_EXECUTOR,
     [EXIT_INIT_CHECK] = EXIT_INIT_CHECK,
     [EXTENDED_ARG] = EXTENDED_ARG,
+    [FILTER_CHECK] = FILTER_CHECK,
     [FORMAT_SIMPLE] = FORMAT_SIMPLE,
     [FORMAT_WITH_SPEC] = FORMAT_WITH_SPEC,
     [FOR_ITER] = FOR_ITER,
+    [FOR_ITER_FILTER] = FOR_ITER,
     [FOR_ITER_GEN] = FOR_ITER,
     [FOR_ITER_LIST] = FOR_ITER,
     [FOR_ITER_RANGE] = FOR_ITER,
@@ -2089,7 +2101,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
 #endif // NEED_OPCODE_METADATA
 
 #define EXTRA_CASES \
-    case 117: \
     case 118: \
     case 119: \
     case 120: \
@@ -2100,7 +2111,6 @@ const uint8_t _PyOpcode_Deopt[256] = {
     case 125: \
     case 126: \
     case 127: \
-    case 219: \
     case 220: \
     case 221: \
     case 222: \

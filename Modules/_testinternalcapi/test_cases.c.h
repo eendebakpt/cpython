@@ -6254,6 +6254,94 @@
             DISPATCH_GOTO();
         }
 
+        TARGET(FILTER_CHECK) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = FILTER_CHECK;
+            (void)(opcode);
+            #endif
+            frame->instr_ptr = next_instr;
+            next_instr += 1;
+            INSTRUCTION_STATS(FILTER_CHECK);
+            _PyStackRef item;
+            _PyStackRef res;
+            _PyStackRef value;
+            res = stack_pointer[-1];
+            item = stack_pointer[-2];
+            _PyInterpreterFrame *caller = frame->previous;
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            int ok = PyObject_IsTrue(PyStackRef_AsPyObjectBorrow(res));
+            _PyFrame_StackPointerInvalidate(frame);
+            stack_pointer += -1;
+            ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            PyStackRef_CLOSE(res);
+            _PyFrame_StackPointerInvalidate(frame);
+            _PyStackRef next = PyStackRef_NULL;
+            _PyFilterObject *lz = (_PyFilterObject *)PyStackRef_AsPyObjectBorrow(caller->stackpointer[-2]);
+            assert(Py_TYPE(lz) == &PyFilter_Type);
+            if (ok < 0) {
+                if (!_PyErr_ExceptionMatches(tstate, PyExc_StopIteration)) {
+                    JUMP_TO_LABEL(error);
+                }
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                _PyErr_Clear(tstate);
+                _PyFrame_StackPointerInvalidate(frame);
+            }
+            else if (ok == 0) {
+                _PyStackRef inner = PyStackRef_FromPyObjectBorrow(lz->it);
+                _PyStackRef index = PyStackRef_NULL;
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                next = _PyForIter_VirtualIteratorNext(tstate, caller, inner, &index);
+                _PyFrame_StackPointerInvalidate(frame);
+                if (PyStackRef_IsError(next)) {
+                    JUMP_TO_LABEL(error);
+                }
+            }
+            _PyStackRef old = item;
+            int call = 0;
+            if (ok > 0) {
+                value = old;
+                old = PyStackRef_NULL;
+            }
+            else if (PyStackRef_IsNull(next)) {
+                caller->return_offset = (uint16_t)(
+                    1 + INLINE_CACHE_ENTRIES_FOR_ITER + caller->instr_ptr->op.arg);
+                value = PyStackRef_None;
+            }
+            else {
+                value = next;
+                call = 1;
+            }
+            stack_pointer[-1] = value;
+            assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+            _PyFrame_StackPointerValidate(frame);
+            PyStackRef_XCLOSE(old);
+            _PyFrame_StackPointerInvalidate(frame);
+            if (call) {
+                PyObject *func = lz->func;
+                _PyStackRef arg = PyStackRef_DUP(value);
+                int code_flags = ((PyCodeObject *)PyFunction_GET_CODE(func))->co_flags;
+                PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+                    tstate, PyStackRef_FromPyObjectNew(func), locals,
+                    &arg, 1, NULL, frame
+                );
+                _PyFrame_StackPointerInvalidate(frame);
+                if (new_frame == NULL) {
+                    JUMP_TO_LABEL(error);
+                }
+                frame->return_offset = 0;
+                DISPATCH_INLINED(new_frame);
+            }
+            DISPATCH();
+        }
+
         TARGET(FORMAT_SIMPLE) {
             #if _Py_TAIL_CALL_INTERP
             int opcode = FORMAT_SIMPLE;
@@ -6389,6 +6477,93 @@
             stack_pointer += 1;
             ASSERT_WITHIN_STACK_BOUNDS(__FILE__, __LINE__);
             DISPATCH();
+        }
+
+        TARGET(FOR_ITER_FILTER) {
+            #if _Py_TAIL_CALL_INTERP
+            int opcode = FOR_ITER_FILTER;
+            (void)(opcode);
+            #endif
+            _Py_CODEUNIT* const this_instr = next_instr;
+            (void)this_instr;
+            frame->instr_ptr = next_instr;
+            next_instr += 2;
+            INSTRUCTION_STATS(FOR_ITER_FILTER);
+            static_assert(INLINE_CACHE_ENTRIES_FOR_ITER == 1, "incorrect cache size");
+            _PyStackRef iter;
+            /* Skip 1 cache entry */
+            iter = stack_pointer[-2];
+            PyObject *filter_o = PyStackRef_AsPyObjectBorrow(iter);
+            if (Py_TYPE(filter_o) != &PyFilter_Type) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            if (IS_PEP523_HOOKED(tstate)) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            _PyFilterObject *lz = (_PyFilterObject *)filter_o;
+            PyObject *func = lz->func;
+            if (Py_TYPE(func) != &PyFunction_Type) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            if (((PyFunctionObject *)func)->vectorcall != _PyFunction_Vectorcall) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            PyCodeObject *code = (PyCodeObject *)PyFunction_GET_CODE(func);
+            if (!_PyThreadState_HasStackSpace(tstate, code->co_framesize + _Py_FilterShim.co_framesize)) {
+                UPDATE_MISS_STATS(FOR_ITER);
+                assert(_PyOpcode_Deopt[opcode] == (FOR_ITER));
+                JUMP_TO_PREDICTED(FOR_ITER);
+            }
+            STAT_INC(FOR_ITER, hit);
+            _PyStackRef inner = PyStackRef_FromPyObjectBorrow(lz->it);
+            _PyStackRef index = PyStackRef_NULL;
+            _PyFrame_SetStackPointer(frame, stack_pointer);
+            _PyFrame_StackPointerValidate(frame);
+            _PyStackRef item = _PyForIter_VirtualIteratorNext(tstate, frame, inner, &index);
+            _PyFrame_StackPointerInvalidate(frame);
+            if (!PyStackRef_IsValid(item)) {
+                if (PyStackRef_IsError(item)) {
+                    JUMP_TO_LABEL(error);
+                }
+                JUMPBY(oparg + 1);
+                DISPATCH();
+            }
+            assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+            _PyFrame_StackPointerValidate(frame);
+            _PyInterpreterFrame *shim = _PyFrame_PushTrampolineUnchecked(
+                tstate, (PyCodeObject *)&_Py_FilterShim, 1, frame);
+            _PyFrame_StackPointerInvalidate(frame);
+            assert(_PyFrame_GetBytecode(shim)[0].op.code == FILTER_CHECK);
+            assert(_PyFrame_GetBytecode(shim)[1].op.code == RETURN_VALUE);
+            shim->localsplus[0] = item;
+            _PyStackRef arg = PyStackRef_DUP(item);
+            int code_flags = code->co_flags;
+            PyObject *locals = code_flags & CO_OPTIMIZED ? NULL : Py_NewRef(PyFunction_GET_GLOBALS(func));
+            assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+            _PyFrame_StackPointerValidate(frame);
+            _PyInterpreterFrame *new_frame = _PyEvalFramePushAndInit(
+                tstate, PyStackRef_FromPyObjectNew(func), locals,
+                &arg, 1, NULL, shim
+            );
+            _PyFrame_StackPointerInvalidate(frame);
+            if (new_frame == NULL) {
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                _PyEval_FrameClearAndPop(tstate, shim);
+                _PyFrame_StackPointerInvalidate(frame);
+                JUMP_TO_LABEL(error);
+            }
+            frame->return_offset = 2u ;
+            tstate->py_recursion_remaining--;
+            DISPATCH_INLINED(new_frame);
         }
 
         TARGET(FOR_ITER_GEN) {
@@ -13798,6 +13973,25 @@ JUMP_TO_LABEL(error);
             next_instr = frame->instr_ptr;
             stack_pointer = _PyFrame_GetStackPointer(frame);
             _PyFrame_StackPointerInvalidate(frame);
+            if (next_instr->op.code == FILTER_CHECK &&
+                _PyErr_ExceptionMatches(tstate, PyExc_StopIteration))
+            {
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                _PyErr_Clear(tstate);
+                _PyFrame_StackPointerInvalidate(frame);
+                _PyInterpreterFrame *caller = frame->previous;
+                caller->return_offset = (uint16_t)(
+                    1 + INLINE_CACHE_ENTRIES_FOR_ITER + caller->instr_ptr->op.arg);
+                _PyStackRef tmp = stack_pointer[-1];
+                stack_pointer[-1] = PyStackRef_None;
+                assert(stack_pointer == _PyFrame_GetStackPointer(frame));
+                _PyFrame_StackPointerValidate(frame);
+                PyStackRef_CLOSE(tmp);
+                _PyFrame_StackPointerInvalidate(frame);
+                next_instr += 1;
+                DISPATCH();
+            }
             JUMP_TO_LABEL(error);
         }
 
